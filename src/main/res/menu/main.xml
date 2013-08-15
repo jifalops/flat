@@ -1,10 +1,7 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
-    <item android:id="@+id/powerSwitchItem">
-        <Switch android:id="@+id/powerSwitch"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:showAsAction = "always" />
-    </item>
+    <item android:id="@+id/powerSwitch"
+        android:actionLayout="@layout/power_switch"
+        android:showAsAction = "always" />
     <item android:id="@+id/action_settings"
         android:title="@string/action_settings"
         android:orderInCategory="100"

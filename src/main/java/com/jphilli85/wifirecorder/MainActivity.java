@@ -2,118 +2,108 @@ package com.jphilli85.wifirecorder;
 
 import android.app.Activity;
 import android.app.AlertDialog;
-import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.graphics.Bitmap;
-import android.net.wifi.ScanResult;
-import android.net.wifi.WifiManager;
 import android.os.Bundle;
 import android.provider.MediaStore;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
+import android.widget.CompoundButton;
 import android.widget.EditText;
 import android.widget.Switch;
-
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.List;
-import java.util.Locale;
+import android.widget.TextView;
 
 public class MainActivity extends Activity {
-    static final String BASE_DIR = "Wifi Records";
-    static final String LOG_FILE = "wifirecords.txt";
-    static final SimpleDateFormat SDF = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US);
-    static final int REQUEST_IMAGE = 0;
-    WifiManager mWifiManager;
-    File mBaseDir;
-    FileWriter mLogWriter;
-    int mScanCount;
-    boolean mIsEnabled;
-    String mMarkLabel;
+    private static final String LOG_TAG = MainActivity.class.getSimpleName();
+
+    private static final int REQUEST_IMAGE = 0;
+
+    //boolean mIsEnabled;
+    private String mMarkLabel;
+    private TextView mScanCountView;
+    private int mScanCount;
+    private MyService.WifiReceiver mReceiver;
+    private Switch mPowerSwitch;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        mScanCountView = (TextView) findViewById(R.id.scanCount);
 
-
-        mIsEnabled = true;
-
-        mWifiManager = (WifiManager) getSystemService(Context.WIFI_SERVICE);
-
-        mBaseDir = new File(getExternalFilesDir(null) + File.separator + BASE_DIR);
-        mLogWriter = null;
-
-        try {
-            mLogWriter = new FileWriter(new File(mBaseDir, LOG_FILE));
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        IntentFilter filter = new IntentFilter();
-        filter.addAction(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION);
-        registerReceiver(new BroadcastReceiver(){
-            public void onReceive(Context c, Intent i) {
-                ++mScanCount;
-                String timestamp = SDF.format(new Date());
-                List<ScanResult> results = mWifiManager.getScanResults ();
-                StringBuilder sb = new StringBuilder();
-                for (ScanResult sr : results) {
-                    sb.append(mScanCount + "," + timestamp + "," + sr.BSSID + ","
-                            + sr.SSID + "," + sr.level + "," + mMarkLabel + "\n");
+        mReceiver = new MyService.WifiReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                if (intent.getAction().equals(MyService.WifiReceiver.ACTION_WIFI)) {
+                    mScanCount = intent.getIntExtra(MyService.EXTRA_SCAN_COUNT, 0);
+                    mScanCountView.setText(String.valueOf(mScanCount));
                 }
+//                else if (intent.getAction().equals(MyService.ACTION_ON_STOPPED)) {
+//                    if (mPowerSwitch != null) mPowerSwitch.setChecked(MyService.isRunning());
+//                }
 
-                try {
-                    mLogWriter.append(sb.toString());
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-
-                if (mIsEnabled) mWifiManager.startScan();
             }
-        }, filter);
+        };
 
 
-        if (!mWifiManager.startScan()) {
+    }
 
-        }
+    @Override
+    protected void onStart() {
+        super.onStart();
+        IntentFilter filter = new IntentFilter();
+        filter.addAction(MyService.WifiReceiver.ACTION_WIFI);
+//        filter.addAction(MyService.ACTION_ON_STOPPED);
+        registerReceiver(mReceiver, filter);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+//        mPowerSwitch.setChecked(MyService.isRunning());
     }
 
     @Override
     protected void onPause() {
         super.onPause();
-        mIsEnabled = false;
+//        mIsEnabled = false;
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        unregisterReceiver(mReceiver);
     }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.main, menu);
+        mPowerSwitch = (Switch) menu.findItem(R.id.powerSwitch).getActionView();
+        mPowerSwitch.setChecked(MyService.isRunning());
+        mPowerSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
+                setEnabled(b);
+            }
+        });
         return true;
     }
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
-            case R.id.powerSwitchItem:
-                //toggle();
-                //((Switch) item.getActionView()).setChecked(mIsEnabled);
-                mIsEnabled = ((Switch) item.getActionView()).isChecked();
-                break;
+
         }
         return true;
     }
 
-    void onMarkLocation() {
+    public void onMarkLocation(View v) {
         AlertDialog.Builder editalert = new AlertDialog.Builder(this);
 
         //editalert.setTitle("messagetitle");
@@ -123,16 +113,20 @@ public class MainActivity extends Activity {
         final EditText input = (EditText) getLayoutInflater().inflate(R.layout.edittext, null);
         mMarkLabel = "Mark " + mScanCount;
         input.setText(mMarkLabel);
-        input.setSelection(0, mMarkLabel.length() - 1);
+        input.setSelection(0, mMarkLabel.length());
         editalert.setView(input);
 
-        editalert.setPositiveButton("OK", new DialogInterface.OnClickListener() {
+        editalert.setPositiveButton("Set Label", new DialogInterface.OnClickListener() {
             public void onClick(DialogInterface dialog, int whichButton) {
                 mMarkLabel = input.getText().toString();
+                Intent broadcastIntent = new Intent();
+                broadcastIntent.setAction(MyService.WifiReceiver.ACTION_LABEL);
+                broadcastIntent.putExtra(MyService.EXTRA_LABEL, mMarkLabel);
+                sendBroadcast(broadcastIntent);
             }
         });
 
-        editalert.setNegativeButton("Take Pic", new DialogInterface.OnClickListener() {
+        editalert.setNegativeButton("Add Pic", new DialogInterface.OnClickListener() {
             public void onClick(DialogInterface dialog, int whichButton) {
                 mMarkLabel = input.getText().toString();
                 Intent cameraIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
@@ -148,16 +142,23 @@ public class MainActivity extends Activity {
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         if (requestCode == REQUEST_IMAGE && resultCode == Activity.RESULT_OK) {
             Bitmap photo = (Bitmap) data.getExtras().get("data");
-            try {
-                FileOutputStream out = new FileOutputStream(new File(mBaseDir, mMarkLabel));
-                photo.compress(Bitmap.CompressFormat.PNG, 100, out);
-            } catch (FileNotFoundException e) {
-                e.printStackTrace();
-            }
+            Intent broadcastIntent = new Intent();
+            broadcastIntent.setAction(MyService.WifiReceiver.ACTION_PHOTO);
+            broadcastIntent.putExtra(MyService.EXTRA_PHOTO, photo);
+            broadcastIntent.putExtra(MyService.EXTRA_LABEL, mMarkLabel);
+            sendBroadcast(broadcastIntent);
         }
     }
 
-    private void toggle() {
-        mIsEnabled = !mIsEnabled;
+    private void setEnabled(boolean enabled) {
+        if (enabled && !MyService.isRunning()) {
+            startService(new Intent(this, MyService.class));
+        } else if (!enabled && MyService.isRunning()) {
+            stopService(new Intent(this, MyService.class));
+//            Intent broadcastIntent = new Intent();
+//            broadcastIntent.setAction(MyService.ACTION_STOP);
+//            sendBroadcast(broadcastIntent);
+        }
+
     }
 }
