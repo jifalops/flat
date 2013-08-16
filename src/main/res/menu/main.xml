@@ -2,8 +2,12 @@
     <item android:id="@+id/powerSwitch"
         android:actionLayout="@layout/power_switch"
         android:showAsAction = "always" />
-    <item android:id="@+id/action_settings"
-        android:title="@string/action_settings"
-        android:orderInCategory="100"
+    <item android:id="@+id/clearLog"
+        android:title="@string/clear_log"
+        android:onClick="onClearLog"
         android:showAsAction="never" />
+    <!--<item android:id="@+id/action_settings"-->
+        <!--android:title="@string/action_settings"-->
+        <!--android:orderInCategory="100"-->
+        <!--android:showAsAction="never" />-->
 </menu>

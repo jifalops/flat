@@ -6,6 +6,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.graphics.Bitmap;
+import android.net.Uri;
 import android.net.wifi.ScanResult;
 import android.net.wifi.WifiManager;
 import android.os.Handler;
@@ -29,8 +30,13 @@ import java.util.Locale;
  * Created by jake on 8/14/13.
  */
 public class MyService extends Service {
-//    public static final String ACTION_STOP = MyService.class.getName() + ".ACTION_STOP";
-//    public static final String ACTION_ON_STOPPED = MyService.class.getName() + ".ACTION_ON_STOPPED";
+    public static final String ACTION_PHOTO = MyService.class.getName() + ".ACTION_PHOTO";
+    public static final String ACTION_LABEL = MyService.class.getName() + ".ACTION_LABEL";
+    public static final String ACTION_RECORD_WRITTEN = MyService.class.getName() + ".ACTION_RECORD_WRITTEN";
+    public static final String ACTION_VIEW_LOG = MyService.class.getName() + ".ACTION_VIEW_LOG";
+    public static final String ACTION_CLEAR_LOG = MyService.class.getName() + ".ACTION_CLEAR_LOG";
+    public static final String ACTION_START_RECORDING = MyService.class.getName() + ".ACTION_START_RECORDING";
+    public static final String ACTION_STOP_RECORDING = MyService.class.getName() + ".ACTION_STOP_RECORDING";
     public static final String EXTRA_SCAN_COUNT = "scan_count";
     public static final String EXTRA_RECORD = "record";
     public static final String EXTRA_PHOTO = "photo";
@@ -39,29 +45,43 @@ public class MyService extends Service {
     private static final String LOG_TAG = MyService.class.getSimpleName();
 
     private static final String BASE_DIR = "Wifi Records";
-    private static final String LOG_FILE = "wifirecords.csv";
+    private static final String LOG_FILE = "wifirecords.csv.txt";
     private static final SimpleDateFormat SDF = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.US);
 
-    private static boolean sIsRunning;
+    public static final int STATE_RUNNING = 0x1;
+    public static final int STATE_SCANNING = 0x2;
+
+
+    private static int sState;
 
     private Looper mServiceLooper;
     private ServiceHandler mServiceHandler;
 
     private WifiManager mWifiManager;
     private File mBaseDir;
+    private File mLogFile;
     private FileWriter mLogWriter;
     private int mScanCount;
     private String mMarkLabel;
-    private WifiReceiver mReceiver;
+    private MessageReceiver mWifiReceiver;
+    private MessageReceiver mCommandReceiver;
 
-    public static abstract class WifiReceiver extends BroadcastReceiver {
-        public static final String ACTION_WIFI = "com.jphilli85.wifirecorder.ACTION_WIFI";
-        public static final String ACTION_PHOTO = "com.jphilli85.wifirecorder.ACTION_PHOTO";
-        public static final String ACTION_LABEL = "com.jphilli85.wifirecorder.ACTION_LABEL";
-    }
 
     public static boolean isRunning() {
-        return sIsRunning;
+        return (sState & STATE_RUNNING) == STATE_RUNNING;
+    }
+
+    public static boolean isScanning() {
+        return (sState & STATE_SCANNING) == STATE_SCANNING;
+    }
+
+    private final class MessageReceiver extends BroadcastReceiver {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            Message msg = mServiceHandler.obtainMessage();
+            msg.obj = intent;
+            mServiceHandler.sendMessage(msg);
+        }
     }
 
     // Handler that receives messages from the thread
@@ -88,19 +108,27 @@ public class MyService extends Service {
                     Log.e(LOG_TAG, "Error writing log record.", e);
                 }
 
-                Intent broadcastIntent = new Intent();
-                broadcastIntent.setAction(WifiReceiver.ACTION_WIFI);
+                Intent broadcastIntent = new Intent(ACTION_RECORD_WRITTEN);
                 broadcastIntent.putExtra(EXTRA_SCAN_COUNT, mScanCount);
                 broadcastIntent.putExtra(EXTRA_RECORD, sb.toString());
                 sendBroadcast(broadcastIntent);
 
                 mWifiManager.startScan();
 
-            } else if (intent.getAction().equals(WifiReceiver.ACTION_LABEL)) {
-
+            } else if (intent.getAction().equals(ACTION_START_RECORDING)) {
+                registerReceiver(mWifiReceiver, new IntentFilter(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION));
+                if (!mWifiManager.startScan()) {
+                    Log.e(LOG_TAG, "Could not initiate scan.");
+                }
+                sState |= STATE_SCANNING;
+            } else if (intent.getAction().equals(ACTION_STOP_RECORDING)) {
+                unregisterReceiver(mWifiReceiver);
+                try { mLogWriter.flush(); }
+                catch (IOException ignored) {}
+                sState &= ~STATE_SCANNING;
+            } else if (intent.getAction().equals(ACTION_LABEL)) {
                 mMarkLabel = intent.getStringExtra(EXTRA_LABEL);
-
-            } else if (intent.getAction().equals(WifiReceiver.ACTION_PHOTO)) {
+            } else if (intent.getAction().equals(ACTION_PHOTO)) {
                 mMarkLabel = intent.getStringExtra(EXTRA_LABEL);
                 try {
                     Bitmap photo = intent.getParcelableExtra(EXTRA_PHOTO);
@@ -109,15 +137,23 @@ public class MyService extends Service {
                 } catch (Exception e) {
                     Log.e(LOG_TAG, "Error saving photo.", e);
                 }
+            } else if (intent.getAction().equals(ACTION_VIEW_LOG)) {
+                Intent i = new Intent(Intent.ACTION_VIEW);
+                i.setDataAndType(Uri.fromFile(mLogFile), "text/plain");
+                i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                try { mLogWriter.flush(); }
+                catch (IOException ignored) {}
+                startActivity(i);
+            } else if (intent.getAction().equals(ACTION_CLEAR_LOG)) {
+                try {
+                    mLogWriter.close();
+                    mLogWriter = new FileWriter(mLogFile);
+                    mLogWriter.close();
+                    mLogWriter = new FileWriter(mLogFile, true);
+                } catch (IOException e) {
+                    Log.e(LOG_TAG, "Error clearing Log.", e);
+                }
             }
-//            else if (intent.getAction().equals(ACTION_STOP)) {
-//
-//                stopSelf();
-//
-//                Intent broadcastIntent = new Intent();
-//                broadcastIntent.setAction(ACTION_ON_STOPPED);
-//                sendBroadcast(broadcastIntent);
-//            }
         }
     }
 
@@ -136,48 +172,38 @@ public class MyService extends Service {
 
         mBaseDir = new File(getExternalFilesDir(null) + File.separator + BASE_DIR);
         mBaseDir.mkdirs();
+        mLogFile = new File(mBaseDir, LOG_FILE);
         mLogWriter = null;
 
         try {
-            mLogWriter = new FileWriter(new File(mBaseDir, LOG_FILE), true);
+            mLogWriter = new FileWriter(mLogFile, true);
         } catch (IOException e) {
             Log.e(LOG_TAG, "Error initializing LogWriter.", e);
         }
 
         mMarkLabel = "";
 
+        mCommandReceiver = new MessageReceiver();
+        mWifiReceiver = new MessageReceiver();
+
+        IntentFilter filter = new IntentFilter();
+        filter.addAction(ACTION_LABEL);
+        filter.addAction(ACTION_PHOTO);
+        filter.addAction(ACTION_VIEW_LOG);
+        filter.addAction(ACTION_CLEAR_LOG);
+        filter.addAction(ACTION_START_RECORDING);
+        filter.addAction(ACTION_STOP_RECORDING);
+        registerReceiver(mCommandReceiver, filter);
+
     }
 
     @Override
-    public int onStartCommand(Intent intent, int flags, final int startId) {
-        sIsRunning = true;
+    public int onStartCommand(Intent intent, int flags, int startId) {
+        sState |= STATE_RUNNING;
 
         Toast.makeText(this, "service starting", Toast.LENGTH_SHORT).show();
 
 
-        mReceiver = new WifiReceiver() {
-            @Override
-            public void onReceive(Context context, Intent intent) {
-                // For each start request, send a message to start a job and deliver the
-                // start ID so we know which request we're stopping when we finish the job
-                Message msg = mServiceHandler.obtainMessage();
-                msg.arg1 = startId;
-                msg.obj = intent;
-                mServiceHandler.sendMessage(msg);
-            }
-        };
-
-        IntentFilter filter = new IntentFilter();
-        filter.addAction(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION);
-        filter.addAction(WifiReceiver.ACTION_LABEL);
-        filter.addAction(WifiReceiver.ACTION_PHOTO);
-//        filter.addAction(ACTION_STOP);
-        registerReceiver(mReceiver, filter);
-
-
-        if (!mWifiManager.startScan()) {
-            Log.e(LOG_TAG, "Could not initiate scan.");
-        }
 
         // If we get killed, after returning from here, restart
         return START_STICKY;
@@ -190,9 +216,11 @@ public class MyService extends Service {
 
     @Override
     public void onDestroy() {
-        sIsRunning = false;
-        unregisterReceiver(mReceiver);
+        sState = 0;
+        unregisterReceiver(mCommandReceiver);
+        if (isScanning()) unregisterReceiver(mWifiReceiver);
         try {
+            mLogWriter.flush();
             mLogWriter.close();
         } catch (IOException e) {
             Log.e(LOG_TAG, "Unable to close log file.", e);

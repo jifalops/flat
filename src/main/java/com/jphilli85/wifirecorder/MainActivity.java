@@ -2,6 +2,7 @@ package com.jphilli85.wifirecorder;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -22,57 +23,59 @@ public class MainActivity extends Activity {
 
     private static final int REQUEST_IMAGE = 0;
 
-    //boolean mIsEnabled;
     private String mMarkLabel;
     private TextView mScanCountView;
     private int mScanCount;
-    private MyService.WifiReceiver mReceiver;
+    private BroadcastReceiver mReceiver;
     private Switch mPowerSwitch;
+    private Switch mScannerSwitch;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        mScanCountView = (TextView) findViewById(R.id.scanCount);
 
-        mReceiver = new MyService.WifiReceiver() {
+
+        mScanCountView = (TextView) findViewById(R.id.scanCount);
+        mScannerSwitch = (Switch) findViewById(R.id.scannerSwitch);
+        mScannerSwitch.setChecked(MyService.isScanning());
+        mScannerSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
+                String action = b
+                        ? MyService.ACTION_START_RECORDING
+                        : MyService.ACTION_STOP_RECORDING;
+                sendBroadcast(new Intent(action));
+            }
+        });
+
+        mReceiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
-                if (intent.getAction().equals(MyService.WifiReceiver.ACTION_WIFI)) {
+                if (intent.getAction().equals(MyService.ACTION_RECORD_WRITTEN)) {
                     mScanCount = intent.getIntExtra(MyService.EXTRA_SCAN_COUNT, 0);
                     mScanCountView.setText(String.valueOf(mScanCount));
                 }
-//                else if (intent.getAction().equals(MyService.ACTION_ON_STOPPED)) {
-//                    if (mPowerSwitch != null) mPowerSwitch.setChecked(MyService.isRunning());
-//                }
-
             }
         };
 
-
+        if (!MyService.isRunning()) startService(new Intent(this, MyService.class));
     }
 
     @Override
     protected void onStart() {
         super.onStart();
-        IntentFilter filter = new IntentFilter();
-        filter.addAction(MyService.WifiReceiver.ACTION_WIFI);
-//        filter.addAction(MyService.ACTION_ON_STOPPED);
-        registerReceiver(mReceiver, filter);
+        registerReceiver(mReceiver, new IntentFilter(MyService.ACTION_RECORD_WRITTEN));
     }
 
     @Override
     protected void onResume() {
         super.onResume();
+        // TODO why does this cause error?
 //        mPowerSwitch.setChecked(MyService.isRunning());
     }
 
-    @Override
-    protected void onPause() {
-        super.onPause();
-//        mIsEnabled = false;
-    }
 
     @Override
     protected void onStop() {
@@ -82,45 +85,43 @@ public class MainActivity extends Activity {
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.main, menu);
         mPowerSwitch = (Switch) menu.findItem(R.id.powerSwitch).getActionView();
         mPowerSwitch.setChecked(MyService.isRunning());
+        mScannerSwitch.setEnabled(MyService.isRunning());
         mPowerSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
-                setEnabled(b);
+                if (b && !MyService.isRunning()) {
+                    startService(new Intent(MainActivity.this, MyService.class));
+                    mScannerSwitch.setEnabled(true);
+                } else if (!b && MyService.isRunning()) {
+                    stopService(new Intent(MainActivity.this, MyService.class));
+                    mScannerSwitch.setEnabled(false);
+                    mScannerSwitch.setChecked(false);
+                }
             }
         });
-        return true;
-    }
-
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        switch (item.getItemId()) {
-
-        }
         return true;
     }
 
     public void onMarkLocation(View v) {
         AlertDialog.Builder editalert = new AlertDialog.Builder(this);
 
-        //editalert.setTitle("messagetitle");
-        editalert.setMessage("Mark Location");
+        editalert.setTitle("Mark Location");
 
 
         final EditText input = (EditText) getLayoutInflater().inflate(R.layout.edittext, null);
-        mMarkLabel = "Mark " + mScanCount;
+        mMarkLabel = "Mark " + (mScanCount + 1);
         input.setText(mMarkLabel);
         input.setSelection(0, mMarkLabel.length());
         editalert.setView(input);
 
-        editalert.setPositiveButton("Set Label", new DialogInterface.OnClickListener() {
+        editalert.setPositiveButton("Text only", new DialogInterface.OnClickListener() {
             public void onClick(DialogInterface dialog, int whichButton) {
                 mMarkLabel = input.getText().toString();
                 Intent broadcastIntent = new Intent();
-                broadcastIntent.setAction(MyService.WifiReceiver.ACTION_LABEL);
+                broadcastIntent.setAction(MyService.ACTION_LABEL);
                 broadcastIntent.putExtra(MyService.EXTRA_LABEL, mMarkLabel);
                 sendBroadcast(broadcastIntent);
             }
@@ -138,27 +139,27 @@ public class MainActivity extends Activity {
         editalert.show();
     }
 
+    public void onViewLog(View v) {
+        Intent broadcastIntent = new Intent();
+        broadcastIntent.setAction(MyService.ACTION_VIEW_LOG);
+        sendBroadcast(broadcastIntent);
+    }
+
+    public void onClearLog(MenuItem item) {
+        Intent broadcastIntent = new Intent();
+        broadcastIntent.setAction(MyService.ACTION_CLEAR_LOG);
+        sendBroadcast(broadcastIntent);
+    }
+
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         if (requestCode == REQUEST_IMAGE && resultCode == Activity.RESULT_OK) {
             Bitmap photo = (Bitmap) data.getExtras().get("data");
             Intent broadcastIntent = new Intent();
-            broadcastIntent.setAction(MyService.WifiReceiver.ACTION_PHOTO);
+            broadcastIntent.setAction(MyService.ACTION_PHOTO);
             broadcastIntent.putExtra(MyService.EXTRA_PHOTO, photo);
             broadcastIntent.putExtra(MyService.EXTRA_LABEL, mMarkLabel);
             sendBroadcast(broadcastIntent);
         }
-    }
-
-    private void setEnabled(boolean enabled) {
-        if (enabled && !MyService.isRunning()) {
-            startService(new Intent(this, MyService.class));
-        } else if (!enabled && MyService.isRunning()) {
-            stopService(new Intent(this, MyService.class));
-//            Intent broadcastIntent = new Intent();
-//            broadcastIntent.setAction(MyService.ACTION_STOP);
-//            sendBroadcast(broadcastIntent);
-        }
-
     }
 }
