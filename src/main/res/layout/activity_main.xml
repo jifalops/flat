@@ -35,7 +35,7 @@
         android:layout_height="wrap_content"
         android:padding="24dp"
         android:text="Mark Location"
-        android:onClick="onMarkLocation"
+        android:onClick="onButtonClick"
         android:id="@+id/markLocation" />
     <Space
             android:layout_width="0dp"
@@ -46,7 +46,14 @@
         android:layout_height="wrap_content"
         android:padding="16dp"
         android:text="View Log"
-        android:onClick="onViewLog"
+        android:onClick="onButtonClick"
         android:id="@+id/viewLog" />
+    <Button
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:padding="16dp"
+            android:text="View Pics"
+            android:onClick="onButtonClick"
+            android:id="@+id/viewPics" />
 
 </LinearLayout>

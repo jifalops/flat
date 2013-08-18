@@ -1,14 +1,17 @@
 package com.jphilli85.wifirecorder;
 
+import android.app.ActionBar;
 import android.app.Activity;
 import android.app.AlertDialog;
-import android.content.BroadcastReceiver;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
-import android.content.IntentFilter;
+import android.content.ServiceConnection;
 import android.graphics.Bitmap;
+import android.net.Uri;
 import android.os.Bundle;
+import android.os.IBinder;
 import android.provider.MediaStore;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -19,147 +22,213 @@ import android.widget.Switch;
 import android.widget.TextView;
 
 public class MainActivity extends Activity {
-    private static final String LOG_TAG = MainActivity.class.getSimpleName();
+    private static final String LOG_TAG = MainActivity.class.getSimpleName(); // Android's log
 
     private static final int REQUEST_IMAGE = 0;
 
-    private String mMarkLabel;
+    private String mLabel;
     private TextView mScanCountView;
     private int mScanCount;
-    private BroadcastReceiver mReceiver;
-    private Switch mPowerSwitch;
+    private Switch mPersistentSwitch;
     private Switch mScannerSwitch;
+    private boolean mBound;
+    private MyService mService;
+    private ServiceConnection mConnection;
+    private Bitmap mPhoto;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
-
+        getActionBar().setDisplayOptions(
+                ActionBar.DISPLAY_SHOW_HOME |
+//                ActionBar.DISPLAY_HOME_AS_UP |
+                ActionBar.DISPLAY_SHOW_CUSTOM);
+        getActionBar().setCustomView(R.layout.power_switch);
+        mPersistentSwitch = (Switch) getActionBar().getCustomView();
 
         mScanCountView = (TextView) findViewById(R.id.scanCount);
         mScannerSwitch = (Switch) findViewById(R.id.scannerSwitch);
-        mScannerSwitch.setChecked(MyService.isScanning());
-        mScannerSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
-                String action = b
-                        ? MyService.ACTION_START_RECORDING
-                        : MyService.ACTION_STOP_RECORDING;
-                sendBroadcast(new Intent(action));
-            }
-        });
 
-        mReceiver = new BroadcastReceiver() {
+        mConnection = new ServiceConnection() {
             @Override
-            public void onReceive(Context context, Intent intent) {
-                if (intent.getAction().equals(MyService.ACTION_RECORD_WRITTEN)) {
-                    mScanCount = intent.getIntExtra(MyService.EXTRA_SCAN_COUNT, 0);
-                    mScanCountView.setText(String.valueOf(mScanCount));
+            public void onServiceConnected(ComponentName className, IBinder service) {
+                // We've bound to LocalService, cast the IBinder and get LocalService instance
+                MyService.LocalBinder binder = (MyService.LocalBinder) service;
+                mService = binder.getService();
+                mService.setListener(new MyService.Listener() {
+                    @Override
+                    public void onScanRecorded(int count) {
+                        mScanCount = count;
+                        mScanCountView.post(new Runnable() {
+                            @Override
+                            public void run() {
+                                mScanCountView.setText(String.valueOf(mScanCount));
+                            }
+                        });
+                    }
+                });
+
+                mScannerSwitch.setOnCheckedChangeListener(null);
+                mScannerSwitch.setChecked(mService.isRecording());
+                mScannerSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+                    @Override
+                    public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
+                        if (mBound) {
+                            mService.setRecording(b);
+                        }
+                    }
+                });
+
+                mPersistentSwitch.setOnCheckedChangeListener(null);
+                mPersistentSwitch.setChecked(mService.isPersistent());
+                mPersistentSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+                    @Override
+                    public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
+                        if (b && !mService.isPersistent()) {
+                            persist();
+                        }
+                        else if (!b && mService.isPersistent()) {
+                            unpersist();
+                        }
+                    }
+                });
+
+                if (mPhoto != null) {
+                    Intent i = new Intent(MyService.ACTION_SAVE_PHOTO);
+                    i.putExtra(MyService.EXTRA_PHOTO, mPhoto);
+                    sendBroadcast(i);
+                    mPhoto = null;
                 }
+
+                mBound = true;
+            }
+
+            @Override
+            public void onServiceDisconnected(ComponentName arg0) {
+                mBound = false;
             }
         };
-
-        if (!MyService.isRunning()) startService(new Intent(this, MyService.class));
     }
 
     @Override
     protected void onStart() {
         super.onStart();
-        registerReceiver(mReceiver, new IntentFilter(MyService.ACTION_RECORD_WRITTEN));
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-        // TODO why does this cause error?
-//        mPowerSwitch.setChecked(MyService.isRunning());
+        doBindService();
     }
 
 
     @Override
     protected void onStop() {
         super.onStop();
-        unregisterReceiver(mReceiver);
+        doUnbindService();
     }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.main, menu);
-        mPowerSwitch = (Switch) menu.findItem(R.id.powerSwitch).getActionView();
-        mPowerSwitch.setChecked(MyService.isRunning());
-        mScannerSwitch.setEnabled(MyService.isRunning());
-        mPowerSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
-                if (b && !MyService.isRunning()) {
-                    startService(new Intent(MainActivity.this, MyService.class));
-                    mScannerSwitch.setEnabled(true);
-                } else if (!b && MyService.isRunning()) {
-                    stopService(new Intent(MainActivity.this, MyService.class));
-                    mScannerSwitch.setEnabled(false);
-                    mScannerSwitch.setChecked(false);
-                }
-            }
-        });
+
         return true;
     }
 
-    public void onMarkLocation(View v) {
-        AlertDialog.Builder editalert = new AlertDialog.Builder(this);
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch (item.getItemId()) {
+            case R.id.clearLog:
+                AlertDialog.Builder alert = new AlertDialog.Builder(this);
+                alert.setMessage("Clear Log");
+                alert.setPositiveButton("OK", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialogInterface, int i) {
+                        if (mBound) {
+                            mService.clearLog();
+                        }
+                    }
+                });
+                alert.setNegativeButton("Cancel", null);
+                alert.show();
+                break;
+        }
 
-        editalert.setTitle("Mark Location");
-
-
-        final EditText input = (EditText) getLayoutInflater().inflate(R.layout.edittext, null);
-        mMarkLabel = "Mark " + (mScanCount + 1);
-        input.setText(mMarkLabel);
-        input.setSelection(0, mMarkLabel.length());
-        editalert.setView(input);
-
-        editalert.setPositiveButton("Text only", new DialogInterface.OnClickListener() {
-            public void onClick(DialogInterface dialog, int whichButton) {
-                mMarkLabel = input.getText().toString();
-                Intent broadcastIntent = new Intent();
-                broadcastIntent.setAction(MyService.ACTION_LABEL);
-                broadcastIntent.putExtra(MyService.EXTRA_LABEL, mMarkLabel);
-                sendBroadcast(broadcastIntent);
-            }
-        });
-
-        editalert.setNegativeButton("Add Pic", new DialogInterface.OnClickListener() {
-            public void onClick(DialogInterface dialog, int whichButton) {
-                mMarkLabel = input.getText().toString();
-                Intent cameraIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-                startActivityForResult(cameraIntent, REQUEST_IMAGE);
-            }
-        });
-
-
-        editalert.show();
+        return true;
     }
 
-    public void onViewLog(View v) {
-        Intent broadcastIntent = new Intent();
-        broadcastIntent.setAction(MyService.ACTION_VIEW_LOG);
-        sendBroadcast(broadcastIntent);
-    }
-
-    public void onClearLog(MenuItem item) {
-        Intent broadcastIntent = new Intent();
-        broadcastIntent.setAction(MyService.ACTION_CLEAR_LOG);
-        sendBroadcast(broadcastIntent);
+    public void onButtonClick(View v) {
+        switch (v.getId()) {
+            case R.id.markLocation:
+                AlertDialog.Builder alert = new AlertDialog.Builder(this);
+                mLabel = "Mark " + (mScanCount + 1);
+                final EditText input = (EditText) getLayoutInflater().inflate(R.layout.edittext, null);
+                input.setText(mLabel);
+                input.setSelection(0, mLabel.length());
+                alert.setView(input);
+                alert.setPositiveButton("Text only", new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int whichButton) {
+                        mLabel = input.getText().toString();
+                        if (mBound) {
+                            mService.setLabel(mLabel);
+                        }
+                    }
+                });
+                alert.setNegativeButton("Add Pic", new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int whichButton) {
+                        mLabel = input.getText().toString();
+                        if (mBound) {
+                            mService.setLabel(mLabel);
+                        }
+                        Intent cameraIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+                        startActivityForResult(cameraIntent, REQUEST_IMAGE);
+                    }
+                });
+                alert.show();
+                break;
+            case R.id.viewLog:
+                if (mBound) {
+                    Intent i = new Intent(Intent.ACTION_VIEW);
+                    i.setDataAndType(Uri.fromFile(mService.getLogFile()), "text/csv");
+                    i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    startActivity(i);
+                }
+                break;
+            case R.id.viewPics:
+//                if (mBound) {
+//                    mService.viewPhotos();
+//                }
+                if (mBound) {
+                    Intent i = new Intent(Intent.ACTION_GET_CONTENT);
+                    i.setDataAndType(Uri.fromFile(mService.getBaseDir()), "file/*");
+                    i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    startActivity(i);
+                }
+                break;
+        }
     }
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         if (requestCode == REQUEST_IMAGE && resultCode == Activity.RESULT_OK) {
-            Bitmap photo = (Bitmap) data.getExtras().get("data");
-            Intent broadcastIntent = new Intent();
-            broadcastIntent.setAction(MyService.ACTION_PHOTO);
-            broadcastIntent.putExtra(MyService.EXTRA_PHOTO, photo);
-            broadcastIntent.putExtra(MyService.EXTRA_LABEL, mMarkLabel);
-            sendBroadcast(broadcastIntent);
+            mPhoto = (Bitmap) data.getExtras().get("data");
+        }
+    }
+
+    private void persist() {
+        startService(new Intent(MainActivity.this, MyService.class));
+    }
+
+    private void unpersist() {
+        stopService(new Intent(MainActivity.this, MyService.class));
+        doBindService();
+        mScannerSwitch.setChecked(false);
+    }
+
+    private void doBindService() {
+        bindService(new Intent(this, MyService.class), mConnection, Context.BIND_AUTO_CREATE);
+    }
+
+    private void doUnbindService() {
+        if (mBound) {
+            unbindService(mConnection);
+            mBound = false;
         }
     }
 }
