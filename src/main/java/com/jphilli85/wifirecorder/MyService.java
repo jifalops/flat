@@ -24,6 +24,7 @@ import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
@@ -76,6 +77,50 @@ public class MyService extends Service {
     private Listener mListener = DUMMY_LISTENER;
     private MediaScannerConnection mMediaScannerConnection;
     private MediaScannerConnection.MediaScannerConnectionClient mMediaScannerClient;
+    private List<DistanceInfo> mDistances, mPrevDistances;
+
+    public static class DistanceInfo {
+        private static final double factor = 0.92;
+        public final String bssid, ssid;
+        private double level, prevLevel;
+        private volatile double dist;
+        int freq;
+        private DistanceInfo(ScanResult sr) {
+            bssid = sr.BSSID;
+            ssid = sr.SSID;
+            level = sr.level;
+            freq = sr.frequency;
+            update(level, freq);
+        }
+
+        private void update(double scanLevel, int scanFreq) {
+            freq = scanFreq;
+            double temp = (factor * prevLevel + (1.0-factor) * scanLevel);
+            prevLevel = level;
+            level = temp;
+
+            final double a = -0.07363796;
+            final double b = -2.52218124;
+
+            //final double a = -0.07192023;
+            //final double b = -2.40415772;
+
+            final double C = 299792458.0;
+            final double ROUTER_HEIGHT = 2.5;
+
+            double n = Math.max(2, a*level +b);
+            double wavelength = C/(freq * 1E6);
+            double FSPL = 20.0 * Math.log10(4.0 * Math.PI / wavelength);
+            double directDistanceM = Math.pow(10, (-level - FSPL)/(10.0 * n));
+
+            directDistanceM = Math.max(directDistanceM, ROUTER_HEIGHT);
+
+            dist = Math.sqrt(Math.pow(directDistanceM,2) - Math.pow(ROUTER_HEIGHT, 2));
+        }
+        public double getDistance() {
+            return dist;
+        }
+    }
 
     public class LocalBinder extends Binder {
         MyService getService() {
@@ -102,13 +147,29 @@ public class MyService extends Service {
             Intent intent = (Intent) msg.obj;
 
             if (intent.getAction().equals(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION)) {
-
                 ++mScanCount;
                 List<ScanResult> results = mWifiManager.getScanResults ();
+                boolean exists;
                 StringBuilder sb = new StringBuilder();
+                mPrevDistances = mDistances;
+                mDistances = new ArrayList<DistanceInfo>();
                 for (ScanResult sr : results) {
                     sb.append(mScanCount + "," + SDF.format(new Date()) + "," + sr.BSSID + ","
                             + sr.SSID + "," + sr.level + "," + mLabel + "\n");
+
+                    exists = false;
+                    for (DistanceInfo di : mPrevDistances) {
+                        if (di.bssid.equals(sr.BSSID)) {
+                            di.update(sr.level, sr.frequency);
+                            mDistances.add(di);
+                            exists = true;
+                            break;
+                        }
+                    }
+                    if (!exists) {
+                        mDistances.add(new DistanceInfo(sr));
+
+                    }
                 }
 
 
@@ -164,6 +225,8 @@ public class MyService extends Service {
 
         mWifiManager = (WifiManager) getSystemService(Context.WIFI_SERVICE);
 
+        mDistances = mPrevDistances = new ArrayList<DistanceInfo>();
+
         mBaseDir = getExternalFilesDir(null);
         mLogFile = new File(mBaseDir, LOG_FILE);
 
@@ -212,7 +275,7 @@ public class MyService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        Toast.makeText(this, "Service Starting", Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, "Service Persisting", Toast.LENGTH_SHORT).show();
 
         mIsPersistent = true;
 
@@ -304,5 +367,9 @@ public class MyService extends Service {
 //        mMediaScannerConnection.connect();
 
 
+    }
+
+    public List<DistanceInfo> getDistances() {
+        return mDistances;
     }
 }

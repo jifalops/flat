@@ -20,6 +20,9 @@ import android.widget.CompoundButton;
 import android.widget.EditText;
 import android.widget.Switch;
 import android.widget.TextView;
+import android.widget.Toast;
+
+import java.util.List;
 
 public class MainActivity extends Activity {
     private static final String LOG_TAG = MainActivity.class.getSimpleName(); // Android's log
@@ -35,6 +38,7 @@ public class MainActivity extends Activity {
     private MyService mService;
     private ServiceConnection mConnection;
     private Bitmap mPhoto;
+    private TextView mDistancesView;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -49,6 +53,7 @@ public class MainActivity extends Activity {
 
         mScanCountView = (TextView) findViewById(R.id.scanCount);
         mScannerSwitch = (Switch) findViewById(R.id.scannerSwitch);
+        mDistancesView = (TextView) findViewById(R.id.distances);
 
         mConnection = new ServiceConnection() {
             @Override
@@ -66,6 +71,21 @@ public class MainActivity extends Activity {
                                 mScanCountView.setText(String.valueOf(mScanCount));
                             }
                         });
+                        if (mBound) {
+                            List<MyService.DistanceInfo> distances = mService.getDistances();
+                            final StringBuilder sb = new StringBuilder();
+                            for (MyService.DistanceInfo di : distances) {
+                                sb.append(di.bssid).append(", ")
+                                    .append(di.getDistance()).append(", ")
+                                    .append(di.ssid).append("\n");
+                            }
+                            mDistancesView.post(new Runnable() {
+                                @Override
+                                public void run() {
+                                    mDistancesView.setText(sb.toString());
+                                }
+                            });
+                        }
                     }
                 });
 
@@ -216,6 +236,7 @@ public class MainActivity extends Activity {
     }
 
     private void unpersist() {
+        Toast.makeText(this, "Service unpersisting", Toast.LENGTH_SHORT);
         stopService(new Intent(MainActivity.this, MyService.class));
         doBindService();
         mScannerSwitch.setChecked(false);
