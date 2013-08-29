@@ -16,7 +16,6 @@ import android.os.Message;
  * Created by jake on 8/14/13.
  */
 public abstract class PersistentIntentService extends Service {
-    private static final String LOG_TAG = PersistentIntentService.class.getSimpleName();
 
     protected Looper mServiceLooper;
     private ServiceHandler mServiceHandler;

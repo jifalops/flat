@@ -7,8 +7,9 @@ import android.net.wifi.p2p.WifiP2pDevice;
 import android.net.wifi.p2p.WifiP2pDeviceList;
 import android.net.wifi.p2p.WifiP2pManager;
 import android.os.AsyncTask;
-import android.util.Log;
 import android.widget.Toast;
+
+import com.jphilli85.wifirecorder.util.Jog;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -19,7 +20,7 @@ import java.net.Socket;
  * Created by Jake on 8/28/13.
  */
 public final class WifiDirectService extends PersistentIntentService {
-    private static final String LOG_TAG = WifiDirectService.class.getSimpleName();
+
     public static final int SERVER_PORT = 8888;
     public static final int BUFFER_SIZE = 1024;
 
@@ -72,12 +73,12 @@ public final class WifiDirectService extends PersistentIntentService {
         mDiscoveryListener = new WifiP2pManager.ActionListener() {
             @Override
             public void onSuccess() {
-                Log.d(LOG_TAG, "discovery process succeeded");
+                Jog.v("discovery process succeeded", WifiDirectService.this);
             }
 
             @Override
             public void onFailure(int reasonCode) {
-                Log.e(LOG_TAG, "discovery process failed: " + reasonCode);
+                Jog.d("discovery process failed: " + reasonCode, WifiDirectService.this);
             }
         };
 
@@ -86,9 +87,7 @@ public final class WifiDirectService extends PersistentIntentService {
             @Override
             public void onPeersAvailable(WifiP2pDeviceList wifiP2pDeviceList) {
                 for (WifiP2pDevice device : wifiP2pDeviceList.getDeviceList()) {
-                    Log.d(LOG_TAG,
-                            "addr: " + device.deviceAddress +
-                            "\nname: " + device.deviceName);
+                    Jog.v(device.deviceAddress + ": " + device.deviceName);
                     WifiP2pConfig config = new WifiP2pConfig();
                     config.deviceAddress = device.deviceAddress;
                     mManager.connect(mChannel, config, mConnectListener);
@@ -106,7 +105,7 @@ public final class WifiDirectService extends PersistentIntentService {
 
             @Override
             public void onFailure(int reason) {
-                Log.e(LOG_TAG, "connection failed: " + reason);
+                Jog.d("connection failed: " + reason, WifiDirectService.this);
             }
         };
     }
@@ -130,16 +129,16 @@ public final class WifiDirectService extends PersistentIntentService {
                 InputStream inputstream = client.getInputStream();
                 inputstream.read(buffer);
 
-                Log.d(LOG_TAG, "Buffer contents:\n" + buffer.toString());
+                Jog.v("Buffer contents:\n" + buffer.toString());
 
             } catch (IOException e) {
-                Log.e(LOG_TAG, "Failed during communication", e);
+                Jog.d("Failed during communication", e);
             } finally {
                 if (serverSocket != null) {
                     try {
                         serverSocket.close();
                     } catch (IOException e) {
-                        Log.e(LOG_TAG, "Failed closing server socket", e);
+                        Jog.d("Failed closing server socket", e);
                     }
                 }
             }
@@ -167,16 +166,16 @@ public final class WifiDirectService extends PersistentIntentService {
                 InputStream inputstream = client.getInputStream();
                 inputstream.read(buffer);
 // TODO now what?
-                Log.d(LOG_TAG, "Buffer contents:\n" + buffer.toString());
+                Jog.v("Buffer contents:\n" + buffer.toString());
 
             } catch (IOException e) {
-                Log.e(LOG_TAG, "Failed during communication", e);
+                Jog.d("Failed during communication", e);
             } finally {
                 if (serverSocket != null) {
                     try {
                         serverSocket.close();
                     } catch (IOException e) {
-                        Log.e(LOG_TAG, "Failed closing server socket", e);
+                        Jog.d("Failed closing server socket", e);
                     }
                 }
             }
