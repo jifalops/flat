@@ -24,6 +24,8 @@ public final class BluetoothService extends PersistentIntentService {
     public static final int REQUEST_ENABLE_BT = 1;
     public static final int REQUEST_DISCOVERABLE = 2;
 
+    public static final int BUFFER_SIZE = 1024;
+
     private static final String SERVICE_NAME = "Essential Localization Bluetooth Service";
     private static final UUID SERVICE_UUID = UUID.fromString(BluetoothService.class.getName());
 
@@ -223,14 +225,16 @@ public final class BluetoothService extends PersistentIntentService {
             try {
                 tmpIn = socket.getInputStream();
                 tmpOut = socket.getOutputStream();
-            } catch (IOException e) { }
+            } catch (IOException e) {
+                Jog.d("BT error getting I/O streams.", e, BluetoothService.this);
+            }
 
             mmInStream = tmpIn;
             mmOutStream = tmpOut;
         }
 
         public void run() {
-            byte[] buffer = new byte[1024];  // buffer store for the stream
+            byte[] buffer = new byte[BUFFER_SIZE];  // buffer store for the stream
             int bytes; // bytes returned from read()
 
             // Keep listening to the InputStream until an exception occurs
@@ -239,26 +243,29 @@ public final class BluetoothService extends PersistentIntentService {
                     // Read from the InputStream
                     bytes = mmInStream.read(buffer);
                     // Send the obtained bytes to the UI activity
-                    mHandler.obtainMessage(MESSAGE_READ, bytes, -1, buffer)
-                            .sendToTarget();
+//                    mHandler.obtainMessage(MESSAGE_READ, bytes, -1, buffer)
+//                            .sendToTarget();
                 } catch (IOException e) {
+                    Jog.d("BT error reading input stream.", e, BluetoothService.this);
                     break;
                 }
             }
         }
 
-        /* Call this from the main activity to send data to the remote device */
         public void write(byte[] bytes) {
             try {
                 mmOutStream.write(bytes);
-            } catch (IOException e) { }
+            } catch (IOException e) {
+                Jog.d("BT error writing to output stream.", e, BluetoothService.this);
+            }
         }
 
-        /* Call this from the main activity to shutdown the connection */
-        public void cancel() {
+        public void close() {
             try {
                 mmSocket.close();
-            } catch (IOException e) { }
+            } catch (IOException e) {
+                Jog.d("BT error closing connection socket.", e, BluetoothService.this);
+            }
         }
     }
 }
