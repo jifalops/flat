@@ -38,5 +38,5 @@ Thumbs.db
 ~*
 
 # Private stuff
-.private
-Private.java
+internal/
+Internal.java
