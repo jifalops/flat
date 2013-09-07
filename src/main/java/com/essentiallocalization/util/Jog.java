@@ -1,4 +1,4 @@
-package com.jphilli85.wifirecorder.util;
+package com.essentiallocalization.util;
 
 import android.content.Context;
 import android.util.Log;
@@ -8,10 +8,10 @@ import android.widget.Toast;
  * Created by Jake on 8/29/13.
  */
 public class Jog {
-    private static final String
-            TAG = Jog.class.getName(),
-            LOG_PROPERY = "log.tag." + Jog.class.getPackage().getName() + ".Jog.Log",
-            TOAST_PROPERY = "log.tag." + Jog.class.getPackage().getName() + "Jog.Toast";
+    private static String
+            sTag = Jog.class.getPackage().getName(),
+            sLogProperty = "log.tag." + sTag + ".Jog.Log",
+            sToastProperty = "log.tag." + sTag + "Jog.Toast";
 
     public static final int 
             ASSERT  = Log.ASSERT,
@@ -20,6 +20,8 @@ public class Jog {
             INFO    = Log.INFO,
             DEBUG   = Log.DEBUG,
             VERBOSE = Log.VERBOSE;
+
+
 
     private Jog() {}
 
@@ -66,37 +68,43 @@ public class Jog {
         return 0;
     }
 
+    public static void setTag(String tag) {
+        sTag = tag;
+        sLogProperty = "log.tag." + sTag + ".Jog.Log";
+        sToastProperty = "log.tag." + sTag + "Jog.Toast";
+    }
+
     public static void setLogLevel(int level) {
-        System.setProperty(LOG_PROPERY, String.valueOf(level));
+        System.setProperty(sLogProperty, String.valueOf(level));
     }
 
     public static int getLogLevel() {
-        String prop = System.getProperty(LOG_PROPERY);
+        String prop = System.getProperty(sLogProperty);
         int level = prop == null ? -1 : Integer.valueOf(prop);
         if (level < VERBOSE) {
-            Log.wtf(TAG, "got invalid log level: " + level);
+            Log.wtf(sTag, "Jog got invalid log level: " + level);
         }
         return level;
     }
 
     public static boolean isLoggable(int level) {
-        boolean loggable = Log.isLoggable(LOG_PROPERY, level);
+        boolean loggable = Log.isLoggable(sLogProperty, level);
         boolean check = level >= getLogLevel();
         if (check != loggable) {
-            Log.wtf(TAG, "Jog.isLoggable() does not agree with Log.isLoggable()");
+            Log.wtf(sTag, "Jog.isLoggable() does not agree with Log.isLoggable()");
         }
         return loggable;
     }
 
     public static void setToastLevel(int level) {
-        System.setProperty(TOAST_PROPERY, String.valueOf(level));
+        System.setProperty(sToastProperty, String.valueOf(level));
     }
 
     public static int getToastLevel() {
-        String prop = System.getProperty(TOAST_PROPERY);
+        String prop = System.getProperty(sToastProperty);
         int level = prop == null ? -1 : Integer.valueOf(prop);
         if (level < VERBOSE) {
-            Log.wtf(TAG, "got invalid toast level: " + level);
+            Log.wtf(sTag, "Jog got invalid toast level: " + level);
         }
         return level;
     }

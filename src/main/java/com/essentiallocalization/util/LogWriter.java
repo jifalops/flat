@@ -1,4 +1,4 @@
-package com.jphilli85.wifirecorder.util;
+package com.essentiallocalization.util;
 
 import android.util.Log;
 
@@ -10,7 +10,7 @@ import java.io.IOException;
  * Created by Jake on 8/28/13.
  */
 public final class LogWriter {
-    private static final String LOG_TAG = LogWriter.class.getSimpleName();
+    private static final String TAG = LogWriter.class.getSimpleName();
 
     private final File mFile;
     private FileWriter mWriter;
@@ -22,15 +22,16 @@ public final class LogWriter {
         try {
             mWriter = new FileWriter(mFile, true);
         } catch (IOException e) {
-            Log.e(LOG_TAG, "Error initializing LogWriter.", e);
+            Log.e(TAG, "Error initializing LogWriter.", e);
         }
     }
 
     public void append(CharSequence csq) {
         try {
             mWriter.append(csq);
+            mWriter.flush();
         } catch (IOException e) {
-            Log.e(LOG_TAG, "Unable to write to log file.", e);
+            Log.e(TAG, "Unable to write to log file.", e);
         }
     }
 
@@ -41,7 +42,7 @@ public final class LogWriter {
             mWriter.flush();
             mWriter.close();
         } catch (IOException e) {
-            Log.e(LOG_TAG, "Unable to close log file.", e);
+            Log.e(TAG, "Unable to cancel log file.", e);
         }
     }
 
@@ -52,7 +53,7 @@ public final class LogWriter {
             mWriter.close();
             mWriter = new FileWriter(mFile, true);
         } catch (IOException e) {
-            Log.e(LOG_TAG, "Error clearing Log.", e);
+            Log.e(TAG, "Error clearing Log.", e);
         }
     }
 
@@ -60,7 +61,7 @@ public final class LogWriter {
     protected void finalize() throws Throwable {
         if (!mClosed) {
             close();
-            Log.e(LOG_TAG, "The file was never closed!");
+            Log.wtf(TAG, "The file was never closed!");
         }
         super.finalize();
     }

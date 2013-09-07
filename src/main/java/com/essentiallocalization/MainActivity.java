@@ -1,4 +1,4 @@
-package com.jphilli85.wifirecorder;
+package com.essentiallocalization;
 
 import android.app.ActionBar;
 import android.app.Activity;
@@ -25,8 +25,6 @@ import android.widget.Toast;
 import java.util.List;
 
 public class MainActivity extends Activity {
-    private static final String LOG_TAG = MainActivity.class.getSimpleName(); // Android's log
-
     private static final int REQUEST_IMAGE = 0;
 
     private String mLabel;

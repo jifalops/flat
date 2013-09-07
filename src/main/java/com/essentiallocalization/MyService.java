@@ -1,4 +1,4 @@
-package com.jphilli85.wifirecorder;
+package com.essentiallocalization;
 
 import android.app.Service;
 import android.content.BroadcastReceiver;
@@ -306,7 +306,7 @@ public class MyService extends Service {
             mLogWriter.flush();
             mLogWriter.close();
         } catch (IOException e) {
-            Log.e(LOG_TAG, "Unable to close log file.", e);
+            Log.e(LOG_TAG, "Unable to cancel log file.", e);
         }
         Toast.makeText(this, "Service Destroyed", Toast.LENGTH_SHORT).show();
     }

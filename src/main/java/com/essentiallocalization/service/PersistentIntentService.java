@@ -1,4 +1,4 @@
-package com.jphilli85.wifirecorder.service;
+package com.essentiallocalization.service;
 
 import android.app.Service;
 import android.content.BroadcastReceiver;
@@ -19,7 +19,7 @@ public abstract class PersistentIntentService extends Service {
 
     protected Looper mServiceLooper;
     private ServiceHandler mServiceHandler;
-    private final IBinder mBinder = new PersistentIntentServiceBinder();
+    private final IBinder mBinder = new LocalBinder();
     private final IntentReceiver mReceiver = new IntentReceiver();
     protected IntentFilter mFilter;
 
@@ -47,8 +47,8 @@ public abstract class PersistentIntentService extends Service {
     }
 
     // Activities use this to get an instance of the service.
-    public final class PersistentIntentServiceBinder extends Binder {
-        PersistentIntentService getService() {
+    public final class LocalBinder extends Binder {
+        public PersistentIntentService getService() {
             return PersistentIntentService.this;
         }
     }

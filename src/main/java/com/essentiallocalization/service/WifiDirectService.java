@@ -1,4 +1,4 @@
-package com.jphilli85.wifirecorder.service;
+package com.essentiallocalization.service;
 
 import android.content.Context;
 import android.content.Intent;
@@ -9,7 +9,7 @@ import android.net.wifi.p2p.WifiP2pManager;
 import android.os.AsyncTask;
 import android.widget.Toast;
 
-import com.jphilli85.wifirecorder.util.Jog;
+import com.essentiallocalization.util.Jog;
 
 import java.io.IOException;
 import java.io.InputStream;

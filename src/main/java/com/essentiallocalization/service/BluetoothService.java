@@ -1,6 +1,5 @@
-package com.jphilli85.wifirecorder.service;
+package com.essentiallocalization.service;
 
-import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothClass;
 import android.bluetooth.BluetoothDevice;
@@ -8,7 +7,8 @@ import android.bluetooth.BluetoothServerSocket;
 import android.bluetooth.BluetoothSocket;
 import android.content.Intent;
 
-import com.jphilli85.wifirecorder.util.Jog;
+import com.essentiallocalization.util.Installation;
+import com.essentiallocalization.util.Jog;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -21,20 +21,23 @@ import java.util.UUID;
  * Created by Jake on 8/29/13.
  */
 public final class BluetoothService extends PersistentIntentService {
-    public static final int REQUEST_ENABLE_BT = 1;
-    public static final int REQUEST_DISCOVERABLE = 2;
-
     public static final int BUFFER_SIZE = 1024;
-
-    private static final String SERVICE_NAME = "Essential Localization Bluetooth Service";
-    private static final UUID SERVICE_UUID = UUID.fromString(BluetoothService.class.getName());
+    private static final String SERVICE_NAME = "EssentialLocalizationBluetoothService";
 
     private BluetoothAdapter mAdapter;
     private List<BluetoothDevice> mDiscoveredDevices;
 
+    private AcceptThread mAcceptThread;
+    private ConnectThread mConnectThread;
+    private ConnectedThread mConnectedThread;
+
+    private UUID mUuid;
+
     @Override
     public void onCreate() {
         super.onCreate();
+
+        mUuid = Installation.uuid(this);
 
         mDiscoveredDevices = new ArrayList<BluetoothDevice>();
         mAdapter = BluetoothAdapter.getDefaultAdapter();
@@ -53,6 +56,19 @@ public final class BluetoothService extends PersistentIntentService {
         mFilter.addAction(BluetoothAdapter.ACTION_SCAN_MODE_CHANGED);
         mFilter.addAction(BluetoothAdapter.ACTION_STATE_CHANGED);
         mFilter.addAction(BluetoothDevice.ACTION_FOUND);
+
+
+        // Cancel any thread attempting to make a connection
+        if (mConnectThread != null) {mConnectThread.close(); mConnectThread = null;}
+
+        // Cancel any thread currently running a connection
+        if (mConnectedThread != null) {mConnectedThread.close(); mConnectedThread = null;}
+
+        if (mAcceptThread == null) {
+            mAcceptThread = new AcceptThread();
+            mAcceptThread.start();
+        }
+
 
     }
 
@@ -81,6 +97,7 @@ public final class BluetoothService extends PersistentIntentService {
         } else if (action.equals(BluetoothDevice.ACTION_FOUND)) {
 
             BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
+
             BluetoothClass btClass = intent.getParcelableExtra(BluetoothDevice.EXTRA_CLASS);
             mDiscoveredDevices.add(device);
 
@@ -99,26 +116,14 @@ public final class BluetoothService extends PersistentIntentService {
         }
     }
 
-    public void enableBluetooth(Activity activity) {
-        if (!mAdapter.isEnabled()) {
-            activity.startActivityForResult(new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE), REQUEST_ENABLE_BT);
-        }
-    }
-
-    /** Will enable Bluetooth if it is not already enabled. */
-    public void enableDiscoverability(Activity activity) {
-        if (!mAdapter.isDiscovering()) {
-            mDiscoveredDevices.clear(); // TODO this should be called in onActivityResult()
-            activity.startActivityForResult(new Intent(BluetoothAdapter.ACTION_REQUEST_DISCOVERABLE), REQUEST_DISCOVERABLE);
-        }
-    }
-
-    public boolean startDiscovery() {
-        return mAdapter.startDiscovery();
-    }
-
     private void manageConnectedSocket(BluetoothSocket socket) {
-//        socket. TODO fffffffffffffffffffffffff
+        // Cancel the thread that completed the connection
+        if (mConnectThread != null) {mConnectThread.close(); mConnectThread = null;}
+
+        // Start the thread to manage the connection and perform transmissions
+        mConnectedThread = new ConnectedThread(socket);
+        mConnectedThread.start();
+        mConnectedThread.write("Test data".getBytes());
     }
 
     private class AcceptThread extends Thread {
@@ -127,7 +132,7 @@ public final class BluetoothService extends PersistentIntentService {
         public AcceptThread() {
             BluetoothServerSocket tmp = null;
             try {
-                tmp = mAdapter.listenUsingRfcommWithServiceRecord(SERVICE_NAME, SERVICE_UUID);
+                tmp = mAdapter.listenUsingRfcommWithServiceRecord(SERVICE_NAME, mUuid);
             } catch (IOException e) {
                 Jog.d("BT error getting server socket", e, BluetoothService.this);
             }
@@ -151,8 +156,8 @@ public final class BluetoothService extends PersistentIntentService {
                     // Do work to manage the connection (in a separate thread)
                     manageConnectedSocket(socket);
 
-                    // Don't close the server = multiple connections can be accepted (diff channels)?
-                    //close();
+                    // Don't cancel the server = multiple connections can be accepted (diff channels)?
+                    //cancel();
                     //break;
                 }
             }
@@ -162,7 +167,7 @@ public final class BluetoothService extends PersistentIntentService {
             try {
                 mmServerSocket.close();
             } catch (IOException e) {
-                Jog.d("BT unable to close server socket.", e, BluetoothService.this);
+                Jog.d("BT unable to cancel server socket.", e, BluetoothService.this);
             }
         }
     }
@@ -175,7 +180,7 @@ public final class BluetoothService extends PersistentIntentService {
             BluetoothSocket tmp = null;
             mmDevice = device;
             try {
-                tmp = device.createRfcommSocketToServiceRecord(SERVICE_UUID);
+                tmp = device.createRfcommSocketToServiceRecord(mUuid);
             } catch (IOException e) {
                 Jog.d("BT error getting client socket", e, BluetoothService.this);
             }
@@ -196,6 +201,10 @@ public final class BluetoothService extends PersistentIntentService {
                 return;
             }
 
+            synchronized (BluetoothService.this) {
+                mConnectThread = null;
+            }
+
             // Do work to manage the connection (in a separate thread)
             manageConnectedSocket(mmSocket);
         }
@@ -204,7 +213,7 @@ public final class BluetoothService extends PersistentIntentService {
             try {
                 mmSocket.close();
             } catch (IOException e) {
-                Jog.d("BT unable to close client socket.", e, BluetoothService.this);
+                Jog.d("BT unable to cancel client socket.", e, BluetoothService.this);
             }
         }
     }
@@ -242,11 +251,9 @@ public final class BluetoothService extends PersistentIntentService {
                 try {
                     // Read from the InputStream
                     bytes = mmInStream.read(buffer);
-                    // Send the obtained bytes to the UI activity
-//                    mHandler.obtainMessage(MESSAGE_READ, bytes, -1, buffer)
-//                            .sendToTarget();
+                    Jog.i("Received " + bytes + " bytes: " + new String(buffer), BluetoothService.this);
                 } catch (IOException e) {
-                    Jog.d("BT error reading input stream.", e, BluetoothService.this);
+                    Jog.d("BT error reading input stream (disconnected).", e, BluetoothService.this);
                     break;
                 }
             }
