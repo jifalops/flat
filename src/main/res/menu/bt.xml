@@ -1,0 +1,12 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:id="@+id/bt_test"
+        android:title="@string/action_bt_test"
+        android:showAsAction="ifRoom" />
+    <item android:id="@+id/bt_set_max"
+        android:title="@string/action_bt_set_max"
+        android:showAsAction="ifRoom" />
+    <item android:id="@+id/action_settings"
+        android:title="@string/action_settings"
+        android:orderInCategory="100"
+        android:showAsAction="never" />
+</menu>

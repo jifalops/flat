@@ -22,6 +22,7 @@ public abstract class PersistentIntentService extends Service {
     private final IBinder mBinder = new LocalBinder();
     private final IntentReceiver mReceiver = new IntentReceiver();
     protected IntentFilter mFilter;
+    private boolean mPersist;
 
     protected abstract void onHandleIntent(Intent intent);
 
@@ -36,8 +37,19 @@ public abstract class PersistentIntentService extends Service {
         mFilter = new IntentFilter();
     }
 
+    public boolean isPersistent() {
+        return mPersist;
+    }
+
+    @Override
+    public boolean stopService(Intent name) {
+        mPersist = false;
+        return super.stopService(name);
+    }
+
     @Override
     public final int onStartCommand(Intent intent, int flags, int startId) {
+        mPersist = true;
         return getStartType();
     }
 
@@ -89,5 +101,11 @@ public abstract class PersistentIntentService extends Service {
 
     public final void unregisterReceiver() {
         unregisterReceiver(mReceiver);
+    }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        mPersist = false;
     }
 }

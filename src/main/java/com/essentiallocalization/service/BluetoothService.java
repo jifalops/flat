@@ -1,219 +1,369 @@
 package com.essentiallocalization.service;
 
 import android.bluetooth.BluetoothAdapter;
-import android.bluetooth.BluetoothClass;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothServerSocket;
 import android.bluetooth.BluetoothSocket;
 import android.content.Intent;
+import android.os.Handler;
+import android.util.Log;
 
-import com.essentiallocalization.util.Installation;
-import com.essentiallocalization.util.Jog;
+import com.essentiallocalization.BluetoothFragment;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 /**
- * Created by Jake on 8/29/13.
+ * Created by Jake on 9/2/13.
  */
-public final class BluetoothService extends PersistentIntentService {
+public class BluetoothService extends PersistentIntentService {
     public static final int BUFFER_SIZE = 1024;
     private static final String SERVICE_NAME = "EssentialLocalizationBluetoothService";
 
-    private BluetoothAdapter mAdapter;
-    private List<BluetoothDevice> mDiscoveredDevices;
+    // Current BT piconets are at most 7 peers
+    private static final String[] UUIDS = {
+            "0aa67214-5217-4ded-b656-5cccff9a237c",
+            "709bd128-8f45-45d6-aea7-cb1fb7303ea5",
+            "4c91a1a9-fa9f-4338-8b5f-1d5f48d6b20e",
+            "20d47c6a-eeda-45a4-98a6-7d4f371f1a34",
+            "ffdc4e45-d4c7-4789-81c7-b4f6e03ca865",
+            "1052c5cf-67db-4e5c-80e3-de3a89bbaf96",
+            "30cb5e95-c22a-41d1-b609-dedf29e866cf"
+    };
+    public static final int MAX_CONNECTIONS = UUIDS.length;
 
-    private AcceptThread mAcceptThread;
-    private ConnectThread mConnectThread;
-    private ConnectedThread mConnectedThread;
+    private final BluetoothAdapter mAdapter = BluetoothAdapter.getDefaultAdapter();
+    private final String mName = mAdapter.getName();
+    private final String[] mConnectedDevices = new String[MAX_CONNECTIONS];
+    private final String TAG = "BluetoothService " + mName;
 
-    private UUID mUuid;
+    private AcceptThread[] mAcceptThreads;
+    private ConnectThread[] mConnectThreads;
+    private ConnectedThread[] mConnectedThreads;
+    private Handler mHandler = new Handler();
+    private int[] mState;
+    private int mMaxConnections = MAX_CONNECTIONS;
+    private boolean mRunning;
+
+    // Constants that indicate the current connection state
+    public static final int STATE_NONE = 0;       // we're doing nothing
+    public static final int STATE_LISTEN = 1;     // now listening for incoming connections
+    public static final int STATE_CONNECTING = 2; // now initiating an outgoing connection
+    public static final int STATE_CONNECTED = 3;  // now connected to a remote device
+
+    public void setHandler(Handler handler) {
+        synchronized (mHandler) {
+            mHandler = handler;
+        }
+    }
 
     @Override
     public void onCreate() {
         super.onCreate();
+        Log.v(TAG, "onCreate()");
 
-        mUuid = Installation.uuid(this);
+        mAcceptThreads = new AcceptThread[MAX_CONNECTIONS];
+        mConnectThreads = new ConnectThread[MAX_CONNECTIONS];
+        mConnectedThreads = new ConnectedThread[MAX_CONNECTIONS];
 
-        mDiscoveredDevices = new ArrayList<BluetoothDevice>();
-        mAdapter = BluetoothAdapter.getDefaultAdapter();
-        if (mAdapter == null) {
-            Jog.a("Device does not support Bluetooth", this, true);
+        mState = new int[MAX_CONNECTIONS];
+        for (int i = 0; i < MAX_CONNECTIONS; ++i) {
+            setState(i, STATE_NONE);
         }
-
-//        mFilter.addAction(BluetoothAdapter.ACTION_CONNECTION_STATE_CHANGED);
-//        mFilter.addAction(BluetoothAdapter.ACTION_DISCOVERY_FINISHED);
-//        mFilter.addAction(BluetoothAdapter.ACTION_DISCOVERY_STARTED);
-//        mFilter.addAction(BluetoothAdapter.ACTION_LOCAL_NAME_CHANGED);
-//        mFilter.addAction(BluetoothAdapter.ACTION_REQUEST_DISCOVERABLE);
-//        mFilter.addAction(BluetoothAdapter.ACTION_REQUEST_ENABLE);
-
-
-        mFilter.addAction(BluetoothAdapter.ACTION_SCAN_MODE_CHANGED);
-        mFilter.addAction(BluetoothAdapter.ACTION_STATE_CHANGED);
-        mFilter.addAction(BluetoothDevice.ACTION_FOUND);
-
-
-        // Cancel any thread attempting to make a connection
-        if (mConnectThread != null) {mConnectThread.close(); mConnectThread = null;}
-
-        // Cancel any thread currently running a connection
-        if (mConnectedThread != null) {mConnectedThread.close(); mConnectedThread = null;}
-
-        if (mAcceptThread == null) {
-            mAcceptThread = new AcceptThread();
-            mAcceptThread.start();
-        }
-
-
     }
 
     @Override
     protected void onHandleIntent(Intent intent) {
-        String action = intent.getAction();
-        if (action.equals(BluetoothAdapter.ACTION_STATE_CHANGED)) {
-
-            int state = intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, -1);
-            int prevState = intent.getIntExtra(BluetoothAdapter.EXTRA_PREVIOUS_STATE, -1);
-
-            String s;
-            switch (state) {
-                case BluetoothAdapter.STATE_CONNECTED:      s = "connected";        break;
-                case BluetoothAdapter.STATE_CONNECTING:     s = "connecting";       break;
-                case BluetoothAdapter.STATE_DISCONNECTED:   s = "disconnected";     break;
-                case BluetoothAdapter.STATE_DISCONNECTING:  s = "disconnecting";    break;
-                case BluetoothAdapter.STATE_OFF:            s = "off";              break;
-                case BluetoothAdapter.STATE_ON:             s = "on";               break;
-                case BluetoothAdapter.STATE_TURNING_OFF:    s = "turning off";      break;
-                case BluetoothAdapter.STATE_TURNING_ON:     s = "turning on";       break;
-                default:                                    s = "unknown";          break;
-            }
-            Jog.v("BT state: " + s, this);
-
-        } else if (action.equals(BluetoothDevice.ACTION_FOUND)) {
-
-            BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
-
-            BluetoothClass btClass = intent.getParcelableExtra(BluetoothDevice.EXTRA_CLASS);
-            mDiscoveredDevices.add(device);
-
-        } else if (action.equals(BluetoothAdapter.ACTION_SCAN_MODE_CHANGED)) {
-
-            int mode = intent.getIntExtra(BluetoothAdapter.EXTRA_SCAN_MODE, -1);
-            int prevMode = intent.getIntExtra(BluetoothAdapter.EXTRA_PREVIOUS_SCAN_MODE, -1);
-            String s;
-            switch (mode) {
-                case BluetoothAdapter.SCAN_MODE_CONNECTABLE:                s = "connectable";              break;
-                case BluetoothAdapter.SCAN_MODE_CONNECTABLE_DISCOVERABLE:   s = "connectable discoverable"; break;
-                case BluetoothAdapter.SCAN_MODE_NONE:                       s = "none";                     break;
-                default:                                                    s = "unknown";                  break;
-            }
-            Jog.v("BT scan mode: " + s, this);
-        }
+        Log.v(TAG, "onHandleIntent()");
+        // listen to system bt broadcasts
     }
 
-    private void manageConnectedSocket(BluetoothSocket socket) {
+    @Override
+    public boolean onUnbind(Intent intent) {
+        Log.v(TAG, "onUnbind()");
+        setHandler(new Handler());
+        return super.onUnbind(intent);
+    }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        stop();
+    }
+
+    private synchronized void setState(int index, int state) {
+        mState[index] = state;
+        mHandler.obtainMessage(BluetoothFragment.MESSAGE_STATE_CHANGE, index, state).sendToTarget();
+    }
+
+    /**
+     * Return the current connection state. */
+    public synchronized int getState(int index) {
+        return mState[index];
+    }
+
+    public synchronized void setMaxConnections(int connections) {
+        boolean running = mRunning;
+        stop();
+        if (connections > MAX_CONNECTIONS) connections = MAX_CONNECTIONS;
+        mMaxConnections = connections;
+        if (running) start();
+    }
+
+    public synchronized int getMaxConnections() {
+        return mMaxConnections;
+    }
+
+    public synchronized void start() {
+        Log.v(TAG, "start()");
+        stop();
+        for (int i = 0; i < mMaxConnections; ++i) {
+            setState(i, STATE_LISTEN);
+
+            // Start the threads to listen on a BluetoothServerSocket
+            if (mAcceptThreads[i] == null) {
+                mAcceptThreads[i] = new AcceptThread(i);
+                mAcceptThreads[i].start();
+            }
+        }
+
+        Set<BluetoothDevice> devices = mAdapter.getBondedDevices();
+        if (devices != null) {
+            int count = 0;
+            for (BluetoothDevice d : devices) {
+                if (count >= mMaxConnections) break;
+                connect(count, d);
+                ++count;
+            }
+        }
+        mRunning = true;
+    }
+
+    public synchronized void stop() {
+        Log.v(TAG, "stop()");
+        for (int i = 0; i < mMaxConnections; ++i) {
+            if (mConnectThreads[i] != null) {
+                mConnectThreads[i].cancel(); mConnectThreads[i] = null;}
+
+            if (mConnectedThreads[i] != null) {
+                mConnectedThreads[i].cancel(); mConnectedThreads[i] = null;}
+
+            if (mAcceptThreads[i] != null) {
+                mAcceptThreads[i].cancel(); mAcceptThreads[i] = null;}
+
+            setState(i, STATE_NONE);
+        }
+        mRunning = false;
+    }
+
+    public synchronized boolean isRunning() {
+        return mRunning;
+    }
+
+    public void write(int index, byte[] buffer) {
+        synchronized (this) {
+            if (mState[index] != STATE_CONNECTED) {
+                Log.d(TAG, "Tried to write to closed socket: " + index);
+                return;
+            }
+        }
+        mConnectedThreads[index].write(buffer);
+    }
+
+
+    private synchronized void connect(int index, BluetoothDevice device) {
+        // Cancel any thread attempting to make a connection
+        if (mState[index] == STATE_CONNECTING) {
+            if (mConnectThreads[index] != null) {mConnectThreads[index].cancel(); mConnectThreads[index] = null;}
+            Log.d(TAG, "ConnectThread " + index + " was connecting");
+        }
+
+        // Cancel any thread currently running a connection
+        if (mConnectedThreads[index] != null) {
+            mConnectedThreads[index].cancel();
+            mConnectThreads[index] = null;
+            Log.d(TAG, "ConnectedThread " + index + " is being replaced");
+        }
+        // Start the thread to connect with the given device
+        mConnectThreads[index] = new ConnectThread(device, index);
+        mConnectThreads[index].start();
+        setState(index, STATE_CONNECTING);
+    }
+
+    private void manageConnectedSocket(BluetoothSocket socket, int index) {
         // Cancel the thread that completed the connection
-        if (mConnectThread != null) {mConnectThread.close(); mConnectThread = null;}
+        if (mConnectThreads[index] != null) {
+            mConnectThreads[index].cancel(); mConnectThreads[index] = null;}
 
         // Start the thread to manage the connection and perform transmissions
-        mConnectedThread = new ConnectedThread(socket);
-        mConnectedThread.start();
-        mConnectedThread.write("Test data".getBytes());
+        mConnectedThreads[index] = new ConnectedThread(socket, index);
+        mConnectedThreads[index].start();
+
+        mConnectedDevices[index] = socket.getRemoteDevice().getName();
+
+        mHandler.obtainMessage(BluetoothFragment.MESSAGE_DEVICE_NAME,
+                index, -1, mConnectedDevices[index]).sendToTarget();
+
+
+        setState(index, STATE_CONNECTED);
     }
 
     private class AcceptThread extends Thread {
         private final BluetoothServerSocket mmServerSocket;
+        private final int mmIndex;
 
-        public AcceptThread() {
+        public AcceptThread(int index) {
+            mmIndex = index;
             BluetoothServerSocket tmp = null;
             try {
-                tmp = mAdapter.listenUsingRfcommWithServiceRecord(SERVICE_NAME, mUuid);
+                tmp = mAdapter.listenUsingRfcommWithServiceRecord(
+                        SERVICE_NAME, UUID.fromString(UUIDS[mmIndex]));
             } catch (IOException e) {
-                Jog.d("BT error getting server socket", e, BluetoothService.this);
+                Log.e(TAG, "BT error getting server socket " + mmIndex, e);
             }
             mmServerSocket = tmp;
         }
 
         @Override
         public void run() {
-            BluetoothSocket socket = null;
+            BluetoothSocket socket;
             // Keep listening until exception occurs or a socket is returned
             while (true) {
                 try {
                     // blocks thread
                     socket = mmServerSocket.accept();
                 } catch (IOException e) {
-                    Jog.d("BT error while waiting to accept connection", e, BluetoothService.this);
+                    Log.e(TAG, "BT error while waiting to accept connection " + mmIndex, e);
                     break;
                 }
 
                 if (socket != null) {
-                    // Do work to manage the connection (in a separate thread)
-                    manageConnectedSocket(socket);
-
-                    // Don't cancel the server = multiple connections can be accepted (diff channels)?
-                    //cancel();
-                    //break;
+                    synchronized (BluetoothService.this) {
+                        switch (mState[mmIndex]) {
+                            case STATE_LISTEN:
+                            case STATE_CONNECTING:
+                                // Situation normal. Start the connected thread.
+                                manageConnectedSocket(socket, mmIndex);
+                                break;
+                            case STATE_NONE:
+                            case STATE_CONNECTED:
+                                Log.d(TAG, "Either not ready or already connected: " + mmIndex);
+                                try {
+                                    socket.close();
+                                } catch (IOException e) {
+                                    Log.e(TAG, "Could not close unwanted socket " + mmIndex, e);
+                                }
+                                break;
+                        }
+                    }
                 }
             }
         }
 
-        public void close() {
+        public void cancel() {
             try {
                 mmServerSocket.close();
             } catch (IOException e) {
-                Jog.d("BT unable to cancel server socket.", e, BluetoothService.this);
+                Log.e(TAG, "BT unable to cancel server socket " + mmIndex, e);
             }
         }
     }
 
     private class ConnectThread extends Thread {
-        private final BluetoothSocket mmSocket;
+        private final BluetoothSocket[] mmSockets;
         private final BluetoothDevice mmDevice;
+        private final int mmIndex;
+        private int mmConnectedSocket;
+        private final BluetoothSocket mmSocket0;
+        private final BluetoothSocket mmSocket1;
+        private final BluetoothSocket mmSocket2;
+        private final BluetoothSocket mmSocket3;
+        private final BluetoothSocket mmSocket4;
+        private final BluetoothSocket mmSocket5;
+        private final BluetoothSocket mmSocket6;
 
-        public ConnectThread(BluetoothDevice device) {
-            BluetoothSocket tmp = null;
+        public ConnectThread(BluetoothDevice device, int index) {
             mmDevice = device;
-            try {
-                tmp = device.createRfcommSocketToServiceRecord(mUuid);
-            } catch (IOException e) {
-                Jog.d("BT error getting client socket", e, BluetoothService.this);
+            mmIndex = index;
+
+            BluetoothSocket[] tmp = new BluetoothSocket[MAX_CONNECTIONS];
+
+            for (int i = 0; i < MAX_CONNECTIONS; ++i) {
+                if (i < mMaxConnections) {
+                    try {
+                        tmp[i] = mmDevice.createRfcommSocketToServiceRecord(UUID.fromString(UUIDS[i]));
+                    } catch (IOException e) {
+                        Log.e(TAG, "Error creating client socket " + i + ", thread " + mmIndex);
+                    }
+                } else {
+                    tmp[i] = null;
+                }
             }
-            mmSocket = tmp;
+
+            mmSocket0 = tmp[0];
+            mmSocket1 = tmp[1];
+            mmSocket2 = tmp[2];
+            mmSocket3 = tmp[3];
+            mmSocket4 = tmp[4];
+            mmSocket5 = tmp[5];
+            mmSocket6 = tmp[6];
+
+            mmSockets = new BluetoothSocket[] { mmSocket0, mmSocket1, mmSocket2, mmSocket3, mmSocket4, mmSocket5, mmSocket6 };
         }
 
         public void run() {
             // Cancel discovery because it will slow down the connection
-            mAdapter.cancelDiscovery();
+            //mAdapter.cancelDiscovery();
 
-            try {
-                // Connect the device through the socket. This will block
-                // until it succeeds or throws an exception
-                mmSocket.connect();
-            } catch (IOException e) {
-                Jog.d("BT client socket connection error", e, BluetoothService.this);
-                close();
+            for (int i = 0; i < mMaxConnections; ++i) {
+                if (mmSockets[i] != null) {
+                    try {
+                        mmSockets[i].connect();
+                    } catch (IOException e) {
+                        Log.w(TAG, "BT client socket connection error " + mmIndex, e);
+                        cancel(i);
+                    }
+                    if (mmSockets[i] == null) {
+                        try {
+                            Thread.sleep(200);
+                        } catch (InterruptedException e) {
+                            Log.e(TAG, "Thread interrupted during sleep", e);
+                        }
+                    } else {
+                        mmConnectedSocket = i;
+                        break;
+                    }
+                }
+            }
+
+            if (mmSockets[mmConnectedSocket] == null) {
+                Log.e(TAG, "Unable to acquire socket for thread " + mmIndex);
+                mHandler.obtainMessage(BluetoothFragment.MESSAGE_CONNECTION_FAILED, mmIndex).sendToTarget();
                 return;
             }
 
             synchronized (BluetoothService.this) {
-                mConnectThread = null;
+                mConnectThreads[mmIndex] = null;
             }
 
             // Do work to manage the connection (in a separate thread)
-            manageConnectedSocket(mmSocket);
+            manageConnectedSocket(mmSockets[mmConnectedSocket], mmIndex);
         }
 
-        public void close() {
+        public void cancel() {
+            for (int i = 0; i < MAX_CONNECTIONS; ++i) {
+                cancel(i);
+            }
+        }
+
+        private void cancel(int index) {
             try {
-                mmSocket.close();
+                mmSockets[index].close();
             } catch (IOException e) {
-                Jog.d("BT unable to cancel client socket.", e, BluetoothService.this);
+                Log.e(TAG, "BT unable to cancel client socket " + index + ", thread " + mmIndex, e);
             }
         }
     }
@@ -223,8 +373,10 @@ public final class BluetoothService extends PersistentIntentService {
         private final BluetoothSocket mmSocket;
         private final InputStream mmInStream;
         private final OutputStream mmOutStream;
+        private final int mmIndex;
 
-        public ConnectedThread(BluetoothSocket socket) {
+        public ConnectedThread(BluetoothSocket socket, int index) {
+            mmIndex = index;
             mmSocket = socket;
             InputStream tmpIn = null;
             OutputStream tmpOut = null;
@@ -235,7 +387,7 @@ public final class BluetoothService extends PersistentIntentService {
                 tmpIn = socket.getInputStream();
                 tmpOut = socket.getOutputStream();
             } catch (IOException e) {
-                Jog.d("BT error getting I/O streams.", e, BluetoothService.this);
+                Log.e(TAG, "BT error getting I/O streams for " + mmIndex, e);
             }
 
             mmInStream = tmpIn;
@@ -251,27 +403,30 @@ public final class BluetoothService extends PersistentIntentService {
                 try {
                     // Read from the InputStream
                     bytes = mmInStream.read(buffer);
-                    Jog.i("Received " + bytes + " bytes: " + new String(buffer), BluetoothService.this);
+                    mHandler.obtainMessage(BluetoothFragment.MESSAGE_READ, mmIndex, bytes, buffer).sendToTarget();
                 } catch (IOException e) {
-                    Jog.d("BT error reading input stream (disconnected).", e, BluetoothService.this);
+                    Log.w(TAG, "BT error reading input stream (disconnected) " + mmIndex, e);
+                    setState(mmIndex, STATE_NONE);
+                    mHandler.obtainMessage(BluetoothFragment.MESSAGE_CONNECTION_LOST, mmIndex).sendToTarget();
                     break;
                 }
             }
         }
 
-        public void write(byte[] bytes) {
+        public void write(byte[] buffer) {
             try {
-                mmOutStream.write(bytes);
+                mmOutStream.write(buffer);
+                mHandler.obtainMessage(BluetoothFragment.MESSAGE_WRITE, mmIndex, -1, buffer).sendToTarget();
             } catch (IOException e) {
-                Jog.d("BT error writing to output stream.", e, BluetoothService.this);
+                Log.e(TAG, "BT error writing to output stream " + mmIndex, e);
             }
         }
 
-        public void close() {
+        public void cancel() {
             try {
                 mmSocket.close();
             } catch (IOException e) {
-                Jog.d("BT error closing connection socket.", e, BluetoothService.this);
+                Log.e(TAG, "BT error closing connection socket " + mmIndex, e);
             }
         }
     }

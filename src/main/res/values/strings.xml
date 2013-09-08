@@ -1,7 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Essential Localization</string>
+
     <string name="action_settings">Settings</string>
-    <string name="scan_count">Scan count:</string>
-    <string name="clear_log">Clear Log</string>
+
+    <string name="action_bt_power">Bluetooth service</string>
+    <string name="action_bt_test">Send test data</string>
+    <string name="action_bt_set_max">Set max connections</string>
+
+    <string name="action_clear_log">Clear Log</string>
+
+    <string name="persist_service">Persist</string>
+
+    <string name="bt_not_supported">Device does not support Bluetooth</string>
+    <string name="connection_states">Connection States</string>
+
+    <string name="dialog_ok">OK</string>
+    <string name="dialog_cancel">Cancel</string>
+
+    <string name="toast_bt_connected">Connected to %1$s, index %2$d.</string>
+    <string name="toast_bt_connection_failed">Failed connection to index %1$d.</string>
+    <string name="toast_bt_connection_lost">Lost connection to %1$s, index %2$d.</string>
 </resources>
