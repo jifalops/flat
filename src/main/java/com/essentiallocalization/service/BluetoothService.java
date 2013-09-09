@@ -235,6 +235,7 @@ public class BluetoothService extends PersistentIntentService {
                 try {
                     // blocks thread
                     socket = mmServerSocket.accept();
+                    cancel();
                 } catch (IOException e) {
                     Log.e(TAG, "BT error while waiting to accept connection " + mmIndex, e);
                     break;
@@ -260,6 +261,8 @@ public class BluetoothService extends PersistentIntentService {
                         }
                     }
                 }
+
+
             }
         }
 
@@ -277,41 +280,45 @@ public class BluetoothService extends PersistentIntentService {
         private final BluetoothDevice mmDevice;
         private final int mmIndex;
         private int mmConnectedSocket;
-        private final BluetoothSocket mmSocket0;
-        private final BluetoothSocket mmSocket1;
-        private final BluetoothSocket mmSocket2;
-        private final BluetoothSocket mmSocket3;
-        private final BluetoothSocket mmSocket4;
-        private final BluetoothSocket mmSocket5;
-        private final BluetoothSocket mmSocket6;
+//        private BluetoothSocket mmSocket0;
+//        private final BluetoothSocket mmSocket1;
+//        private final BluetoothSocket mmSocket2;
+//        private final BluetoothSocket mmSocket3;
+//        private final BluetoothSocket mmSocket4;
+//        private final BluetoothSocket mmSocket5;
+//        private final BluetoothSocket mmSocket6;
 
         public ConnectThread(BluetoothDevice device, int index) {
             mmDevice = device;
             mmIndex = index;
 
-            BluetoothSocket[] tmp = new BluetoothSocket[MAX_CONNECTIONS];
-
-            for (int i = 0; i < MAX_CONNECTIONS; ++i) {
-                if (i < mMaxConnections) {
-                    try {
-                        tmp[i] = mmDevice.createRfcommSocketToServiceRecord(UUID.fromString(UUIDS[i]));
-                    } catch (IOException e) {
-                        Log.e(TAG, "Error creating client socket " + i + ", thread " + mmIndex);
-                    }
-                } else {
-                    tmp[i] = null;
+//            BluetoothSocket[] tmp = new BluetoothSocket[MAX_CONNECTIONS];
+            mmSockets = new BluetoothSocket[mMaxConnections];
+            for (int i = 0; i < mMaxConnections; ++i) {
+                try {
+                    mmSockets[i] = mmDevice.createRfcommSocketToServiceRecord(UUID.fromString(UUIDS[i]));
+                } catch (IOException e) {
+                    Log.e(TAG, "Error creating client socket " + i + ", thread " + mmIndex);
                 }
             }
 
-            mmSocket0 = tmp[0];
-            mmSocket1 = tmp[1];
-            mmSocket2 = tmp[2];
-            mmSocket3 = tmp[3];
-            mmSocket4 = tmp[4];
-            mmSocket5 = tmp[5];
-            mmSocket6 = tmp[6];
+//            BluetoothSocket tmp = null;
+//            try {
+//                tmp = mmDevice.createRfcommSocketToServiceRecord(UUID.fromString(UUIDS[mmIndex]));
+//            } catch (IOException e) {
+//                Log.e(TAG, "Error creating client socket " + mmIndex);
+//            }
+//            mmSocket0 = tmp;
 
-            mmSockets = new BluetoothSocket[] { mmSocket0, mmSocket1, mmSocket2, mmSocket3, mmSocket4, mmSocket5, mmSocket6 };
+//            mmSocket0 = tmp[0];
+//            mmSocket1 = tmp[1];
+//            mmSocket2 = tmp[2];
+//            mmSocket3 = tmp[3];
+//            mmSocket4 = tmp[4];
+//            mmSocket5 = tmp[5];
+//            mmSocket6 = tmp[6];
+//
+//            mmSockets = new BluetoothSocket[] { mmSocket0, mmSocket1, mmSocket2, mmSocket3, mmSocket4, mmSocket5, mmSocket6 };
         }
 
         public void run() {
@@ -325,7 +332,9 @@ public class BluetoothService extends PersistentIntentService {
                     } catch (IOException e) {
                         Log.w(TAG, "BT client socket connection error " + mmIndex, e);
                         cancel(i);
+                        continue;
                     }
+
                     if (mmSockets[i] == null) {
                         try {
                             Thread.sleep(200);
@@ -333,28 +342,30 @@ public class BluetoothService extends PersistentIntentService {
                             Log.e(TAG, "Thread interrupted during sleep", e);
                         }
                     } else {
-                        mmConnectedSocket = i;
-                        break;
+
+                        synchronized (BluetoothService.this) {
+                            mConnectThreads[mmIndex] = null;
+                        }
+
+                        manageConnectedSocket(mmSockets[i], mmIndex);
+                        return;
                     }
                 }
             }
 
-            if (mmSockets[mmConnectedSocket] == null) {
-                Log.e(TAG, "Unable to acquire socket for thread " + mmIndex);
-                mHandler.obtainMessage(BluetoothFragment.MESSAGE_CONNECTION_FAILED, mmIndex).sendToTarget();
-                return;
-            }
-
-            synchronized (BluetoothService.this) {
-                mConnectThreads[mmIndex] = null;
-            }
-
-            // Do work to manage the connection (in a separate thread)
-            manageConnectedSocket(mmSockets[mmConnectedSocket], mmIndex);
+            mHandler.obtainMessage(BluetoothFragment.MESSAGE_CONNECTION_FAILED, mmIndex).sendToTarget();
+            //retry(mmIndex);
         }
 
         public void cancel() {
-            for (int i = 0; i < MAX_CONNECTIONS; ++i) {
+//            try {
+//                mmSocket0.close();
+//            } catch (IOException e) {
+//                Log.e(TAG, "BT unable to cancel client " + mmIndex, e);
+//            }
+
+
+            for (int i = 0; i < mMaxConnections; ++i) {
                 cancel(i);
             }
         }
@@ -408,6 +419,9 @@ public class BluetoothService extends PersistentIntentService {
                     Log.w(TAG, "BT error reading input stream (disconnected) " + mmIndex, e);
                     setState(mmIndex, STATE_NONE);
                     mHandler.obtainMessage(BluetoothFragment.MESSAGE_CONNECTION_LOST, mmIndex).sendToTarget();
+
+
+
                     break;
                 }
             }
@@ -428,6 +442,25 @@ public class BluetoothService extends PersistentIntentService {
             } catch (IOException e) {
                 Log.e(TAG, "BT error closing connection socket " + mmIndex, e);
             }
+        }
+    }
+
+    private synchronized void retry(int index) {
+        if (mConnectedThreads[index] != null) {
+            mConnectedThreads[index].cancel();
+            mConnectedThreads[index] = null;
+        }
+
+        setState(index, STATE_NONE);
+        if (mAcceptThreads[index] != null) {
+            mAcceptThreads[index].cancel();
+            mAcceptThreads[index] = new AcceptThread(index);
+        }
+        if (mConnectThreads[index] != null) {
+            BluetoothDevice device = mConnectThreads[index].mmDevice;
+            mConnectThreads[index].cancel();
+            mConnectThreads = null;
+            connect(index, device);
         }
     }
 }

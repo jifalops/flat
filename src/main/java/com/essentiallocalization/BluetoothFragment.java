@@ -72,7 +72,7 @@ public final class BluetoothFragment extends Fragment implements ServiceConnecti
     private Listener mListener;
 
     private TextView[] mStateViews;
-    private int mMaxConnections = 1;
+    private int mMaxConnections = 4;
     private boolean mBluetoothSupported;
     private Switch mServiceSwitch;
     private CheckBox mServicePersist;
