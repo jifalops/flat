@@ -5,6 +5,7 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Fragment;
 import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothDevice;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.DialogInterface;
@@ -28,11 +29,12 @@ import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.essentiallocalization.connection.RemoteConnection;
+import com.essentiallocalization.connection.BluetoothConnection;
+import com.essentiallocalization.connection.DataPacket;
 import com.essentiallocalization.service.BluetoothService;
 import com.essentiallocalization.service.PersistentIntentService;
 
-import java.nio.ByteBuffer;
+import java.io.IOException;
 
 /**
  * Created by Jake on 9/1/13.
@@ -49,12 +51,7 @@ public final class BluetoothFragment extends Fragment implements ServiceConnecti
     }
 
     // Message types sent from the BluetoothService Handler
-    public static final int MESSAGE_STATE_CHANGE = 7;
-    public static final int MESSAGE_READ = 2;
-    public static final int MESSAGE_WRITE = 3;
-    public static final int MESSAGE_DEVICE_NAME = 4;
-    public static final int MESSAGE_CONNECTION_FAILED = 5;
-    public static final int MESSAGE_CONNECTION_LOST = 6;
+
 
     // Intent request codes
 //    private static final int REQUEST_ENABLE_BT = 1;
@@ -68,9 +65,6 @@ public final class BluetoothFragment extends Fragment implements ServiceConnecti
     /** Whether the service is bound */
     private boolean mBound;
 
-    /** Handle messages from the BluetoothService thread. */
-    private final Handler mHandler = new BluetoothServiceHandler();
-
     /** Contains callback methods for this class. */
     private Listener mListener;
 
@@ -82,7 +76,6 @@ public final class BluetoothFragment extends Fragment implements ServiceConnecti
 
     /** This device's Bluetooth name. */
     private String mName;
-    private final String[] mConnectedDevices = new String[BluetoothService.MAX_CONNECTIONS];
 
     @Override
     public void onAttach(Activity activity) {
@@ -187,10 +180,13 @@ public final class BluetoothFragment extends Fragment implements ServiceConnecti
                 break;
             case R.id.bt_test:
                 if (mBound) {
-                    for (int i = 0; i < mMaxConnections; ++i) {
-                        if (mService.getState(i) == BluetoothService.STATE_CONNECTED) {
-                            //String test = mName + ": testing connection " + i;
-                            mService.write(i, ByteBuffer.allocate(8).putLong(System.nanoTime()).array());
+                    for (BluetoothConnection conn : mService.getConnections()) {
+                        try {
+                            conn.sendMessage(new com.essentiallocalization.connection.Message("Testing"));
+                        } catch (IOException e) {
+
+                        } catch (com.essentiallocalization.connection.Message.MessageTooLongException e) {
+
                         }
                     }
                 }
@@ -281,7 +277,7 @@ public final class BluetoothFragment extends Fragment implements ServiceConnecti
         if (mMaxConnections != mService.getMaxConnections()) {
             mService.setMaxConnections(mMaxConnections);
         }
-        mService.setHandler(mHandler2);
+        mService.setHandler(mHandler);
         mBound = true;
         setupServiceControls();
     }
@@ -293,98 +289,84 @@ public final class BluetoothFragment extends Fragment implements ServiceConnecti
     }
 
 
-    private class BluetoothServiceHandler extends Handler {
+    private final Handler mHandler = new Handler() {
         @Override
         public void handleMessage(Message msg) {
-            final int i = msg.arg1;
             switch (msg.what) {
-                case MESSAGE_STATE_CHANGE:
-                    if (i >= mMaxConnections) break;
-                    switch (msg.arg2) {
-                        case BluetoothService.STATE_CONNECTED:
-                            mStateViews[i].setText("Connection " + i + ": Connected");
-                            break;
-                        case BluetoothService.STATE_CONNECTING:
-                            mStateViews[i].setText("Connection " + i + ": Connecting...");
-                            break;
-                        case BluetoothService.STATE_LISTEN:
-                            mStateViews[i].setText("Connection " + i + ": Listening...");
-                        case BluetoothService.STATE_NONE:
-                            mStateViews[i].setText("Connection " + i + ": Not connected");
-                            break;
-                    }
-                    break;
-                case MESSAGE_WRITE:
-                    byte[] writeBuf = (byte[]) msg.obj;
-                    String writeMessage = new String(writeBuf);
-                    String writeToast = "sent msg to " + mConnectedDevices[i] + " (" + i + "): " + writeMessage;
-                    Log.d(TAG, mName + ": " + writeToast);
-                    Toast.makeText(getActivity(), writeToast, Toast.LENGTH_LONG).show();
-                    break;
-                case MESSAGE_READ:
-                    byte[] readBuf = (byte[]) msg.obj;
-                    long delay = System.nanoTime() - ByteBuffer.wrap(readBuf).getLong();
-                    double dist = BluetoothService.SPEED_OF_LIGHT * delay * 1E-9;
-                    //String readMessage = new String(readBuf);
-                    String readToast = mConnectedDevices[i] + ": " + delay + (float)dist;
-                    Log.d(TAG, mName + ": " + readToast);
-                    Toast.makeText(getActivity(), readToast, Toast.LENGTH_LONG).show();
-                    break;
-                case MESSAGE_DEVICE_NAME:
-                    mConnectedDevices[i] = (String) msg.obj;
-                    String connected = String.format(getString(R.string.toast_bt_connected), mConnectedDevices[i], i);
-                    Log.i(TAG, mName + ": " + connected);
-                    Toast.makeText(getActivity(), connected, Toast.LENGTH_SHORT).show();
-                    break;
-                case MESSAGE_CONNECTION_FAILED:
-                    String failed = String.format(getString(R.string.toast_bt_connection_failed), i);
-                    Log.e(TAG, mName + ": " + failed);
-                    Toast.makeText(getActivity(), failed, Toast.LENGTH_SHORT).show();
-                    break;
-                case MESSAGE_CONNECTION_LOST:
-                    String lost = String.format(getString(R.string.toast_bt_connection_lost),
-                            mConnectedDevices[i], i);
-                    Log.e(TAG, mName + ": " + lost);
-                    Toast.makeText(getActivity(), lost, Toast.LENGTH_SHORT).show();
-                    break;
-            }
-        }
-    }
+                case BluetoothConnection.MSG_STATE_CHANGE:
+                    int state = msg.arg1;
+                    int i = 0;
+                    BluetoothDevice device;
+                    String name;
+                    for (BluetoothConnection conn : mService.getConnections()) {
+                        state = conn.getState();
+                        device = conn.getConnectedDevice();
+                        if (device != null) {
+                            name = device.getName();
+                        } else {
+                            name = "device " + i;
+                        }
 
-    private final Handler mHandler2 = new Handler() {
-        @Override
-        public void handleMessage(Message msg) {
-            switch (msg.what) {
-                case RemoteConnection.MSG_SENT:
-                    Toast.makeText(getActivity(), "Sent: " + (String) msg.obj, Toast.LENGTH_SHORT).show();
-                    break;
-                case RemoteConnection.MSG_RECEIVED:
-                    Toast.makeText(getActivity(), "Received: " + (String) msg.obj, Toast.LENGTH_SHORT).show();
-                    break;
-                case RemoteConnection.MSG_CONFIRMED:
-                    Toast.makeText(getActivity(), "Confirmed: " + (String) msg.obj, Toast.LENGTH_SHORT).show();
-                    break;
-                case RemoteConnection.MSG_DISCONNECTED:
-                    Toast.makeText(getActivity(), "Disconnected", Toast.LENGTH_SHORT).show();
-                    break;
-                case MESSAGE_STATE_CHANGE:
-                    int i = msg.arg1;
-                    if (i >= mMaxConnections) break;
-                    switch (msg.arg2) {
-                        case BluetoothService.STATE_CONNECTED:
-                            mStateViews[i].setText("Connection " + i + ": Connected");
-                            break;
-                        case BluetoothService.STATE_CONNECTING:
-                            mStateViews[i].setText("Connection " + i + ": Connecting...");
-                            break;
-                        case BluetoothService.STATE_LISTEN:
-                            mStateViews[i].setText("Connection " + i + ": Listening...");
-                        case BluetoothService.STATE_NONE:
-                            mStateViews[i].setText("Connection " + i + ": Not connected");
-                            break;
+                        switch (state) {
+                            case BluetoothConnection.STATE_CONNECTED:
+                                mStateViews[i].setText(name + ": Connected");
+                                break;
+                            case BluetoothConnection.STATE_CONNECTING:
+                                mStateViews[i].setText(name + ": Connecting...");
+                                break;
+                            case BluetoothConnection.STATE_NONE:
+                                mStateViews[i].setText(name + ": Not connected");
+                                break;
+                        }
+                        i++;
                     }
+                    while (i < mStateViews.length) {
+                        mStateViews[i].setVisibility(View.GONE);
+                        i++;
+                    }
+
+                    break;
+
+                case BluetoothConnection.MSG_CONNECTED:
+
+                    break;
+
+                case BluetoothConnection.MSG_CONNECTION_FAILED:
+
+                    break;
+
+                case BluetoothConnection.MSG_DISCONNECTED:
+
+                    break;
+
+                case BluetoothConnection.MSG_SENT:
+                    int to = msg.arg1;
+                    int sentMsgIndex = msg.arg2;
+                    String message = (String) msg.obj;
+                    Toast.makeText(getActivity(), "Sent msg " + sentMsgIndex + " to " + to, Toast.LENGTH_SHORT).show();
+                    break;
+
+                case BluetoothConnection.MSG_RECEIVED:
+                    int to2 = msg.arg1;
+                    int recMsgIndex = msg.arg2;
+                    String message2 = (String) msg.obj;
+                    Toast.makeText(getActivity(), "Received msg " + recMsgIndex + " from " + to2, Toast.LENGTH_SHORT).show();
+                    break;
+
+                case BluetoothConnection.MSG_CONFIRMED:
+                    int to3 = msg.arg1;
+                    int sentMsgIndex2 = msg.arg2;
+                    DataPacket dp = (DataPacket) msg.obj;
+                    Toast.makeText(getActivity(), "Confirmed msg " + sentMsgIndex2 + " from " + to3
+                            + ". Distance: " + calcDistance(dp), Toast.LENGTH_SHORT).show();
                     break;
             }
         }
     };
+
+    private float calcDistance(DataPacket p) {
+        long roundTrip = p.confirmed - p.sent;
+        double distance = (BluetoothService.SPEED_OF_LIGHT * (roundTrip * 1E-9)) / 2;
+        return (float) Math.round(distance * 100) / 100;
+    }
 }

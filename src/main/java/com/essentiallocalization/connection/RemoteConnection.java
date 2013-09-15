@@ -15,7 +15,7 @@ import java.util.List;
  * Created by Jake on 9/14/13.
  */
 public class RemoteConnection {
-    private static final String TAG = RemoteConnection.class.getSimpleName();
+    private final String TAG;
 
     public static final int MSG_SENT = 1;
     public static final int MSG_RECEIVED = 2;
@@ -24,7 +24,7 @@ public class RemoteConnection {
 
     private final Handler mHandler;
 
-    private final byte mFrom, mTo;
+    private final byte mTo;
     private final InputStream mIn;
     private final OutputStream mOut;
     private final List<DataPacket> mSentPackets;
@@ -34,8 +34,8 @@ public class RemoteConnection {
     private final SparseArray<String[]> mPartialReceivedMessages;
     private boolean mDisconnected;
 
-    public RemoteConnection(byte from, byte to, InputStream in, OutputStream out, Handler handler) {
-        mFrom = from;
+    public RemoteConnection(byte to, InputStream in, OutputStream out, Handler handler) {
+        TAG = "RemoteConnection to " + to;
         mTo = to;
         mIn = in;
         mOut = out;
@@ -48,11 +48,18 @@ public class RemoteConnection {
         mListenerThread.start();
     }
 
-    public synchronized int sendTestMessage() throws IOException {
+    public synchronized void close() {
         try {
-            return sendMessage(Packet.TYPE_TEST, new Message("Test msg"));
-        } catch (Message.MessageTooLongException ignored) {}
-        return 0;
+            mIn.close();
+        } catch (IOException e) {
+            Log.e(TAG, "Unable to close input stream!");
+        }
+
+        try {
+            mOut.close();
+        } catch (IOException e) {
+            Log.e(TAG, "Unable to close output stream!");
+        }
     }
 
     public synchronized int sendMessage(Message message) throws IOException {
@@ -62,16 +69,16 @@ public class RemoteConnection {
     private synchronized int sendMessage(byte type, Message message) throws  IOException {
         if (mDisconnected || message == null) return 0;
         int msgIndex = mSentMessages.size();
-        byte msgParts = (byte) (message.parts.size() - 1);
+        byte msgParts = (byte) message.size();
         byte msgAttempt = 1;
         DataPacket packet;
-        for (int i = 0; i < msgParts; i++) {
-            packet = new DataPacket(type, mSentPackets.size(), msgIndex, msgAttempt, (byte) i, msgParts, message.parts.get(i));
+        for (byte msgPart = 0; msgPart < msgParts; msgPart++) {
+            packet = new DataPacket(type, mSentPackets.size(), msgIndex, msgAttempt, msgPart, msgParts, message.get(msgPart));
             sendPacket(packet);
             mSentPackets.add(packet);
         }
         mSentMessages.add(message);
-        mHandler.obtainMessage(MSG_SENT, message.toString()).sendToTarget();
+        mHandler.obtainMessage(MSG_SENT, mTo, mSentMessages.size() - 1, message.toString()).sendToTarget();
         return msgParts;
     }
 
@@ -80,7 +87,7 @@ public class RemoteConnection {
         try {
             mOut.write(packet.getBytes());
         } catch (IOException e) {
-            Log.e(TAG, "Error sending packet.");
+            Log.e(TAG, "Error sending packet " + packet.packetIndex);
             throw e;
         }
     }
@@ -95,52 +102,57 @@ public class RemoteConnection {
                     mIn.read(buffer);
                     processPacket(buffer);
                 } catch (IOException e) {
-                    Log.e(TAG, "Disconnected.", e);
+                    Log.w(TAG, "Disconnected");
                     synchronized (RemoteConnection.this) {
                         mDisconnected = true;
                     }
-                    mHandler.obtainMessage(MSG_DISCONNECTED).sendToTarget();
+                    mHandler.obtainMessage(MSG_DISCONNECTED, mTo).sendToTarget();
                     break;
                 }
             }
         }
 
         private void processPacket(byte[] data) {
-            switch (data[Packet.INDEX_OF_TYPE]) {
+            switch (Packet.getType(data)) {
                 case Packet.TYPE_ACK:
                     AckPacket ap = new AckPacket(data);
-                    mSentPackets.get(ap.packetIndex).confirmed = System.nanoTime();
-                    mSentPackets.get(ap.packetIndex).received = ap.received;
-                    if (ap.msgPart == ap.msgParts) {
-                        mHandler.obtainMessage(MSG_CONFIRMED, ap.msgIndex).sendToTarget();
+                    Log.v(TAG, "Received ack for packet " + ap.packetIndex);
+                    DataPacket dataPacket = mSentPackets.get(ap.packetIndex);
+                    dataPacket.confirmed = System.nanoTime();
+                    dataPacket.received = ap.received;
+                    if (ap.msgPart == ap.msgParts - 1) {
+                        mHandler.obtainMessage(MSG_CONFIRMED, mTo, ap.msgIndex, dataPacket).sendToTarget();
                     }
                     break;
                 case Packet.TYPE_TEST:
                 case Packet.TYPE_MSG:
                     DataPacket dp = new DataPacket(data);
+                    Log.v(TAG, "Received packet " + dp.packetIndex + " (" + dp.msgPart + " of " + dp.msgParts + ")");
                     dp.received = System.nanoTime();
                     mReceivedPackets.add(dp);
                     try {
                         sendPacket(new AckPacket(dp));
                     } catch (IOException e) {
-                        Log.e(TAG, "Error sending Ack packet.");
+                        Log.e(TAG, "Error sending Ack packet for packetIndex " + dp.packetIndex);
                     }
 
                     String part = new String(dp.payload);
-                    String[] parts = mPartialReceivedMessages.get(dp.msgIndex, new String[dp.msgParts + 1]);
+                    String[] parts = mPartialReceivedMessages.get(dp.msgIndex, new String[dp.msgParts]);
                     parts[dp.msgPart] = part;
                     mPartialReceivedMessages.put(dp.msgIndex, parts);
 
-                    if (dp.msgPart == dp.msgParts) {
+                    if (dp.msgPart == dp.msgParts - 1) {
                         String message = TextUtils.join("", parts);
                         try {
                             mReceivedMessages.add(new Message(message));
                         } catch (Message.MessageTooLongException ignored) {}
                         mPartialReceivedMessages.delete(dp.msgIndex);
-                        mHandler.obtainMessage(MSG_RECEIVED, message).sendToTarget();
+                        mHandler.obtainMessage(MSG_RECEIVED, mTo, mReceivedMessages.size() - 1, message).sendToTarget();
                     }
                     break;
             }
         }
     };
+
+
 }
