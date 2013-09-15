@@ -28,8 +28,11 @@ import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.essentiallocalization.connection.RemoteConnection;
 import com.essentiallocalization.service.BluetoothService;
 import com.essentiallocalization.service.PersistentIntentService;
+
+import java.nio.ByteBuffer;
 
 /**
  * Created by Jake on 9/1/13.
@@ -46,7 +49,7 @@ public final class BluetoothFragment extends Fragment implements ServiceConnecti
     }
 
     // Message types sent from the BluetoothService Handler
-    public static final int MESSAGE_STATE_CHANGE = 1;
+    public static final int MESSAGE_STATE_CHANGE = 7;
     public static final int MESSAGE_READ = 2;
     public static final int MESSAGE_WRITE = 3;
     public static final int MESSAGE_DEVICE_NAME = 4;
@@ -186,8 +189,8 @@ public final class BluetoothFragment extends Fragment implements ServiceConnecti
                 if (mBound) {
                     for (int i = 0; i < mMaxConnections; ++i) {
                         if (mService.getState(i) == BluetoothService.STATE_CONNECTED) {
-                            String test = mName + ": testing connection " + i;
-                            mService.write(i, test.getBytes());
+                            //String test = mName + ": testing connection " + i;
+                            mService.write(i, ByteBuffer.allocate(8).putLong(System.nanoTime()).array());
                         }
                     }
                 }
@@ -278,7 +281,7 @@ public final class BluetoothFragment extends Fragment implements ServiceConnecti
         if (mMaxConnections != mService.getMaxConnections()) {
             mService.setMaxConnections(mMaxConnections);
         }
-        mService.setHandler(mHandler);
+        mService.setHandler(mHandler2);
         mBound = true;
         setupServiceControls();
     }
@@ -320,8 +323,10 @@ public final class BluetoothFragment extends Fragment implements ServiceConnecti
                     break;
                 case MESSAGE_READ:
                     byte[] readBuf = (byte[]) msg.obj;
-                    String readMessage = new String(readBuf);
-                    String readToast = "got msg from " + mConnectedDevices[i] + " (" + i + "): " + readMessage;
+                    long delay = System.nanoTime() - ByteBuffer.wrap(readBuf).getLong();
+                    double dist = BluetoothService.SPEED_OF_LIGHT * delay * 1E-9;
+                    //String readMessage = new String(readBuf);
+                    String readToast = mConnectedDevices[i] + ": " + delay + (float)dist;
                     Log.d(TAG, mName + ": " + readToast);
                     Toast.makeText(getActivity(), readToast, Toast.LENGTH_LONG).show();
                     break;
@@ -345,4 +350,41 @@ public final class BluetoothFragment extends Fragment implements ServiceConnecti
             }
         }
     }
+
+    private final Handler mHandler2 = new Handler() {
+        @Override
+        public void handleMessage(Message msg) {
+            switch (msg.what) {
+                case RemoteConnection.MSG_SENT:
+                    Toast.makeText(getActivity(), "Sent: " + (String) msg.obj, Toast.LENGTH_SHORT).show();
+                    break;
+                case RemoteConnection.MSG_RECEIVED:
+                    Toast.makeText(getActivity(), "Received: " + (String) msg.obj, Toast.LENGTH_SHORT).show();
+                    break;
+                case RemoteConnection.MSG_CONFIRMED:
+                    Toast.makeText(getActivity(), "Confirmed: " + (String) msg.obj, Toast.LENGTH_SHORT).show();
+                    break;
+                case RemoteConnection.MSG_DISCONNECTED:
+                    Toast.makeText(getActivity(), "Disconnected", Toast.LENGTH_SHORT).show();
+                    break;
+                case MESSAGE_STATE_CHANGE:
+                    int i = msg.arg1;
+                    if (i >= mMaxConnections) break;
+                    switch (msg.arg2) {
+                        case BluetoothService.STATE_CONNECTED:
+                            mStateViews[i].setText("Connection " + i + ": Connected");
+                            break;
+                        case BluetoothService.STATE_CONNECTING:
+                            mStateViews[i].setText("Connection " + i + ": Connecting...");
+                            break;
+                        case BluetoothService.STATE_LISTEN:
+                            mStateViews[i].setText("Connection " + i + ": Listening...");
+                        case BluetoothService.STATE_NONE:
+                            mStateViews[i].setText("Connection " + i + ": Not connected");
+                            break;
+                    }
+                    break;
+            }
+        }
+    };
 }

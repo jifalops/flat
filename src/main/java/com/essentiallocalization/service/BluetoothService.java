@@ -9,6 +9,7 @@ import android.os.Handler;
 import android.util.Log;
 
 import com.essentiallocalization.BluetoothFragment;
+import com.essentiallocalization.connection.RemoteConnection;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -22,6 +23,8 @@ import java.util.UUID;
 public class BluetoothService extends PersistentIntentService {
     public static final int BUFFER_SIZE = 1024;
     private static final String SERVICE_NAME = "EssentialLocalizationBluetoothService";
+
+    public static final int SPEED_OF_LIGHT = 299792458; // m/s
 
     // Current BT piconets are at most 7 peers
     private static final String[] UUIDS = {
@@ -199,13 +202,17 @@ public class BluetoothService extends PersistentIntentService {
             mConnectThreads[index].cancel(); mConnectThreads[index] = null;}
 
         // Start the thread to manage the connection and perform transmissions
+        if (mConnectedThreads[index] != null) {
+            mConnectedThreads[index].cancel();
+            mConnectedThreads[index] = null;
+        }
         mConnectedThreads[index] = new ConnectedThread(socket, index);
         mConnectedThreads[index].start();
 
         mConnectedDevices[index] = socket.getRemoteDevice().getName();
 
-        mHandler.obtainMessage(BluetoothFragment.MESSAGE_DEVICE_NAME,
-                index, -1, mConnectedDevices[index]).sendToTarget();
+//        mHandler.obtainMessage(BluetoothFragment.MESSAGE_DEVICE_NAME,
+//                index, -1, mConnectedDevices[index]).sendToTarget();
 
 
         setState(index, STATE_CONNECTED);
@@ -353,7 +360,7 @@ public class BluetoothService extends PersistentIntentService {
                 }
             }
 
-            mHandler.obtainMessage(BluetoothFragment.MESSAGE_CONNECTION_FAILED, mmIndex).sendToTarget();
+//            mHandler.obtainMessage(BluetoothFragment.MESSAGE_CONNECTION_FAILED, mmIndex).sendToTarget();
             //retry(mmIndex);
         }
 
@@ -386,6 +393,8 @@ public class BluetoothService extends PersistentIntentService {
         private final OutputStream mmOutStream;
         private final int mmIndex;
 
+        private final RemoteConnection mRemoteConnection;
+
         public ConnectedThread(BluetoothSocket socket, int index) {
             mmIndex = index;
             mmSocket = socket;
@@ -403,34 +412,38 @@ public class BluetoothService extends PersistentIntentService {
 
             mmInStream = tmpIn;
             mmOutStream = tmpOut;
+
+            byte from = Byte.valueOf(mName.substring(mName.length() - 1));
+            String name = mmSocket.getRemoteDevice().getName();
+            byte to = Byte.valueOf(name.substring(name.length() - 1));
+            mRemoteConnection = new RemoteConnection(from, to, mmInStream, mmOutStream, mHandler);
         }
 
+        @Override
         public void run() {
-            byte[] buffer = new byte[BUFFER_SIZE];  // buffer store for the stream
-            int bytes; // bytes returned from read()
-
-            // Keep listening to the InputStream until an exception occurs
-            while (true) {
-                try {
-                    // Read from the InputStream
-                    bytes = mmInStream.read(buffer);
-                    mHandler.obtainMessage(BluetoothFragment.MESSAGE_READ, mmIndex, bytes, buffer).sendToTarget();
-                } catch (IOException e) {
-                    Log.w(TAG, "BT error reading input stream (disconnected) " + mmIndex, e);
-                    setState(mmIndex, STATE_NONE);
-                    mHandler.obtainMessage(BluetoothFragment.MESSAGE_CONNECTION_LOST, mmIndex).sendToTarget();
-
-
-
-                    break;
-                }
-            }
+//            byte[] buffer = new byte[BUFFER_SIZE];  // buffer store for the stream
+//            int bytes; // bytes returned from read()
+//
+//            // Keep listening to the InputStream until an exception occurs
+//            while (true) {
+//                try {
+//                    // Read from the InputStream
+//                    bytes = mmInStream.read(buffer);
+//                    mHandler.obtainMessage(BluetoothFragment.MESSAGE_READ, mmIndex, bytes, buffer).sendToTarget();
+//                } catch (IOException e) {
+//                    Log.w(TAG, "BT error reading input stream (disconnected) " + mmIndex, e);
+//                    setState(mmIndex, STATE_NONE);
+//                    mHandler.obtainMessage(BluetoothFragment.MESSAGE_CONNECTION_LOST, mmIndex).sendToTarget();
+//                    break;
+//                }
+//            }
         }
 
         public void write(byte[] buffer) {
             try {
-                mmOutStream.write(buffer);
-                mHandler.obtainMessage(BluetoothFragment.MESSAGE_WRITE, mmIndex, -1, buffer).sendToTarget();
+                mRemoteConnection.sendTestMessage();
+//                mmOutStream.write(buffer);
+//                mHandler.obtainMessage(BluetoothFragment.MESSAGE_WRITE, mmIndex, -1, buffer).sendToTarget();
             } catch (IOException e) {
                 Log.e(TAG, "BT error writing to output stream " + mmIndex, e);
             }
