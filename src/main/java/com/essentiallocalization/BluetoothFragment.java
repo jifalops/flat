@@ -5,7 +5,6 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Fragment;
 import android.bluetooth.BluetoothAdapter;
-import android.bluetooth.BluetoothDevice;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.DialogInterface;
@@ -15,6 +14,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Message;
+import android.text.TextUtils;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -22,19 +22,25 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ArrayAdapter;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.EditText;
+import android.widget.ListView;
 import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.essentiallocalization.connection.BluetoothConnection;
-import com.essentiallocalization.connection.DataPacket;
+import com.essentiallocalization.connection.bluetooth.BluetoothConnection;
+import com.essentiallocalization.connection.bluetooth.BluetoothConnectionManager;
 import com.essentiallocalization.service.BluetoothService;
 import com.essentiallocalization.service.PersistentIntentService;
+import com.essentiallocalization.util.LogFile;
 
+import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Created by Jake on 9/1/13.
@@ -42,6 +48,8 @@ import java.io.IOException;
 public final class BluetoothFragment extends Fragment implements ServiceConnection {
     /** Tag for Android's Logcat */
     private static final String TAG = BluetoothFragment.class.getSimpleName();
+
+    public static final String LOG_FILE = "log.txt";
 
     /** Interface the containing activity must implement */
     static interface Listener {
@@ -73,9 +81,15 @@ public final class BluetoothFragment extends Fragment implements ServiceConnecti
     private boolean mBluetoothSupported;
     private Switch mServiceSwitch;
     private CheckBox mServicePersist;
+    private ListView mListView;
+    private ArrayAdapter<String> mListAdapter;
 
     /** This device's Bluetooth name. */
     private String mName;
+
+    private LogFile mLogFile;
+
+//    private FileObserver mObserver;
 
     @Override
     public void onAttach(Activity activity) {
@@ -112,6 +126,13 @@ public final class BluetoothFragment extends Fragment implements ServiceConnecti
         View controls = ab.getCustomView();
         mServiceSwitch = (Switch) controls.findViewById(R.id.service_power);
         mServicePersist = (CheckBox) controls.findViewById(R.id.service_persist);
+
+        try {
+            mLogFile = new LogFile(new File(getActivity().getExternalFilesDir(null), LOG_FILE));
+        } catch (IOException e) {
+            Log.e(TAG, "Couldn't create log file.", e);
+            Toast.makeText(getActivity(), "Logging disabled", Toast.LENGTH_SHORT).show();
+        }
     }
 
     private void setupServiceControls() {
@@ -144,15 +165,43 @@ public final class BluetoothFragment extends Fragment implements ServiceConnecti
         // Add all connection state views to the layout,
         // hiding views which are beyond the current max connections.
         ViewGroup states = (ViewGroup) root.findViewById(R.id.states);
-        mStateViews = new TextView[BluetoothService.MAX_CONNECTIONS];
-        for (int i = 0; i < BluetoothService.MAX_CONNECTIONS; ++i) {
+        mStateViews = new TextView[BluetoothConnectionManager.MAX_CONNECTIONS];
+        for (int i = 0; i < BluetoothConnectionManager.MAX_CONNECTIONS; ++i) {
             mStateViews[i] = (TextView) inflater.inflate(R.layout.state_textview, null);
             if (i >= mMaxConnections) {
                 mStateViews[i].setVisibility(View.GONE);
             }
             states.addView(mStateViews[i]);
         }
+
+        mListView = (ListView) root.findViewById(R.id.list);
+        mListAdapter = new ArrayAdapter<String>(getActivity(), R.layout.listitem_textview, readLog());
+        mListView.setAdapter(mListAdapter);
+
+//        mObserver = new FileObserver(mLogFile.toString(), FileObserver.MODIFY) {
+//            @Override
+//            public void onEvent(int event, String path) {
+//
+//            }
+//        };
+//        mObserver.startWatching();
+
         return root;
+    }
+
+    private List<String> readLog() {
+        List<String[]> lineParts = mLogFile.read();
+        List<String> lines = new ArrayList<String>(lineParts.size());
+        for (String[] s : lineParts) {
+            lines.add(TextUtils.join(",", s));
+        }
+        return lines;
+    }
+
+    private void updateListView() {
+        mListAdapter.clear();
+        mListAdapter.addAll(readLog());
+        mListAdapter.notifyDataSetChanged();
     }
 
     @Override
@@ -180,16 +229,18 @@ public final class BluetoothFragment extends Fragment implements ServiceConnecti
                 break;
             case R.id.bt_test:
                 if (mBound) {
-                    for (BluetoothConnection conn : mService.getConnections()) {
-                        try {
-                            conn.sendMessage(new com.essentiallocalization.connection.Message("Testing"));
-                        } catch (IOException e) {
+                    try {
+                        mService.getConnectionManager().sendMessage(new com.essentiallocalization.connection.Message("Testing"));
+                    } catch (IOException e) {
 
-                        } catch (com.essentiallocalization.connection.Message.MessageTooLongException e) {
+                    } catch (com.essentiallocalization.connection.Message.MessageTooLongException e) {
 
-                        }
                     }
                 }
+                break;
+
+            case R.id.bt_refresh_log:
+                updateListView();
                 break;
         }
         return true;
@@ -244,7 +295,7 @@ public final class BluetoothFragment extends Fragment implements ServiceConnecti
     }
 
     private void setMaxConnections(int connections) {
-        if (connections > BluetoothService.MAX_CONNECTIONS) connections = BluetoothService.MAX_CONNECTIONS;
+        if (connections > BluetoothConnectionManager.MAX_CONNECTIONS) connections = BluetoothConnectionManager.MAX_CONNECTIONS;
         mMaxConnections = connections;
         for (int i = 0, value; i < mStateViews.length; ++i) {
             value = i < mMaxConnections ? View.VISIBLE : View.GONE;
@@ -278,6 +329,7 @@ public final class BluetoothFragment extends Fragment implements ServiceConnecti
             mService.setMaxConnections(mMaxConnections);
         }
         mService.setHandler(mHandler);
+        mService.setLogFile(mLogFile);
         mBound = true;
         setupServiceControls();
     }
@@ -292,81 +344,45 @@ public final class BluetoothFragment extends Fragment implements ServiceConnecti
     private final Handler mHandler = new Handler() {
         @Override
         public void handleMessage(Message msg) {
+            String name = null;
+            int index = 0;
+            if (msg.obj != null) {
+                BluetoothConnection connection = (BluetoothConnection) msg.obj;
+                index = mService.getConnectionManager().getConnections().indexOf(connection);
+                name = connection.getName();
+            }
+            if (name == null || name.length() == 0) {
+                name = String.valueOf(index);
+            }
             switch (msg.what) {
-                case BluetoothConnection.MSG_STATE_CHANGE:
-                    int state = msg.arg1;
-                    int i = 0;
-                    BluetoothDevice device;
-                    String name;
-                    for (BluetoothConnection conn : mService.getConnections()) {
-                        state = conn.getState();
-                        device = conn.getConnectedDevice();
-                        if (device != null) {
-                            name = device.getName();
-                        } else {
-                            name = "device " + i;
-                        }
-
-                        switch (state) {
-                            case BluetoothConnection.STATE_CONNECTED:
-                                mStateViews[i].setText(name + ": Connected");
-                                break;
-                            case BluetoothConnection.STATE_CONNECTING:
-                                mStateViews[i].setText(name + ": Connecting...");
-                                break;
-                            case BluetoothConnection.STATE_NONE:
-                                mStateViews[i].setText(name + ": Not connected");
-                                break;
-                        }
-                        i++;
-                    }
-                    while (i < mStateViews.length) {
-                        mStateViews[i].setVisibility(View.GONE);
-                        i++;
-                    }
+                case BluetoothService.MSG_STATE_CHANGE:
+//                    mStateViews[index].setVisibility(View.VISIBLE);
+                    mStateViews[index].setText(name + ": " + BluetoothConnection.getState(msg.arg1));
+                    break;
+                case BluetoothService.MSG_SENT_PACKET:
 
                     break;
 
-                case BluetoothConnection.MSG_CONNECTED:
+                case BluetoothService.MSG_SENT_MSG:
 
                     break;
 
-                case BluetoothConnection.MSG_CONNECTION_FAILED:
+                case BluetoothService.MSG_RECEIVED_PACKET:
 
                     break;
 
-                case BluetoothConnection.MSG_DISCONNECTED:
+                case BluetoothService.MSG_RECEIVED_MSG:
 
                     break;
 
-                case BluetoothConnection.MSG_SENT:
-                    int to = msg.arg1;
-                    int sentMsgIndex = msg.arg2;
-                    String message = (String) msg.obj;
-                    Toast.makeText(getActivity(), "Sent msg " + sentMsgIndex + " to " + to, Toast.LENGTH_SHORT).show();
+                case BluetoothService.MSG_CONFIRMED_PACKET:
+
                     break;
 
-                case BluetoothConnection.MSG_RECEIVED:
-                    int to2 = msg.arg1;
-                    int recMsgIndex = msg.arg2;
-                    String message2 = (String) msg.obj;
-                    Toast.makeText(getActivity(), "Received msg " + recMsgIndex + " from " + to2, Toast.LENGTH_SHORT).show();
-                    break;
+                case BluetoothService.MSG_CONFIRMED_MSG:
 
-                case BluetoothConnection.MSG_CONFIRMED:
-                    int to3 = msg.arg1;
-                    int sentMsgIndex2 = msg.arg2;
-                    DataPacket dp = (DataPacket) msg.obj;
-                    Toast.makeText(getActivity(), "Confirmed msg " + sentMsgIndex2 + " from " + to3
-                            + ". Distance: " + calcDistance(dp), Toast.LENGTH_SHORT).show();
                     break;
             }
         }
     };
-
-    private float calcDistance(DataPacket p) {
-        long roundTrip = p.confirmed - p.sent;
-        double distance = (BluetoothService.SPEED_OF_LIGHT * (roundTrip * 1E-9)) / 2;
-        return (float) Math.round(distance * 100) / 100;
-    }
 }

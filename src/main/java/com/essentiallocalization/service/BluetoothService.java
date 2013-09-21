@@ -4,35 +4,47 @@ import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.content.Intent;
 import android.os.Handler;
+import android.text.TextUtils;
 import android.util.Log;
 
-import com.essentiallocalization.connection.BluetoothConnection;
-import com.essentiallocalization.connection.PendingBluetoothConnection;
+import com.essentiallocalization.connection.DataPacket;
+import com.essentiallocalization.connection.Packet;
+import com.essentiallocalization.connection.bluetooth.BluetoothConnection;
+import com.essentiallocalization.connection.bluetooth.BluetoothConnectionManager;
+import com.essentiallocalization.util.LogFile;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Set;
 
 /**
  * Created by Jake on 9/2/13.
  */
-public class BluetoothService extends PersistentIntentService {
+public class BluetoothService extends PersistentIntentService implements BluetoothConnection.Listener {
 
     public static final int SPEED_OF_LIGHT = 299792458; // m/s
-
-    public static final int MAX_CONNECTIONS = PendingBluetoothConnection.MAX_CONNECTIONS;
-
-
 
     private final BluetoothAdapter mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
     private final String mName = mBluetoothAdapter.getName();
     private final String TAG = "BluetoothService " + mName;
 
-    private final List<BluetoothConnection> mConnections = new ArrayList<BluetoothConnection>(MAX_CONNECTIONS);
+    /** arg1 = state, arg2 = prevState, obj = BluetoothConnection */
+    public static final int MSG_STATE_CHANGE = 1;
+    /** arg1 = packetIndex, arg2 = -1, obj = BluetoothConnection */
+    public static final int MSG_SENT_PACKET = 2;
+    /** arg1 = msgIndex, arg2 = -1, obj = BluetoothConnection */
+    public static final int MSG_SENT_MSG = 3;
+    /** arg1 = packetIndex, arg2 = -1, obj = BluetoothConnection */
+    public static final int MSG_RECEIVED_PACKET = 4;
+    /** arg1 = msgIndex, arg2 = -1, obj = BluetoothConnection */
+    public static final int MSG_RECEIVED_MSG = 5;
+    /** arg1 = packetIndex, arg2 = -1, obj = BluetoothConnection */
+    public static final int MSG_CONFIRMED_PACKET = 6;
+    /** arg1 = msgIndex, arg2 = -1, obj = BluetoothConnection */
+    public static final int MSG_CONFIRMED_MSG = 7;
 
+    private BluetoothConnectionManager mManager;
     private Handler mHandler = new Handler();
-    private int mMaxConnections = MAX_CONNECTIONS;
     private boolean mRunning;
+    private LogFile mLog;
 
     public void setHandler(Handler handler) {
         synchronized (mHandler) {
@@ -40,21 +52,28 @@ public class BluetoothService extends PersistentIntentService {
         }
     }
 
+    public void setLogFile(LogFile log) {
+        mLog = log;
+    }
+
     @Override
     public void onCreate() {
         super.onCreate();
         Log.v(TAG, "onCreate()");
+        mManager = new BluetoothConnectionManager(this, mServiceLooper);
     }
 
     @Override
     protected void onHandleIntent(Intent intent) {
         Log.v(TAG, "onHandleIntent()");
         // listen to system bt broadcasts
+//        BluetoothAdapter.ACTION_
     }
 
     @Override
     public boolean onUnbind(Intent intent) {
         Log.v(TAG, "onUnbind()");
+        mHandler.removeCallbacksAndMessages(null);
         setHandler(new Handler());
         return super.onUnbind(intent);
     }
@@ -65,22 +84,20 @@ public class BluetoothService extends PersistentIntentService {
         stop();
     }
 
-    public List<BluetoothConnection> getConnections() {
-        return mConnections;
+    public BluetoothConnectionManager getConnectionManager() {
+        return mManager;
     }
 
 
     public synchronized void setMaxConnections(int connections) {
-        boolean running = mRunning;
         stop();
-        if (connections > MAX_CONNECTIONS) connections = MAX_CONNECTIONS;
-        mMaxConnections = connections;
-        if (running) start();
+        mManager.setMaxConnections(connections);
     }
 
     public synchronized int getMaxConnections() {
-        return mMaxConnections;
+        return mManager.getMaxConnections();
     }
+
 
     public synchronized void start() {
         Log.v(TAG, "start()");
@@ -88,33 +105,127 @@ public class BluetoothService extends PersistentIntentService {
 
         Set<BluetoothDevice> devices = mBluetoothAdapter.getBondedDevices();
         if (devices != null) {
-            synchronized (mConnections) {
+            synchronized (mManager) {
                 int count = 0;
                 for (BluetoothDevice d : devices) {
-                    if (count >= mMaxConnections) break;
-                    BluetoothConnection conn = new BluetoothConnection(mHandler, d);
-                    conn.start();
-                    mConnections.add(conn);
+                    if (count >= mManager.getMaxConnections()) break;
+                    mManager.addDevice(d);
                     ++count;
                 }
             }
         }
+        mManager.start();
         mRunning = true;
     }
 
     public synchronized void stop() {
         Log.v(TAG, "stop()");
-        synchronized (mConnections) {
-            for (BluetoothConnection conn : mConnections) {
-                conn.stop();
-                mConnections.remove(conn);
-                conn = null;
-            }
-        }
+        mManager.stop();
         mRunning = false;
     }
 
     public synchronized boolean isRunning() {
         return mRunning;
+    }
+
+    private float calcDistance(DataPacket p) {
+        long roundTrip = p.confirmed - p.sent;
+        double distance = (BluetoothService.SPEED_OF_LIGHT * (roundTrip * 1E-9)) / 2;
+        return (float) Math.round(distance * 100) / 100;
+    }
+
+    @Override
+    public void onStateChange(BluetoothConnection connection, int state, int previousState) {
+        mLog.d(connection.getName() + ": state " +
+            BluetoothConnection.getState(previousState) + " -> " + BluetoothConnection.getState(state));
+        mHandler.obtainMessage(MSG_STATE_CHANGE, state, previousState).sendToTarget();
+    }
+
+
+
+    @Override
+    public void onPacketReceived(BluetoothConnection connection, int packetIndex) {
+        mLog.i(TAG, makeLogEntry(connection, Packet.TYPE_MSG, packetIndex, false));
+        mHandler.obtainMessage(MSG_RECEIVED_PACKET, packetIndex, -1, connection).sendToTarget();
+    }
+
+    @Override
+    public void onMessageReceived(BluetoothConnection connection, int msgIndex) {
+
+    }
+
+    @Override
+    public void onPacketSent(BluetoothConnection connection, int packetIndex) {
+        mLog.i(TAG, makeLogEntry(connection, Packet.TYPE_MSG, packetIndex, true));
+        mHandler.obtainMessage(MSG_SENT_PACKET, packetIndex, -1, connection).sendToTarget();
+    }
+
+    @Override
+    public void onMessageSent(BluetoothConnection connection, int msgIndex) {
+
+    }
+
+    @Override
+    public void onPacketConfirmed(BluetoothConnection connection, int packetIndex) {
+        mLog.i(TAG, makeLogEntry(connection, Packet.TYPE_ACK, packetIndex, true));
+        mHandler.obtainMessage(MSG_CONFIRMED_PACKET, packetIndex, -1, connection).sendToTarget();
+    }
+
+    @Override
+    public void onMessageConfirmed(BluetoothConnection connection, int msgIndex) {
+
+    }
+
+
+
+    private String makeLogEntry(BluetoothConnection connection, int type, int packetIndex, boolean sent) {
+        DataPacket packet = sent
+                ? connection.getConnection().getSentPackets().get(packetIndex)
+                : connection.getConnection().getReceivedPackets().get(packetIndex);
+        String[] entry = null;
+        switch (type) {
+            case Packet.TYPE_MSG:
+                entry = new String[] {
+                        "Msg",
+                        String.valueOf(connection.getTo()),
+                        String.valueOf(packet.packetIndex),
+                        String.valueOf(packet.msgIndex),
+                        String.valueOf(packet.msgAttempt),
+                        String.valueOf(packet.msgPart),
+                        String.valueOf(packet.msgParts),
+                        String.valueOf(packet.sent),
+                        String.valueOf(packet.received),
+                        String.valueOf(packet.confirmed),
+                        Packet.trim(packet.payload)
+                };
+                break;
+            case Packet.TYPE_TEST:
+                entry = new String[] {
+                        "Test",
+                        String.valueOf(connection.getTo()),
+                        String.valueOf(packet.packetIndex),
+                        String.valueOf(packet.msgIndex),
+                        String.valueOf(packet.msgAttempt),
+                        String.valueOf(packet.msgPart),
+                        String.valueOf(packet.msgParts),
+                        String.valueOf(packet.sent),
+                        String.valueOf(packet.received),
+                        String.valueOf(packet.confirmed),
+                        Packet.trim(packet.payload)
+                };
+                break;
+            case Packet.TYPE_ACK:
+                entry = new String[] {
+                        "Ack",
+                        String.valueOf(connection.getTo()),
+                        String.valueOf(packet.packetIndex),
+                        String.valueOf(packet.sent),
+                        String.valueOf(packet.received),
+                        String.valueOf(packet.confirmed),
+                        String.valueOf(calcDistance(packet))
+                };
+                break;
+        }
+        return TextUtils.join(" | ", entry);
     }
 }

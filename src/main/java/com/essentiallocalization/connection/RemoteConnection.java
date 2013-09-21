@@ -12,18 +12,28 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Created by Jake on 9/14/13.
+ * Represents a InputStream/OutputStream pair as a connection
+ * which can send Messages back and forth, internally breaking them into Packets.
  */
-public class RemoteConnection {
+public final class RemoteConnection {
     private final String TAG;
 
-    public static final int MSG_SENT = 1;
-    public static final int MSG_RECEIVED = 2;
-    public static final int MSG_CONFIRMED = 3;
-    public static final int MSG_DISCONNECTED = 4;
+    /** arg1 = to, arg2 = packetIndex, obj = ActiveConnection */
+    public static final int MSG_SENT_PACKET = 1;
+    /** arg1 = to, arg2 = msgIndex, obj = ActiveConnection */
+    public static final int MSG_SENT_MSG = 2;
+    /** arg1 = to, arg2 = packetIndex, obj = ActiveConnection */
+    public static final int MSG_RECEIVED_PACKET = 3;
+    /** arg1 = to, arg2 = msgIndex, obj = ActiveConnection */
+    public static final int MSG_RECEIVED_MSG = 4;
+    /** arg1 = to, arg2 = packetIndex, obj = ActiveConnection */
+    public static final int MSG_CONFIRMED_PACKET = 5;
+    /** arg1 = to, arg2 = msgIndex, obj = ActiveConnection */
+    public static final int MSG_CONFIRMED_MSG = 6;
+    /** arg1 = to, arg2 = -1, obj = ActiveConnection */
+    public static final int MSG_DISCONNECTED = 7;
 
     private final Handler mHandler;
-
     private final byte mTo;
     private final InputStream mIn;
     private final OutputStream mOut;
@@ -35,7 +45,7 @@ public class RemoteConnection {
     private boolean mDisconnected;
 
     public RemoteConnection(byte to, InputStream in, OutputStream out, Handler handler) {
-        TAG = "RemoteConnection to " + to;
+        TAG = "ActiveConnection to " + to;
         mTo = to;
         mIn = in;
         mOut = out;
@@ -45,7 +55,35 @@ public class RemoteConnection {
         mReceivedMessages = new ArrayList<Message>();
         mPartialReceivedMessages = new SparseArray<String[]>();
         mHandler = handler;
-        mListenerThread.start();
+        mStreamListener.start();
+    }
+
+    public List<DataPacket> getSentPackets() {
+        return mSentPackets;
+    }
+
+    public List<DataPacket> getReceivedPackets() {
+        return mReceivedPackets;
+    }
+
+    public List<Message> getSentMessages() {
+        return mSentMessages;
+    }
+
+    public List<Message> getReceivedMessages() {
+        return mReceivedMessages;
+    }
+
+
+    public synchronized boolean isDisconnected() {
+        return mDisconnected;
+    }
+
+    private synchronized void setDisconnected(boolean disconnected) {
+        mDisconnected = disconnected;
+        if (mDisconnected) {
+            mHandler.obtainMessage(MSG_DISCONNECTED, mTo, -1, this).sendToTarget();
+        }
     }
 
     public synchronized void close() {
@@ -60,6 +98,7 @@ public class RemoteConnection {
         } catch (IOException e) {
             Log.e(TAG, "Unable to close output stream!");
         }
+        mHandler.removeCallbacksAndMessages(null);
     }
 
     public synchronized int sendMessage(Message message) throws IOException {
@@ -76,9 +115,10 @@ public class RemoteConnection {
             packet = new DataPacket(type, mSentPackets.size(), msgIndex, msgAttempt, msgPart, msgParts, message.get(msgPart));
             sendPacket(packet);
             mSentPackets.add(packet);
+            mHandler.obtainMessage(MSG_SENT_PACKET, mTo, mSentPackets.size() - 1, this).sendToTarget();
         }
         mSentMessages.add(message);
-        mHandler.obtainMessage(MSG_SENT, mTo, mSentMessages.size() - 1, message.toString()).sendToTarget();
+        mHandler.obtainMessage(MSG_SENT_MSG, mTo, mSentMessages.size() - 1, this).sendToTarget();
         return msgParts;
     }
 
@@ -93,7 +133,7 @@ public class RemoteConnection {
     }
 
 
-    private final Thread mListenerThread = new Thread() {
+    private final Thread mStreamListener = new Thread() {
         @Override
         public void run() {
             byte[] buffer = new byte[Packet.BUFFER_SIZE];
@@ -103,10 +143,7 @@ public class RemoteConnection {
                     processPacket(buffer);
                 } catch (IOException e) {
                     Log.w(TAG, "Disconnected");
-                    synchronized (RemoteConnection.this) {
-                        mDisconnected = true;
-                    }
-                    mHandler.obtainMessage(MSG_DISCONNECTED, mTo).sendToTarget();
+                    setDisconnected(true);
                     break;
                 }
             }
@@ -116,18 +153,21 @@ public class RemoteConnection {
             switch (Packet.getType(data)) {
                 case Packet.TYPE_ACK:
                     AckPacket ap = new AckPacket(data);
-                    Log.v(TAG, "Received ack for packet " + ap.packetIndex);
+//                    Log.v(TAG, "Received ack for packet " + ap.packetIndex);
                     DataPacket dataPacket = mSentPackets.get(ap.packetIndex);
                     dataPacket.confirmed = System.nanoTime();
                     dataPacket.received = ap.received;
+
+                    mHandler.obtainMessage(MSG_CONFIRMED_PACKET, mTo, dataPacket.packetIndex, RemoteConnection.this).sendToTarget();
+
                     if (ap.msgPart == ap.msgParts - 1) {
-                        mHandler.obtainMessage(MSG_CONFIRMED, mTo, ap.msgIndex, dataPacket).sendToTarget();
+                        mHandler.obtainMessage(MSG_CONFIRMED_MSG, mTo, ap.msgIndex, RemoteConnection.this).sendToTarget();
                     }
                     break;
-                case Packet.TYPE_TEST:
+                case Packet.TYPE_TEST: // Fall through
                 case Packet.TYPE_MSG:
                     DataPacket dp = new DataPacket(data);
-                    Log.v(TAG, "Received packet " + dp.packetIndex + " (" + dp.msgPart + " of " + dp.msgParts + ")");
+//                    Log.v(TAG, "Received packet " + dp.packetIndex + " (" + dp.msgPart + " of " + dp.msgParts + ")");
                     dp.received = System.nanoTime();
                     mReceivedPackets.add(dp);
                     try {
@@ -141,18 +181,20 @@ public class RemoteConnection {
                     parts[dp.msgPart] = part;
                     mPartialReceivedMessages.put(dp.msgIndex, parts);
 
+                    mHandler.obtainMessage(MSG_RECEIVED_PACKET, mTo, mReceivedPackets.size() - 1, RemoteConnection.this).sendToTarget();
+
                     if (dp.msgPart == dp.msgParts - 1) {
                         String message = TextUtils.join("", parts);
                         try {
                             mReceivedMessages.add(new Message(message));
-                        } catch (Message.MessageTooLongException ignored) {}
+                        } catch (Message.MessageTooLongException e) {
+                            Log.e(TAG, "Message too long for Packet buffer.");
+                        }
                         mPartialReceivedMessages.delete(dp.msgIndex);
-                        mHandler.obtainMessage(MSG_RECEIVED, mTo, mReceivedMessages.size() - 1, message).sendToTarget();
+                        mHandler.obtainMessage(MSG_RECEIVED_MSG, mTo, mReceivedMessages.size() - 1, RemoteConnection.this).sendToTarget();
                     }
                     break;
             }
         }
     };
-
-
 }

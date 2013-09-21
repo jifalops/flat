@@ -5,7 +5,7 @@ import java.nio.ByteBuffer;
 /**
  * Created by Jake on 9/14/13.
  */
-public class DataPacket extends Packet {
+public final class DataPacket extends Packet {
     public static final int HEADER_SIZE = Packet.HEADER_SIZE + 24;
     public static final int MAX_PAYLOAD = BUFFER_SIZE - HEADER_SIZE;
 

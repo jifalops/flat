@@ -25,7 +25,18 @@ public abstract class Packet {
         return packet[0];
     }
 
-    public Packet(byte type, int packetIndex, int msgIndex, byte msgAttempt, byte msgPart, byte msgParts) {
+    public static String trim(byte[] payload) {
+        int i = 0;
+        for (byte b : payload) {
+            if (b == 0) {
+                break;
+            }
+            i++;
+        }
+        return new String(ByteBuffer.wrap(payload, 0, i).array());
+    }
+
+    Packet(byte type, int packetIndex, int msgIndex, byte msgAttempt, byte msgPart, byte msgParts) {
         this.type = type;
         this.packetIndex = packetIndex;
         this.msgIndex = msgIndex;

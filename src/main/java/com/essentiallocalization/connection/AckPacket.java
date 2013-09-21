@@ -5,7 +5,7 @@ import java.nio.ByteBuffer;
 /**
  * Created by Jake on 9/14/13.
  */
-public class AckPacket extends Packet {
+public final class AckPacket extends Packet {
 
     public final long received;
 
