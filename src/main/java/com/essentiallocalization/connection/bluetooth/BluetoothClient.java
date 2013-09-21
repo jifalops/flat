@@ -22,7 +22,7 @@ public final class BluetoothClient extends Thread implements PendingConnection {
     /** obj = BluetoothClient */
     public static final int MSG_FINISHED = 2;
 
-    private static final int MAX_ATTEMPTS = 3;
+    private static final int MAX_ATTEMPTS = 1;
 
     private final ConnectionFilter mManager;
     private final Handler mHandler;

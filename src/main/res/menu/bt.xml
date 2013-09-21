@@ -8,6 +8,12 @@
     <item android:id="@+id/bt_refresh_log"
         android:title="@string/action_bt_refresh_log"
         android:showAsAction="ifRoom" />
+    <item android:id="@+id/bt_clear_log"
+        android:title="@string/action_bt_clear_log"
+        android:showAsAction="ifRoom" />
+    <item android:id="@+id/bt_view_log"
+        android:title="@string/action_bt_view_log"
+        android:showAsAction="ifRoom" />
     <item android:id="@+id/action_settings"
         android:title="@string/action_settings"
         android:orderInCategory="100"

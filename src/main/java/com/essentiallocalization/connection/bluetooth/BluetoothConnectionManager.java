@@ -60,13 +60,14 @@ public final class BluetoothConnectionManager implements ConnectionFilter {
         return mConnections.size() - 1;
     }
 
-    public synchronized void start(int index) {
-        mConnections.get(index).start();
-    }
-
-    public synchronized void stop(int index) {
-        mConnections.get(index).stop();
-    }
+//    public synchronized void start(int index) {
+//        mConnections.get(index).start();
+//    }
+//
+//    public synchronized void stop(int index) {
+//        mConnections.get(index).stop();
+////        mConnections.remove(index);
+//    }
 
     public synchronized void start() {
         stop();
@@ -79,6 +80,7 @@ public final class BluetoothConnectionManager implements ConnectionFilter {
         for (BluetoothConnection conn : mConnections) {
             conn.stop();
         }
+//        mConnections.clear();
     }
 
     public synchronized void sendMessage(int index, Message msg) throws IOException {

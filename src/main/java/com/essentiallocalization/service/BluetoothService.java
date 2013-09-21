@@ -19,12 +19,11 @@ import java.util.Set;
  * Created by Jake on 9/2/13.
  */
 public class BluetoothService extends PersistentIntentService implements BluetoothConnection.Listener {
-
+    private  static final String TAG = BluetoothService.class.getSimpleName();
     public static final int SPEED_OF_LIGHT = 299792458; // m/s
 
     private final BluetoothAdapter mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
     private final String mName = mBluetoothAdapter.getName();
-    private final String TAG = "BluetoothService " + mName;
 
     /** arg1 = state, arg2 = prevState, obj = BluetoothConnection */
     public static final int MSG_STATE_CHANGE = 1;
@@ -54,6 +53,18 @@ public class BluetoothService extends PersistentIntentService implements Bluetoo
 
     public void setLogFile(LogFile log) {
         mLog = log;
+
+        Set<BluetoothDevice> devices = mBluetoothAdapter.getBondedDevices();
+        if (devices != null) {
+            synchronized (mManager) {
+                int count = 0;
+                for (BluetoothDevice d : devices) {
+                    if (count >= mManager.getMaxConnections()) break;
+                    mManager.addDevice(d);
+                    ++count;
+                }
+            }
+        }
     }
 
     @Override
@@ -103,17 +114,7 @@ public class BluetoothService extends PersistentIntentService implements Bluetoo
         Log.v(TAG, "start()");
         stop();
 
-        Set<BluetoothDevice> devices = mBluetoothAdapter.getBondedDevices();
-        if (devices != null) {
-            synchronized (mManager) {
-                int count = 0;
-                for (BluetoothDevice d : devices) {
-                    if (count >= mManager.getMaxConnections()) break;
-                    mManager.addDevice(d);
-                    ++count;
-                }
-            }
-        }
+
         mManager.start();
         mRunning = true;
     }
@@ -136,9 +137,13 @@ public class BluetoothService extends PersistentIntentService implements Bluetoo
 
     @Override
     public void onStateChange(BluetoothConnection connection, int state, int previousState) {
-        mLog.d(connection.getName() + ": state " +
+        String name = connection.getName();
+        if (name == null) {
+            name = String.valueOf(mManager.getConnections().indexOf(connection));
+        }
+        mLog.d(TAG, name + ": state " +
             BluetoothConnection.getState(previousState) + " -> " + BluetoothConnection.getState(state));
-        mHandler.obtainMessage(MSG_STATE_CHANGE, state, previousState).sendToTarget();
+        mHandler.obtainMessage(MSG_STATE_CHANGE, state, previousState, connection).sendToTarget();
     }
 
 

@@ -10,6 +10,7 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
@@ -49,7 +50,7 @@ public final class BluetoothFragment extends Fragment implements ServiceConnecti
     /** Tag for Android's Logcat */
     private static final String TAG = BluetoothFragment.class.getSimpleName();
 
-    public static final String LOG_FILE = "log.txt";
+    public static final String LOG_FILE = "log.csv";
 
     /** Interface the containing activity must implement */
     static interface Listener {
@@ -168,14 +169,12 @@ public final class BluetoothFragment extends Fragment implements ServiceConnecti
         mStateViews = new TextView[BluetoothConnectionManager.MAX_CONNECTIONS];
         for (int i = 0; i < BluetoothConnectionManager.MAX_CONNECTIONS; ++i) {
             mStateViews[i] = (TextView) inflater.inflate(R.layout.state_textview, null);
-            if (i >= mMaxConnections) {
-                mStateViews[i].setVisibility(View.GONE);
-            }
+            mStateViews[i].setVisibility(View.GONE);
             states.addView(mStateViews[i]);
         }
 
         mListView = (ListView) root.findViewById(R.id.list);
-        mListAdapter = new ArrayAdapter<String>(getActivity(), R.layout.listitem_textview, readLog());
+        mListAdapter = new ArrayAdapter<String>(getActivity(), R.layout.listitem_textview, R.id.text, readLog());
         mListView.setAdapter(mListAdapter);
 
 //        mObserver = new FileObserver(mLogFile.toString(), FileObserver.MODIFY) {
@@ -241,6 +240,18 @@ public final class BluetoothFragment extends Fragment implements ServiceConnecti
 
             case R.id.bt_refresh_log:
                 updateListView();
+                break;
+
+            case R.id.bt_clear_log:
+                mLogFile.clear();
+                updateListView();
+                break;
+
+            case R.id.bt_view_log:
+                Intent i = new Intent(Intent.ACTION_VIEW);
+                i.setDataAndType(Uri.fromFile(mLogFile.getFile()), "text/*");
+                i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                startActivity(i);
                 break;
         }
         return true;
@@ -326,7 +337,7 @@ public final class BluetoothFragment extends Fragment implements ServiceConnecti
         PersistentIntentService.LocalBinder binder = (PersistentIntentService.LocalBinder) service;
         mService = (BluetoothService) binder.getService();
         if (mMaxConnections != mService.getMaxConnections()) {
-            mService.setMaxConnections(mMaxConnections);
+            setMaxConnections(mMaxConnections);
         }
         mService.setHandler(mHandler);
         mService.setLogFile(mLogFile);
@@ -344,20 +355,18 @@ public final class BluetoothFragment extends Fragment implements ServiceConnecti
     private final Handler mHandler = new Handler() {
         @Override
         public void handleMessage(Message msg) {
-            String name = null;
-            int index = 0;
-            if (msg.obj != null) {
-                BluetoothConnection connection = (BluetoothConnection) msg.obj;
-                index = mService.getConnectionManager().getConnections().indexOf(connection);
-                name = connection.getName();
-            }
+            BluetoothConnection connection = (BluetoothConnection) msg.obj;
+            String name = connection.getName();
+            int index = mService.getConnectionManager().getConnections().indexOf(connection);
             if (name == null || name.length() == 0) {
                 name = String.valueOf(index);
             }
             switch (msg.what) {
                 case BluetoothService.MSG_STATE_CHANGE:
-//                    mStateViews[index].setVisibility(View.VISIBLE);
-                    mStateViews[index].setText(name + ": " + BluetoothConnection.getState(msg.arg1));
+                    if (index >= 0) {
+                        mStateViews[index].setVisibility(View.VISIBLE);
+                        mStateViews[index].setText(name + ": " + BluetoothConnection.getState(msg.arg1));
+                    }
                     break;
                 case BluetoothService.MSG_SENT_PACKET:
 

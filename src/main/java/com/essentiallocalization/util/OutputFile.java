@@ -42,6 +42,10 @@ public final class OutputFile {
         mWriter = new FileWriter(mFile, true);
     }
 
+    public File getFile() {
+        return mFile;
+    }
+
     @Override
     protected synchronized void finalize() throws Throwable {
         if (!mClosed) {

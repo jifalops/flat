@@ -5,6 +5,7 @@ import android.util.Log;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
@@ -43,7 +44,7 @@ public final class LogFile {
     }
 
 
-    private final BufferedReader mReader;
+    private BufferedReader mReader;
     private final OutputFile mLog;
     private int mLevel;
     private String mTag;
@@ -57,9 +58,22 @@ public final class LogFile {
         if (needsHeader) {
             writeHeader();
         }
-        mReader = new BufferedReader(new FileReader(logFile));
         mLevel = Log.VERBOSE;
-        mTag = "";
+        mTag = TAG;
+        resetReader();
+    }
+
+    private void resetReader() {
+        try {
+            if (mReader != null) {
+                mReader.close();
+            }
+            mReader = new BufferedReader(new FileReader(getFile()));
+        } catch (FileNotFoundException e) {
+            Log.e(TAG, "Failed to reset BufferedReader.", e);
+        } catch (IOException e) {
+            Log.e(TAG, "Failed to reset BufferedReader.", e);
+        }
     }
 
     public synchronized void setTag(String tag) {
@@ -86,6 +100,7 @@ public final class LogFile {
         try {
             mLog.truncate();
             writeHeader();
+            resetReader();
         } catch (IOException e) {
             Log.e(TAG, "Failed to clear log.", e);
         }
@@ -107,6 +122,7 @@ public final class LogFile {
             while ((read = mReader.readLine()) != null) {
                 list.add(read);
             }
+            resetReader();
         } catch (IOException e) {
             Log.e(TAG, "Failed to read log file", e);
         }
@@ -216,6 +232,10 @@ public final class LogFile {
             result[i] = decodeCsv(result[i]);
         }
         return result;
+    }
+
+    public File getFile() {
+        return mLog.getFile();
     }
 
     @Override

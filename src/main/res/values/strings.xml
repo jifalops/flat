@@ -22,4 +22,6 @@
     <string name="toast_bt_connection_failed">Failed connection to index %1$d.</string>
     <string name="toast_bt_connection_lost">Lost connection to %1$s, index %2$d.</string>
     <string name="action_bt_refresh_log">Refresh Log</string>
+    <string name="action_bt_clear_log">Clear Log</string>
+    <string name="action_bt_view_log">View Log</string>
 </resources>

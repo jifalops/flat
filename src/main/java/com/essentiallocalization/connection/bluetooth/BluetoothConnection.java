@@ -54,12 +54,13 @@ public final class BluetoothConnection implements ConnectionFilter {
     private volatile boolean mIsServer;
     private UUID mUuid;
     private final Listener mListener;
-    private boolean mIsConnected;
+    private volatile boolean mIsConnected;
     private final ConnectionFilter mFilter;
     private final Looper mLooper;
     private final ServerHandler mServerHandler;
     private final ClientHandler mClientHandler;
     private final ConnectionHandler mConnectionHandler;
+    private volatile boolean mCancelled;
 
     BluetoothConnection(ConnectionFilter filter, Listener listener, BluetoothDevice target, Looper looper) {
         mLooper = looper;
@@ -113,6 +114,7 @@ public final class BluetoothConnection implements ConnectionFilter {
 
     public synchronized void start() {
         stop();
+        mCancelled = false;
         mServer = new BluetoothServer(this, mServerHandler);
         mClient = new BluetoothClient(this, mClientHandler, mTargetDevice);
         mServer.start();
@@ -147,6 +149,7 @@ public final class BluetoothConnection implements ConnectionFilter {
         mAddress = "";
         mUuid = null;
         mIsConnected = false;
+        mCancelled = true;
         setState(STATE_NONE);
     }
 
@@ -193,7 +196,8 @@ public final class BluetoothConnection implements ConnectionFilter {
                     manageNewConnection(mSocket.getRemoteDevice());
                     break;
                 case BluetoothServer.MSG_FINISHED:
-                    if (mClient.isFinished() && !mIsConnected) {
+                    if (!mIsConnected && mClient.isFinished()
+                            && !mCancelled) {
                         start();
                     }
                     break;
@@ -219,7 +223,8 @@ public final class BluetoothConnection implements ConnectionFilter {
                     manageNewConnection(mSocket.getRemoteDevice());
                     break;
                 case BluetoothClient.MSG_FINISHED:
-                    if (mServer.isFinished() && !mIsConnected) {
+                    if (mServer.isFinished() && !mIsConnected
+                            && !mCancelled) {
                         start();
                     }
                     break;
@@ -253,7 +258,11 @@ public final class BluetoothConnection implements ConnectionFilter {
                     mListener.onMessageConfirmed(BluetoothConnection.this, msg.arg2);
                     break;
                 case RemoteConnection.MSG_DISCONNECTED:
+                    mIsConnected = false;
                     setState(STATE_NONE);
+                    if (!mCancelled) {
+                        start();
+                    }
                     break;
             }
         }

@@ -73,7 +73,7 @@ public final class BluetoothServer extends Thread implements PendingConnection {
                     mSocket = mServerSocket.accept(); // Blocks
                     close();
                 } catch (IOException e) {
-                    Log.w(TAG, "Server " + i + " interrupted.");
+                    Log.e(TAG, "Server " + i + " interrupted.");
                     break;
                 }
 
