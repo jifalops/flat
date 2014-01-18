@@ -14,12 +14,12 @@ public abstract class Packet {
     public static final byte TYPE_ACK = 2;
     public static final byte TYPE_MSG = 3;
 
-    public final byte type;
-    public final int packetIndex;
-    public final int msgIndex;
-    public final byte msgAttempt;
-    public final byte msgPart;
-    public final byte msgParts;
+    public byte type;
+    public int packetIndex;
+    public int msgIndex;
+    public byte msgAttempt;
+    public byte msgPart;
+    public byte msgParts;
 
     public static byte getType(byte[] packet) {
         return packet[0];
@@ -45,7 +45,7 @@ public abstract class Packet {
         this.msgParts = msgParts;
     }
 
-    public Packet(byte[] fromPacket) {
+    Packet(byte[] fromPacket) {
         ByteBuffer bb = ByteBuffer.wrap(fromPacket);
         type = bb.get();
         packetIndex = bb.getInt();
@@ -57,7 +57,7 @@ public abstract class Packet {
 
     public abstract int size();
 
-    public abstract byte[] getBytes();
+    public abstract byte[] onSend();
 
     protected final ByteBuffer getBuffer() {
         return ByteBuffer.allocate(size())

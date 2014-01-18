@@ -130,9 +130,9 @@ public class BluetoothService extends PersistentIntentService implements Bluetoo
     }
 
     private float calcDistance(DataPacket p) {
-        long roundTrip = p.confirmed - p.sent;
+        long roundTrip = (p.received - p.sent) + (p.confirmed - p.resent);
         double distance = (BluetoothService.SPEED_OF_LIGHT * (roundTrip * 1E-9)) / 2;
-        return (float) Math.round(distance * 100) / 100;
+        return Math.round(distance * 100) / 100;
     }
 
     @Override
@@ -184,14 +184,21 @@ public class BluetoothService extends PersistentIntentService implements Bluetoo
 
 
     private String makeLogEntry(BluetoothConnection connection, int type, int packetIndex, boolean sent) {
-        DataPacket packet = sent
-                ? connection.getConnection().getSentPackets().get(packetIndex)
-                : connection.getConnection().getReceivedPackets().get(packetIndex);
+
+        DataPacket packet;
+        String dir;
+        if (sent) {
+            packet = connection.getConnection().getSentPackets().get(packetIndex);
+            dir = "Sent";
+        } else {
+            packet = connection.getConnection().getReceivedPackets().get(packetIndex);
+            dir = "Received";
+        }
         String[] entry = null;
         switch (type) {
             case Packet.TYPE_MSG:
                 entry = new String[] {
-                        "Msg",
+                        "Msg " + dir,
                         String.valueOf(connection.getTo()),
                         String.valueOf(packet.packetIndex),
                         String.valueOf(packet.msgIndex),
@@ -200,13 +207,14 @@ public class BluetoothService extends PersistentIntentService implements Bluetoo
                         String.valueOf(packet.msgParts),
                         String.valueOf(packet.sent),
                         String.valueOf(packet.received),
+                        String.valueOf(packet.resent),
                         String.valueOf(packet.confirmed),
                         Packet.trim(packet.payload)
                 };
                 break;
             case Packet.TYPE_TEST:
                 entry = new String[] {
-                        "Test",
+                        "Test " + dir,
                         String.valueOf(connection.getTo()),
                         String.valueOf(packet.packetIndex),
                         String.valueOf(packet.msgIndex),
@@ -215,6 +223,7 @@ public class BluetoothService extends PersistentIntentService implements Bluetoo
                         String.valueOf(packet.msgParts),
                         String.valueOf(packet.sent),
                         String.valueOf(packet.received),
+                        String.valueOf(packet.resent),
                         String.valueOf(packet.confirmed),
                         Packet.trim(packet.payload)
                 };
@@ -226,6 +235,7 @@ public class BluetoothService extends PersistentIntentService implements Bluetoo
                         String.valueOf(packet.packetIndex),
                         String.valueOf(packet.sent),
                         String.valueOf(packet.received),
+                        String.valueOf(packet.resent),
                         String.valueOf(packet.confirmed),
                         String.valueOf(calcDistance(packet))
                 };

@@ -8,8 +8,8 @@ import java.io.IOException;
 
 /**
  * A simple wrapper for FileWriter that opens in append mode
- * and supplies a truncate method. It also attempts to flush
- * the FileWriter whenever it is appended or closed.
+ * and supplies a truncate method. It can also flush the
+ * FileWriter whenever it is appended (write-through).
  */
 public final class OutputFile {
     private static final String TAG = OutputFile.class.getSimpleName();
@@ -17,6 +17,7 @@ public final class OutputFile {
     private final File mFile;
     private FileWriter mWriter;
     private boolean mClosed;
+    private boolean mWriteThrough;
 
     public OutputFile(File outFile) throws IOException {
         mFile = outFile;
@@ -25,14 +26,18 @@ public final class OutputFile {
 
     public synchronized void append(CharSequence csq) throws IOException {
         mWriter.append(csq);
-        mWriter.flush();
+        if (mWriteThrough) {
+            mWriter.flush();
+        }
     }
 
 
     public synchronized void close() throws IOException {
-        mWriter.flush();
-        mWriter.close();
-        mClosed = true;
+        try { mWriter.flush(); }
+        finally {
+            mClosed = true;
+            mWriter.close();
+        }
     }
 
     public synchronized void truncate() throws IOException {
@@ -42,9 +47,18 @@ public final class OutputFile {
         mWriter = new FileWriter(mFile, true);
     }
 
-    public File getFile() {
+    public synchronized void setWriteThrough(boolean enabled) {
+        mWriteThrough = enabled;
+    }
+
+    public synchronized boolean isWriteThrough() {
+        return mWriteThrough;
+    }
+
+    public synchronized File getFile() {
         return mFile;
     }
+    public synchronized FileWriter getWriter() { return mWriter; }
 
     @Override
     protected synchronized void finalize() throws Throwable {
