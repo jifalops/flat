@@ -13,7 +13,7 @@ public final class Message {
     private final String mFullMsg;
 
     public Message(String msg) throws MessageTooLongException {
-        this.mFullMsg = msg;
+        mFullMsg = msg;
         mParts = new ArrayList<byte[]>();
         int start, end;
         int count = 0;

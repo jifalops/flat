@@ -3,16 +3,22 @@ package com.essentiallocalization.service;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.content.Intent;
+import android.os.Environment;
 import android.os.Handler;
 import android.text.TextUtils;
 import android.util.Log;
+import android.widget.Toast;
 
 import com.essentiallocalization.connection.DataPacket;
 import com.essentiallocalization.connection.Packet;
 import com.essentiallocalization.connection.bluetooth.BluetoothConnection;
 import com.essentiallocalization.connection.bluetooth.BluetoothConnectionManager;
+import com.essentiallocalization.connection.bluetooth.SnoopFilter;
+import com.essentiallocalization.util.Calc;
 import com.essentiallocalization.util.LogFile;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.Set;
 
 /**
@@ -20,7 +26,7 @@ import java.util.Set;
  */
 public class BluetoothService extends PersistentIntentService implements BluetoothConnection.Listener {
     private  static final String TAG = BluetoothService.class.getSimpleName();
-    public static final int SPEED_OF_LIGHT = 299792458; // m/s
+
 
     private final BluetoothAdapter mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
     private final String mName = mBluetoothAdapter.getName();
@@ -44,6 +50,8 @@ public class BluetoothService extends PersistentIntentService implements Bluetoo
     private Handler mHandler = new Handler();
     private boolean mRunning;
     private LogFile mLog;
+
+    private SnoopFilter mMsgFilter;
 
     public void setHandler(Handler handler) {
         synchronized (mHandler) {
@@ -116,24 +124,41 @@ public class BluetoothService extends PersistentIntentService implements Bluetoo
 
 
         mManager.start();
+
+        try {
+            mMsgFilter = new SnoopFilter(new File(Environment.getExternalStorageDirectory(), "btsnoop_hci.log"), "Test", new SnoopFilter.Listener() {
+                @Override
+                public void onMessageFound(long ts, String msg) {
+                    Toast.makeText(BluetoothService.this, String.valueOf(ts) + ": " + msg, Toast.LENGTH_SHORT).show();
+                }
+            });
+            mMsgFilter.start();
+        } catch (IOException e) {
+            Log.e(TAG, "Failed to create message filter");
+        }
+
         mRunning = true;
     }
 
     public synchronized void stop() {
         Log.v(TAG, "stop()");
         mManager.stop();
+
+        if (mMsgFilter != null) {
+            mMsgFilter.cancel();
+            mMsgFilter = null;
+        }
+
+
         mRunning = false;
     }
+
 
     public synchronized boolean isRunning() {
         return mRunning;
     }
 
-    private float calcDistance(DataPacket p) {
-        long roundTrip = (p.received - p.sent) + (p.confirmed - p.resent);
-        double distance = (BluetoothService.SPEED_OF_LIGHT * (roundTrip * 1E-9)) / 2;
-        return Math.round(distance * 100) / 100;
-    }
+
 
     @Override
     public void onStateChange(BluetoothConnection connection, int state, int previousState) {
@@ -237,7 +262,7 @@ public class BluetoothService extends PersistentIntentService implements Bluetoo
                         String.valueOf(packet.received),
                         String.valueOf(packet.resent),
                         String.valueOf(packet.confirmed),
-                        String.valueOf(calcDistance(packet))
+                        String.valueOf(Calc.timeOfFlightDistance1(packet.sent, packet.received, packet.resent, packet.confirmed))
                 };
                 break;
         }

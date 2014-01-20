@@ -102,8 +102,6 @@ public final class StreamedConnection {
     }
 
     public synchronized int sendMessage(Message message) throws IOException {
-                // TODO Temporary double send
-                sendMessage(Packet.TYPE_MSG, message);
         return sendMessage(Packet.TYPE_MSG, message);
     }
 

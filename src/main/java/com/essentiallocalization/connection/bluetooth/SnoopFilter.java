@@ -1,6 +1,7 @@
 package com.essentiallocalization.connection.bluetooth;
 
 import android.os.Bundle;
+import android.os.FileObserver;
 import android.os.Handler;
 import android.os.Message;
 import android.util.Log;
@@ -9,9 +10,9 @@ import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
-import java.util.regex.Pattern;
 
 /**
  * Reads a snoop file in a separate thread for payload data that matches a given pattern.
@@ -54,24 +55,24 @@ public class SnoopFilter extends Thread {
     private static final int TIME_OFFSET = 16;
     private static final int TIME_SIZE = 8;
 
-    private static final int MAX_ATTEMPTS = 5;
+    private static final int MAX_ATTEMPTS = 60;
 
     public static interface Listener {
         void onMessageFound(long ts, String msg);
     }
 
-//    private final File mFile;
+    private final File mFile;
     private final BufferedInputStream mStream;
     private final Handler mHandler;
     private final Listener mListener;
-    private final Pattern mPattern;
+    private final String mFilter;
 
     private volatile int mPacketsRead, mMessagesFound;
     private boolean mCanceled, mFailed;
 
-    public SnoopFilter(File file, Pattern pattern, Listener listener) throws IOException {
-//        mFile = file;
-        mPattern = pattern;
+    public SnoopFilter(File file, String msgPrefix, Listener listener) throws IOException {
+        mFile = file;
+        mFilter = msgPrefix;
         mListener = listener;
 
         mStream = new BufferedInputStream(new FileInputStream(file));
@@ -144,9 +145,17 @@ public class SnoopFilter extends Thread {
         packetHeader = new byte[PACKET_HEADER_SIZE];
         payload = new byte[MAX_PAYLOAD_SIZE];
 
+        FileObserver fo = new FileObserver(mFile.toString()) {
+            @Override
+            public void onEvent(int event, String path) {
+
+            }
+        };
+
+
         // Read the file header.
         attempts = 0;
-        while (true) {
+        while (!isCanceled()) {
             if (++attempts >= MAX_ATTEMPTS) {
                 fail();
                 return;
@@ -173,7 +182,7 @@ public class SnoopFilter extends Thread {
 
             // Read packet header.
             attempts = 0;
-            while (true) {
+            while (!isCanceled()) {
                 if (++attempts >= MAX_ATTEMPTS) {
                     fail();
                     return;
@@ -203,7 +212,7 @@ public class SnoopFilter extends Thread {
 
             // Read payload data.
             attempts = 0;
-            while (true) {
+            while (!isCanceled()) {
                 if (++attempts >= MAX_ATTEMPTS) {
                     fail();
                     return;
@@ -230,24 +239,38 @@ public class SnoopFilter extends Thread {
 
             // Parse the message.
             try {
-                msgStart = mPattern.matcher(ByteBuffer.wrap(payload, 0, payloadSize)
-                        .asCharBuffer()).end();
+                msgStart = new String(payload, 0, payloadSize, "ISO88591").indexOf(mFilter);
+                if (msgStart > -1) {
+                    msgStart += mFilter.length();
+                    ++mMessagesFound;
 
-                ++mMessagesFound;
+                    message = Arrays.copyOfRange(payload, msgStart, payloadSize - 1); // -1 for the RFCOMM fcs byte (checksum)
+                    long timestamp = ByteBuffer.wrap(packetHeader, TIME_OFFSET, TIME_SIZE).getLong();
 
-                message = Arrays.copyOfRange(payload, msgStart, payloadSize - 1); // -1 for the RFCOMM fcs byte (checksum)
-                long timestamp = ByteBuffer.wrap(packetHeader, TIME_OFFSET, TIME_SIZE).getLong();
+                    Bundle data = new Bundle();
+                    data.putLong(KEY_TIMESTAMP, timestamp);
+                    data.putString(KEY_MESSAGE, new String(message));
 
-                Bundle data = new Bundle();
-                data.putLong(KEY_TIMESTAMP, timestamp);
-                data.putString(KEY_MESSAGE, new String(message));
-
-                Message msg = mHandler.obtainMessage(MSG_MESSAGE_FOUND);
-                msg.setData(data);
-                msg.sendToTarget();
-
-            } catch (IllegalStateException ignored) {} // no match found.
+                    Message msg = mHandler.obtainMessage(MSG_MESSAGE_FOUND);
+                    msg.setData(data);
+                    msg.sendToTarget();
+                }
+            } catch (UnsupportedEncodingException e) {
+                Log.e(TAG, "Failed string encoding.");
+            }
         }
+    }
+
+    private void readFileHeader() {
+
+    }
+
+    private void readPacketHeader() {
+
+    }
+
+    private void readPacketPayload() {
+
     }
 
 
