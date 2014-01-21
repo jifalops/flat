@@ -34,7 +34,7 @@ import android.widget.Toast;
 
 import com.essentiallocalization.connection.bluetooth.BluetoothConnection;
 import com.essentiallocalization.connection.bluetooth.BluetoothConnectionManager;
-import com.essentiallocalization.service.BluetoothService;
+import com.essentiallocalization.service.bluetooth.BluetoothService;
 import com.essentiallocalization.service.PersistentIntentService;
 import com.essentiallocalization.util.LogFile;
 
@@ -228,14 +228,12 @@ public final class BluetoothFragment extends Fragment implements ServiceConnecti
                 break;
             case R.id.bt_test:
                 if (mBound) {
-                    try {
-                        mService.getConnectionManager().sendMessage(new com.essentiallocalization.connection.Message("Testing"));
-                    } catch (IOException e) {
-
-                    } catch (com.essentiallocalization.connection.Message.MessageTooLongException e) {
-
-                    }
+                    mService.send("Testing");
                 }
+                break;
+
+            case R.id.bt_reset_hci:
+                //mService.resetSnoopFile();
                 break;
 
             case R.id.bt_refresh_log:

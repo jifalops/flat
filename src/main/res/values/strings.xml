@@ -24,4 +24,5 @@
     <string name="action_bt_refresh_log">Refresh Log</string>
     <string name="action_bt_clear_log">Clear Log</string>
     <string name="action_bt_view_log">View Log</string>
+    <string name="action_bt_reset_hci">Clear HCI</string>
 </resources>

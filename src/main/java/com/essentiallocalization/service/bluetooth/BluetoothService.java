@@ -1,4 +1,4 @@
-package com.essentiallocalization.service;
+package com.essentiallocalization.service.bluetooth;
 
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
@@ -13,11 +13,14 @@ import com.essentiallocalization.connection.DataPacket;
 import com.essentiallocalization.connection.Packet;
 import com.essentiallocalization.connection.bluetooth.BluetoothConnection;
 import com.essentiallocalization.connection.bluetooth.BluetoothConnectionManager;
-import com.essentiallocalization.connection.bluetooth.SnoopFilter;
+import com.essentiallocalization.service.SnoopFilter;
+import com.essentiallocalization.service.PersistentIntentService;
 import com.essentiallocalization.util.Calc;
 import com.essentiallocalization.util.LogFile;
 
+import java.io.BufferedOutputStream;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.Set;
 
@@ -125,8 +128,24 @@ public class BluetoothService extends PersistentIntentService implements Bluetoo
 
         mManager.start();
 
+        startSnoopFilter();
+
+        mRunning = true;
+    }
+
+    public synchronized void stop() {
+        Log.v(TAG, "stop()");
+        mManager.stop();
+
+        stopSnoopFilter();
+
+
+        mRunning = false;
+    }
+
+    public synchronized void startSnoopFilter() {
         try {
-            mMsgFilter = new SnoopFilter(new File(Environment.getExternalStorageDirectory(), "btsnoop_hci.log"), "Test", new SnoopFilter.Listener() {
+            mMsgFilter = new SnoopFilter(BtSnoop.FILE, BtSnoop.PREFIX, new SnoopFilter.Listener() {
                 @Override
                 public void onMessageFound(long ts, String msg) {
                     Toast.makeText(BluetoothService.this, String.valueOf(ts) + ": " + msg, Toast.LENGTH_SHORT).show();
@@ -136,23 +155,37 @@ public class BluetoothService extends PersistentIntentService implements Bluetoo
         } catch (IOException e) {
             Log.e(TAG, "Failed to create message filter");
         }
-
-        mRunning = true;
     }
 
-    public synchronized void stop() {
-        Log.v(TAG, "stop()");
-        mManager.stop();
-
+    public synchronized void stopSnoopFilter() {
         if (mMsgFilter != null) {
             mMsgFilter.cancel();
             mMsgFilter = null;
         }
-
-
-        mRunning = false;
     }
 
+    public synchronized void resetSnoopFile() {
+        stop();
+
+        try {
+            BufferedOutputStream bos = new BufferedOutputStream(new FileOutputStream(BtSnoop.FILE));
+            bos.write(BtSnoop.DEFAULT_BYTES);
+            bos.flush();
+            bos.close();
+        } catch (IOException e) {
+            Log.e(TAG, "Failed to reset BTSnoop file.");
+        }
+    }
+
+    public synchronized void send(String msg) {
+        try {
+            mManager.sendMessage(new com.essentiallocalization.connection.Message(BtSnoop.PREFIX + msg));
+        } catch (IOException e) {
+            Log.e(TAG, "Failed sending message");
+        } catch (com.essentiallocalization.connection.Message.MessageTooLongException e) {
+            Log.e(TAG, "Message too long!");
+        }
+    }
 
     public synchronized boolean isRunning() {
         return mRunning;
@@ -267,5 +300,14 @@ public class BluetoothService extends PersistentIntentService implements Bluetoo
                 break;
         }
         return TextUtils.join(" | ", entry);
+    }
+
+    private static class BtSnoop {
+        public static final File FILE = new File(Environment.getExternalStorageDirectory(), "btsnoop_hci.log");
+        public static final String PREFIX = "EssLocBtSnoop";
+        public static final byte[] DEFAULT_BYTES = new byte[] {
+            0x62, 0x74, 0x73, 0x6E, 0x6F, 0x6F, 0x70, 0x00,
+            0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x03, (byte) 0xEA
+        };
     }
 }

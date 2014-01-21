@@ -2,6 +2,9 @@
     <item android:id="@+id/bt_test"
         android:title="@string/action_bt_test"
         android:showAsAction="ifRoom" />
+    <item android:id="@+id/bt_reset_hci"
+        android:title="@string/action_bt_reset_hci"
+        android:showAsAction="ifRoom" />
     <item android:id="@+id/bt_set_max"
         android:title="@string/action_bt_set_max"
         android:showAsAction="ifRoom" />
