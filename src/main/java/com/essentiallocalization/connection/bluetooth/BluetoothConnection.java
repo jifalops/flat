@@ -1,5 +1,6 @@
 package com.essentiallocalization.connection.bluetooth;
 
+import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
 import android.os.Handler;
@@ -8,7 +9,7 @@ import android.os.Message;
 import android.util.Log;
 
 import com.essentiallocalization.connection.ConnectionFilter;
-import com.essentiallocalization.connection.StreamedConnection;
+import com.essentiallocalization.connection.PacketManager;
 
 import java.io.IOException;
 import java.util.UUID;
@@ -44,12 +45,13 @@ public final class BluetoothConnection implements ConnectionFilter {
 
     private BluetoothServer mServer;
     private BluetoothClient mClient;
-    private StreamedConnection mConnection;
+    private PacketManager mConnection;
     private BluetoothSocket mSocket;
     private int mState;
     private String mAddress;
     private String mName;
-    private byte mTo;
+    private final byte mSrc;
+    private byte mDest;
     private BluetoothDevice mTargetDevice;
     private volatile boolean mIsServer;
     private UUID mUuid;
@@ -71,10 +73,14 @@ public final class BluetoothConnection implements ConnectionFilter {
         mTargetDevice = target;
         mState = -1;
         mAddress = "";
+
+        String me = BluetoothAdapter.getDefaultAdapter().getName();
+        mSrc = Byte.valueOf(me.substring(me.length() - 1));
+
         setState(STATE_NONE);
     }
 
-    public synchronized StreamedConnection getConnection() {
+    public synchronized PacketManager getConnection() {
         return mConnection;
     }
 
@@ -95,7 +101,7 @@ public final class BluetoothConnection implements ConnectionFilter {
     }
 
     public synchronized byte getTo() {
-        return mTo;
+        return mDest;
     }
 
     private synchronized void setState(int state) {
@@ -153,9 +159,9 @@ public final class BluetoothConnection implements ConnectionFilter {
 
     private void manageNewConnection(BluetoothDevice device) {
         mName = device.getName();
-        mTo = Byte.valueOf(mName.substring(mName.length() - 1));
+        mDest = Byte.valueOf(mName.substring(mName.length() - 1));
         try {
-            mConnection = new StreamedConnection(mTo, mSocket.getInputStream(), mSocket.getOutputStream(), mConnectionHandler);
+            mConnection = new PacketManager(mSrc, mDest, mSocket.getInputStream(), mSocket.getOutputStream(), mConnectionHandler);
             mIsConnected = true;
             setState(STATE_CONNECTED);
         } catch (IOException e) {
@@ -237,25 +243,25 @@ public final class BluetoothConnection implements ConnectionFilter {
         @Override
         public void handleMessage(Message msg) {
             switch (msg.what) {
-                case StreamedConnection.MSG_SENT_PACKET:
+                case PacketManager.MSG_SENT_PACKET:
                     mListener.onPacketSent(BluetoothConnection.this, msg.arg2);
                     break;
-                case StreamedConnection.MSG_SENT_MSG:
+                case PacketManager.MSG_SENT_MSG:
                     mListener.onMessageSent(BluetoothConnection.this, msg.arg2);
                     break;
-                case StreamedConnection.MSG_RECEIVED_PACKET:
+                case PacketManager.MSG_RECEIVED_PACKET:
                     mListener.onPacketReceived(BluetoothConnection.this, msg.arg2);
                     break;
-                case StreamedConnection.MSG_RECEIVED_MSG:
+                case PacketManager.MSG_RECEIVED_MSG:
                     mListener.onMessageReceived(BluetoothConnection.this, msg.arg2);
                     break;
-                case StreamedConnection.MSG_CONFIRMED_PACKET:
+                case PacketManager.MSG_CONFIRMED_PACKET:
                     mListener.onPacketConfirmed(BluetoothConnection.this, msg.arg2);
                     break;
-                case StreamedConnection.MSG_CONFIRMED_MSG:
+                case PacketManager.MSG_CONFIRMED_MSG:
                     mListener.onMessageConfirmed(BluetoothConnection.this, msg.arg2);
                     break;
-                case StreamedConnection.MSG_DISCONNECTED:
+                case PacketManager.MSG_DISCONNECTED:
                     mIsConnected = false;
                     setState(STATE_NONE);
                     if (!mCancelled) {

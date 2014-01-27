@@ -7,20 +7,17 @@ import android.os.Environment;
 import android.os.Handler;
 import android.text.TextUtils;
 import android.util.Log;
-import android.widget.Toast;
 
 import com.essentiallocalization.connection.DataPacket;
 import com.essentiallocalization.connection.Packet;
 import com.essentiallocalization.connection.bluetooth.BluetoothConnection;
 import com.essentiallocalization.connection.bluetooth.BluetoothConnectionManager;
-import com.essentiallocalization.service.SnoopFilter;
+import com.essentiallocalization.util.SnoopFilter;
 import com.essentiallocalization.service.PersistentIntentService;
 import com.essentiallocalization.util.Calc;
 import com.essentiallocalization.util.LogFile;
 
-import java.io.BufferedOutputStream;
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.Set;
 
@@ -36,15 +33,15 @@ public class BluetoothService extends PersistentIntentService implements Bluetoo
 
     /** arg1 = state, arg2 = prevState, obj = BluetoothConnection */
     public static final int MSG_STATE_CHANGE = 1;
-    /** arg1 = packetIndex, arg2 = -1, obj = BluetoothConnection */
+    /** arg1 = pktIndex, arg2 = -1, obj = BluetoothConnection */
     public static final int MSG_SENT_PACKET = 2;
     /** arg1 = msgIndex, arg2 = -1, obj = BluetoothConnection */
     public static final int MSG_SENT_MSG = 3;
-    /** arg1 = packetIndex, arg2 = -1, obj = BluetoothConnection */
+    /** arg1 = pktIndex, arg2 = -1, obj = BluetoothConnection */
     public static final int MSG_RECEIVED_PACKET = 4;
     /** arg1 = msgIndex, arg2 = -1, obj = BluetoothConnection */
     public static final int MSG_RECEIVED_MSG = 5;
-    /** arg1 = packetIndex, arg2 = -1, obj = BluetoothConnection */
+    /** arg1 = pktIndex, arg2 = -1, obj = BluetoothConnection */
     public static final int MSG_CONFIRMED_PACKET = 6;
     /** arg1 = msgIndex, arg2 = -1, obj = BluetoothConnection */
     public static final int MSG_CONFIRMED_MSG = 7;
@@ -145,12 +142,7 @@ public class BluetoothService extends PersistentIntentService implements Bluetoo
 
     public synchronized void startSnoopFilter() {
         try {
-            mMsgFilter = new SnoopFilter(BtSnoop.FILE, BtSnoop.PREFIX, new SnoopFilter.Listener() {
-                @Override
-                public void onMessageFound(long ts, String msg) {
-                    Toast.makeText(BluetoothService.this, String.valueOf(ts) + ": " + msg, Toast.LENGTH_SHORT).show();
-                }
-            });
+            mMsgFilter = new SnoopFilter(BtSnoop.FILE, BtSnoop.OUT_FILE, Packet.PREFIX, null);
             mMsgFilter.start();
         } catch (IOException e) {
             Log.e(TAG, "Failed to create message filter");
@@ -164,22 +156,9 @@ public class BluetoothService extends PersistentIntentService implements Bluetoo
         }
     }
 
-    public synchronized void resetSnoopFile() {
-        stop();
-
-        try {
-            BufferedOutputStream bos = new BufferedOutputStream(new FileOutputStream(BtSnoop.FILE));
-            bos.write(BtSnoop.DEFAULT_BYTES);
-            bos.flush();
-            bos.close();
-        } catch (IOException e) {
-            Log.e(TAG, "Failed to reset BTSnoop file.");
-        }
-    }
-
     public synchronized void send(String msg) {
         try {
-            mManager.sendMessage(new com.essentiallocalization.connection.Message(BtSnoop.PREFIX + msg));
+            mManager.sendMessage(new com.essentiallocalization.connection.Message(msg));
         } catch (IOException e) {
             Log.e(TAG, "Failed sending message");
         } catch (com.essentiallocalization.connection.Message.MessageTooLongException e) {
@@ -258,9 +237,9 @@ public class BluetoothService extends PersistentIntentService implements Bluetoo
                 entry = new String[] {
                         "Msg " + dir,
                         String.valueOf(connection.getTo()),
-                        String.valueOf(packet.packetIndex),
+                        String.valueOf(packet.pktIndex),
                         String.valueOf(packet.msgIndex),
-                        String.valueOf(packet.msgAttempt),
+                        String.valueOf(packet.attempt),
                         String.valueOf(packet.msgPart),
                         String.valueOf(packet.msgParts),
                         String.valueOf(packet.sent),
@@ -274,9 +253,9 @@ public class BluetoothService extends PersistentIntentService implements Bluetoo
                 entry = new String[] {
                         "Test " + dir,
                         String.valueOf(connection.getTo()),
-                        String.valueOf(packet.packetIndex),
+                        String.valueOf(packet.pktIndex),
                         String.valueOf(packet.msgIndex),
-                        String.valueOf(packet.msgAttempt),
+                        String.valueOf(packet.attempt),
                         String.valueOf(packet.msgPart),
                         String.valueOf(packet.msgParts),
                         String.valueOf(packet.sent),
@@ -290,7 +269,7 @@ public class BluetoothService extends PersistentIntentService implements Bluetoo
                 entry = new String[] {
                         "Ack",
                         String.valueOf(connection.getTo()),
-                        String.valueOf(packet.packetIndex),
+                        String.valueOf(packet.pktIndex),
                         String.valueOf(packet.sent),
                         String.valueOf(packet.received),
                         String.valueOf(packet.resent),
@@ -303,11 +282,8 @@ public class BluetoothService extends PersistentIntentService implements Bluetoo
     }
 
     private static class BtSnoop {
-        public static final File FILE = new File(Environment.getExternalStorageDirectory(), "btsnoop_hci.log");
-        public static final String PREFIX = "EssLocBtSnoop";
-        public static final byte[] DEFAULT_BYTES = new byte[] {
-            0x62, 0x74, 0x73, 0x6E, 0x6F, 0x6F, 0x70, 0x00,
-            0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x03, (byte) 0xEA
-        };
+        public static final File FILE = new File(Environment.getExternalStorageDirectory(), "btsnoop_hci.log"),
+                                OUT_FILE = new File(Environment.getExternalStorageDirectory(), "btsnoop_packets.txt"),
+                                CSV_FILE = new File(Environment.getExternalStorageDirectory(), "btsnoop_packet_data.csv");
     }
 }

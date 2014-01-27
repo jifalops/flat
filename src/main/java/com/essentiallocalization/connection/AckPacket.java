@@ -7,35 +7,49 @@ import java.nio.ByteBuffer;
  */
 public final class AckPacket extends Packet {
 
-    public final long received;
-    public long resent;
+    public long hciDestReceived;
+    public long javaDestReceived;
+    public long javaDestSent;
 
-    @Override
-    public int size() {
-        return Packet.HEADER_SIZE + 16;
-    }
+    private static final int HEADER_SIZE = (8 * 3) + (4 * 0) + (2 * 0) + (1 * 0); // see properties above
 
-    public AckPacket(int packetIndex, int msgIndex, byte msgAttempt, byte msgPart, byte msgParts, long received) {
-        super(Packet.TYPE_ACK, packetIndex, msgIndex, msgAttempt, msgPart, msgParts);
-        this.received = received;
-    }
+    AckPacket(byte[] ackPacket) {
+        super(ackPacket);
+        type = Packet.TYPE_ACK;
 
-    public AckPacket(byte[] fromAckPacket) {
-        super(fromAckPacket);
-        received = ByteBuffer.wrap(fromAckPacket).getLong(Packet.HEADER_SIZE);
-        resent = ByteBuffer.wrap(fromAckPacket).getLong(Packet.HEADER_SIZE + 8);
-    }
-
-    public AckPacket(DataPacket packet) {
-        super(Packet.TYPE_ACK, packet.packetIndex, packet.msgIndex, packet.msgAttempt, packet.msgPart, packet.msgParts);
-        this.received = System.nanoTime();
+        ByteBuffer bb = ByteBuffer.wrap(ackPacket);
+        bb.position(Packet.HEADER_SIZE + PREFIX.length());
+        hciDestReceived = bb.getLong();
+        javaDestReceived = bb.getLong();
+        javaDestSent = bb.getLong();
     }
 
     @Override
-    public byte[] onSend() {
+    public byte[] getBytes(boolean sending) {
         return getBuffer()
-                .putLong(received)
-                .putLong(resent = System.nanoTime())
+                .putLong(hciDestReceived)
+                .putLong(javaDestReceived)
+                .putLong(sending ? javaDestSent = System.nanoTime()
+                                 : javaDestSent)
                 .array();
+    }
+
+    AckPacket() {
+        type = Packet.TYPE_ACK;
+    }
+
+    AckPacket(Packet p) {
+        super(p);
+        type = Packet.TYPE_ACK;
+    }
+
+    @Override
+    public int marginalHeaderSize() {
+        return HEADER_SIZE;
+    }
+
+    @Override
+    public int payloadSize() {
+        return 0;
     }
 }

@@ -1,9 +1,5 @@
-package com.essentiallocalization.service;
+package com.essentiallocalization.util;
 
-import android.os.Bundle;
-import android.os.FileObserver;
-import android.os.Handler;
-import android.os.Message;
 import android.util.Log;
 
 import java.io.BufferedInputStream;
@@ -62,7 +58,8 @@ public class SnoopFilter extends Thread {
     private static final int TASK_READ_PACKET_PAYLOAD = 3;
 
     public static interface Listener {
-        void onMessageFound(long ts, String msg);
+        /** Called on the SnoopFilter thread. */
+        void onMessageFound(long ts, byte[] msg);
     }
 
     private int mTask;
@@ -70,35 +67,36 @@ public class SnoopFilter extends Thread {
     private int mPayloadSize;
 
     private final File mSnoopFile;
-    private  FileObserver mObserver;
-    private final BufferedInputStream mStream;
-    private final Handler mHandler;
+//    private final File mOutFile;
+//    private final BufferedOutputStream mOutStream;
+    private final BufferedInputStream mInStream;
+//    private final Handler mHandler;
     private final Listener mListener;
     private final String mFilter;
 
     private volatile int mPacketsRead, mMessagesFound;
     private boolean mCanceled, mFailed;
 
-    public SnoopFilter(File mFile, String msgPrefix, Listener listener) throws IOException {
-        mSnoopFile = mFile;
+    public SnoopFilter(File snoopFile, /*File outFile,*/ String msgPrefix, Listener listener) throws IOException {
+        mSnoopFile = snoopFile;
+//        mOutFile = outFile;
         mFilter = msgPrefix;
         mListener = listener;
 
-        mStream = new BufferedInputStream(new FileInputStream(mFile));
+        mInStream = new BufferedInputStream(new FileInputStream(snoopFile));
+//        mOutStream = new BufferedOutputStream(new FileOutputStream(outFile));
 
-
-
-        mHandler = new Handler() {
-            @Override
-            public void handleMessage(Message msg) {
-                switch (msg.what) {
-                    case MSG_MESSAGE_FOUND:
-                        Bundle data = msg.getData();
-                        if (mListener != null) mListener.onMessageFound(data.getLong(KEY_TIMESTAMP), data.getString(KEY_MESSAGE));
-                        break;
-                }
-            }
-        };
+//        mHandler = new Handler() {
+//            @Override
+//            public void handleMessage(Message msg) {
+//                switch (msg.what) {
+//                    case MSG_MESSAGE_FOUND:
+//                        Bundle data = msg.getData();
+//                        if (mListener != null) mListener.onMessageFound(data.getLong(KEY_TIMESTAMP), data.getString(KEY_MESSAGE));
+//                        break;
+//                }
+//            }
+//        };
 
         mTask = TASK_READ_FILE_HEADER;
     }
@@ -112,7 +110,7 @@ public class SnoopFilter extends Thread {
     }
 
     private boolean resetStream() {
-        try { mStream.reset(); }
+        try { mInStream.reset(); }
         catch (IOException e) {
             Log.e(TAG, "Failed to reset stream.");
             return false;
@@ -130,12 +128,8 @@ public class SnoopFilter extends Thread {
     }
 
     public synchronized void cancel() {
-        if (mObserver != null) {
-            mObserver.stopWatching();
-            mObserver = null;
-        }
-
         mCanceled = true;
+        close();
     }
     public synchronized boolean isCanceled() {
         return mCanceled;
@@ -144,14 +138,23 @@ public class SnoopFilter extends Thread {
     private synchronized void fail() {
         mFailed = true;
         Log.e(TAG, "The snoop filter has failed!");
+        close();
     }
     public synchronized boolean isFailed() {
         return mFailed;
     }
 
-    @Override
-    public synchronized void start() {
-        super.start();
+
+    private void close() {
+        try {
+            mInStream.close();
+//            mOutStream.flush();
+//            mOutStream.close();
+        } catch (IOException e) {
+            Log.e(TAG, "Failed closing input or output files.");
+        }
+
+//        mHandler.removeCallbacksAndMessages(null);
     }
 
     @Override
@@ -193,9 +196,9 @@ public class SnoopFilter extends Thread {
                 fail();
                 return false;
             }
-            mStream.mark(FILE_HEADER_SIZE);
+            mInStream.mark(FILE_HEADER_SIZE);
             try {
-                bytesRead = mStream.read(fileHeader);
+                bytesRead = mInStream.read(fileHeader);
                 if (bytesRead != FILE_HEADER_SIZE) {
                     Log.e(TAG, "File header was not the correct length.");
                 }
@@ -225,10 +228,10 @@ public class SnoopFilter extends Thread {
                 fail();
                 return false;
             }
-            mStream.mark(PACKET_HEADER_SIZE);
+            mInStream.mark(PACKET_HEADER_SIZE);
 
             try {
-                bytesRead = mStream.read(packetHeader);
+                bytesRead = mInStream.read(packetHeader);
                 if (bytesRead != PACKET_HEADER_SIZE) {
                     Log.e(TAG, "Packet header was not the correct length.");
                 }
@@ -256,7 +259,7 @@ public class SnoopFilter extends Thread {
     }
 
     private boolean readPacketPayload() {
-        byte[] payload = new byte[MAX_PAYLOAD_SIZE], message;
+        byte[] payload = new byte[mPayloadSize], message;
         int bytesRead, msgStart;
 
         int attempts = 0;
@@ -265,10 +268,10 @@ public class SnoopFilter extends Thread {
                 fail();
                 return false;
             }
-            mStream.mark(mPayloadSize);
+            mInStream.mark(mPayloadSize);
 
             try {
-                bytesRead = mStream.read(payload, 0, mPayloadSize);
+                bytesRead = mInStream.read(payload);
                 if (bytesRead != mPayloadSize) {
                     Log.e(TAG, "Payload was not the correct length.");
                 }
@@ -284,20 +287,30 @@ public class SnoopFilter extends Thread {
 
                 // Parse the message.
                 try {
-                    msgStart = new String(payload, 0, mPayloadSize, "ISO88591").indexOf(mFilter);
+                    msgStart = new String(payload, "ISO88591").indexOf(mFilter);
                     if (msgStart > -1) {
-                        msgStart += mFilter.length();
+                        // Uncomment to exclude the filter string from the result
+                        //msgStart += mFilter.length();
                         ++mMessagesFound;
 
                         message = Arrays.copyOfRange(payload, msgStart, mPayloadSize - 1); // -1 for the RFCOMM fcs byte (checksum)
 
-                        Bundle data = new Bundle();
-                        data.putLong(KEY_TIMESTAMP, mTimestamp);
-                        data.putString(KEY_MESSAGE, new String(message));
+                        mListener.onMessageFound(mTimestamp, message);
 
-                        Message msg = mHandler.obtainMessage(MSG_MESSAGE_FOUND);
-                        msg.setData(data);
-                        msg.sendToTarget();
+//                        try {
+//                            mOutStream.write(message);
+//                        } catch (IOException e) {
+//                            Log.e(TAG, "Failed to write message to outfile.");
+//                        }
+//
+//
+//                        Bundle data = new Bundle();
+//                        data.putLong(KEY_TIMESTAMP, mTimestamp);
+//                        data.putString(KEY_MESSAGE, new String(message));
+//
+//                        Message msg = mHandler.obtainMessage(MSG_MESSAGE_FOUND);
+//                        msg.setData(data);
+//                        msg.sendToTarget();
                     }
                 } catch (UnsupportedEncodingException e) {
                     Log.e(TAG, "Failed string encoding.");
@@ -314,7 +327,7 @@ public class SnoopFilter extends Thread {
     @Override
     protected void finalize() throws Throwable {
         try{
-            cancel();
+            close();
         } finally {
             super.finalize();
         }
