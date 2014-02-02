@@ -12,10 +12,10 @@ import com.essentiallocalization.connection.DataPacket;
 import com.essentiallocalization.connection.Packet;
 import com.essentiallocalization.connection.bluetooth.BluetoothConnection;
 import com.essentiallocalization.connection.bluetooth.BluetoothConnectionManager;
-import com.essentiallocalization.util.SnoopFilter;
+import com.essentiallocalization.util.io.SnoopFilter;
 import com.essentiallocalization.service.PersistentIntentService;
 import com.essentiallocalization.util.Calc;
-import com.essentiallocalization.util.LogFile;
+import com.essentiallocalization.util.io.LogFile;
 
 import java.io.File;
 import java.io.IOException;

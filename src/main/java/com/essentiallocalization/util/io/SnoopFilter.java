@@ -1,6 +1,9 @@
-package com.essentiallocalization.util;
+package com.essentiallocalization.util.io;
 
 import android.util.Log;
+
+import com.essentiallocalization.util.lifecycle.Cancelable;
+import com.essentiallocalization.util.lifecycle.Failable;
 
 import java.io.BufferedInputStream;
 import java.io.File;
@@ -16,7 +19,7 @@ import java.util.Arrays;
  * and is passed the timestamp and message. The message passed will begin with the character
  * AFTER the prefix string.
  */
-public class SnoopFilter extends Thread {
+public class SnoopFilter extends Thread implements Cancelable, Failable {
     private static final String TAG = SnoopFilter.class.getSimpleName();
                                             // Big endian
 //    static final class FileHeader {
@@ -57,7 +60,8 @@ public class SnoopFilter extends Thread {
     private static final int TASK_READ_PACKET_HEADER = 2;
     private static final int TASK_READ_PACKET_PAYLOAD = 3;
 
-    public static interface Listener {
+
+    public static interface Listener extends Failable.Listener {
         /** Called on the SnoopFilter thread. */
         void onMessageFound(long ts, byte[] msg);
     }
@@ -127,10 +131,13 @@ public class SnoopFilter extends Thread {
         }
     }
 
+    @Override
     public synchronized void cancel() {
         mCanceled = true;
         close();
     }
+
+    @Override
     public synchronized boolean isCanceled() {
         return mCanceled;
     }
@@ -139,8 +146,11 @@ public class SnoopFilter extends Thread {
         mFailed = true;
         Log.e(TAG, "The snoop filter has failed!");
         close();
+        mListener.onFail();
     }
-    public synchronized boolean isFailed() {
+
+    @Override
+    public synchronized boolean hasFailed() {
         return mFailed;
     }
 
@@ -176,9 +186,9 @@ public class SnoopFilter extends Thread {
 //            }
 //        };
 //        mObserver.startWatching();
-        while (!isCanceled() && !isFailed()) {
+        while (!isCanceled() && !hasFailed()) {
             if (readFileHeader()) {
-                while (!isCanceled() && !isFailed()) {
+                while (!isCanceled() && !hasFailed()) {
                     readPacketHeader();
                     readPacketPayload();
                 }

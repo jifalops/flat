@@ -1,4 +1,4 @@
-package com.essentiallocalization.util;
+package com.essentiallocalization.util.io;
 
 import android.util.Log;
 

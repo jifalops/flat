@@ -4,7 +4,7 @@ import android.bluetooth.BluetoothDevice;
 import android.os.Looper;
 import android.util.Log;
 
-import com.essentiallocalization.connection.ConnectionFilter;
+import com.essentiallocalization.util.Filter;
 import com.essentiallocalization.connection.Message;
 
 import java.io.IOException;
@@ -15,7 +15,7 @@ import java.util.UUID;
 /**
  * Created by Jake on 9/15/13.
  */
-public final class BluetoothConnectionManager implements ConnectionFilter {
+public final class BluetoothConnectionManager implements Filter {
     private static final String TAG = BluetoothConnectionManager.class.getSimpleName();
 
     static final UUID[] UUIDS = {
@@ -104,7 +104,7 @@ public final class BluetoothConnectionManager implements ConnectionFilter {
     }
 
     @Override
-    public synchronized boolean isAllowed(String address) {
+    public synchronized boolean accept(String address) {
         for (BluetoothConnection conn : mConnections) {
             if (conn.getAddress().equals(address)) {
                 return false;

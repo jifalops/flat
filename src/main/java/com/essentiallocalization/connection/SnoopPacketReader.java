@@ -2,7 +2,8 @@ package com.essentiallocalization.connection;
 
 import android.util.Log;
 
-import com.essentiallocalization.util.SnoopFilter;
+import com.essentiallocalization.util.io.SnoopFilter;
+import com.essentiallocalization.util.lifecycle.Startable;
 
 import java.io.File;
 import java.io.IOException;
@@ -12,19 +13,39 @@ import java.util.List;
 /**
  * Created by Jake on 1/26/14.
  */
-public class SnoopPacketReader implements SnoopFilter.Listener {
+public class SnoopPacketReader implements SnoopFilter.Listener, Startable {
     private static final String TAG = SnoopPacketReader.class.getSimpleName();
+
+    @Override
+    public void onFail() {
+        //
+    }
+
+    @Override
+    public void start() {
+        mFilter.start();
+    }
+
+    @Override
+    public void cancel() {
+        mFilter.cancel();
+    }
+
+    @Override
+    public boolean isCanceled() {
+        return mFilter.isCanceled();
+    }
 
     /**
      * Events are called based with their related HCI timestamps completed.
      * Java timestamps may or may not be completed.
      */
     public static interface Listener {
-        /** called on separate thread. */
+        /** called on separate (SnoopFilter) thread. */
         void onSendAck(AckPacket ap);
-        /** called on separate thread. */
+        /** called on separate (SnoopFilter) thread. */
         void onSendAckTime(AckTimePacket atp);
-        /** called on separate thread. */
+        /** called on separate (SnoopFilter) thread. */
         void onPacketCompleted(DataPacket dp);
     }
 

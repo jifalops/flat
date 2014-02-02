@@ -7,8 +7,8 @@ import android.bluetooth.BluetoothSocket;
 import android.os.Handler;
 import android.util.Log;
 
-import com.essentiallocalization.connection.ConnectionFilter;
-import com.essentiallocalization.connection.PendingConnection;
+import com.essentiallocalization.util.Filter;
+import com.essentiallocalization.util.lifecycle.Finishable;
 
 import java.io.IOException;
 import java.util.UUID;
@@ -16,7 +16,7 @@ import java.util.UUID;
 /**
  * Created by Jake on 9/20/13.
  */
-public final class BluetoothServer extends Thread implements PendingConnection {
+public final class BluetoothServer extends Thread implements Finishable {
     private static final String TAG = BluetoothServer.class.getSimpleName();
     private static final String SERVICE_NAME = "EssentialLocalizationBluetoothService";
 
@@ -26,7 +26,7 @@ public final class BluetoothServer extends Thread implements PendingConnection {
     public static final int MSG_FINISHED = 2;
 
     private final BluetoothAdapter mAdapter;
-    private final ConnectionFilter mManager;
+    private final Filter mManager;
     private final Handler mHandler;
     private BluetoothServerSocket mServerSocket;
     private boolean mCanceled;
@@ -35,7 +35,7 @@ public final class BluetoothServer extends Thread implements PendingConnection {
     private BluetoothSocket mSocket;
     private UUID mUuid;
 
-    public BluetoothServer(ConnectionFilter connMgr, Handler handler) {
+    public BluetoothServer(Filter connMgr, Handler handler) {
         mManager = connMgr;
         mHandler = handler;
         mAdapter = BluetoothAdapter.getDefaultAdapter();
@@ -79,7 +79,7 @@ public final class BluetoothServer extends Thread implements PendingConnection {
 
                 if (mSocket != null) {
                     BluetoothDevice device = mSocket.getRemoteDevice();
-                    if (device != null && mManager.isAllowed(device.getAddress())) {
+                    if (device != null && mManager.allow(device.getAddress())) {
                         setConnected(true);
                         mHandler.obtainMessage(MSG_CONNECTED, this).sendToTarget();
                     }

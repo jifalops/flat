@@ -8,8 +8,8 @@ import android.os.Looper;
 import android.os.Message;
 import android.util.Log;
 
-import com.essentiallocalization.connection.ConnectionFilter;
-import com.essentiallocalization.connection.PacketManager;
+import com.essentiallocalization.util.Filter;
+import com.essentiallocalization.connection.PacketConnection;
 
 import java.io.IOException;
 import java.util.UUID;
@@ -17,18 +17,15 @@ import java.util.UUID;
 /**
  * Created by Jake on 9/20/13.
  */
-public final class BluetoothConnection implements ConnectionFilter {
+public final class BluetoothConnection extends PacketConnection implements Filter {
     private static final String TAG = BluetoothConnection.class.getSimpleName();
-
-    public static final int STATE_NONE = 0;
-    public static final int STATE_CONNECTING = 1;
-    public static final int STATE_CONNECTED = 2;
 
     public static String getState(int state) {
         switch (state) {
-            case STATE_NONE:        return "None";
-            case STATE_CONNECTING:  return "Connecting";
-            case STATE_CONNECTED:   return "Connected";
+            case STATE_NONE:         return "None";
+            case STATE_CONNECTING:   return "Connecting";
+            case STATE_CONNECTED:    return "Connected";
+            case STATE_DISCONNECTED: return "Disconnected";
         }
         return "Unknown";
     }
@@ -45,7 +42,7 @@ public final class BluetoothConnection implements ConnectionFilter {
 
     private BluetoothServer mServer;
     private BluetoothClient mClient;
-    private PacketManager mConnection;
+    private PacketConnection mConnection;
     private BluetoothSocket mSocket;
     private int mState;
     private String mAddress;
@@ -57,13 +54,13 @@ public final class BluetoothConnection implements ConnectionFilter {
     private UUID mUuid;
     private final Listener mListener;
     private volatile boolean mIsConnected;
-    private final ConnectionFilter mFilter;
+    private final Filter mFilter;
     private final ServerHandler mServerHandler;
     private final ClientHandler mClientHandler;
     private final ConnectionHandler mConnectionHandler;
     private volatile boolean mCancelled;
 
-    BluetoothConnection(ConnectionFilter filter, Listener listener, BluetoothDevice target, Looper looper) {
+    BluetoothConnection(Filter filter, BluetoothDevice target, Looper sendAndEventLooper, Listener listener) {
         mConnectionHandler = new ConnectionHandler(looper);
         mServerHandler = new ServerHandler(looper);
         mClientHandler = new ClientHandler(looper);
@@ -80,7 +77,7 @@ public final class BluetoothConnection implements ConnectionFilter {
         setState(STATE_NONE);
     }
 
-    public synchronized PacketManager getConnection() {
+    public synchronized PacketConnection getConnection() {
         return mConnection;
     }
 
@@ -161,7 +158,7 @@ public final class BluetoothConnection implements ConnectionFilter {
         mName = device.getName();
         mDest = Byte.valueOf(mName.substring(mName.length() - 1));
         try {
-            mConnection = new PacketManager(mSrc, mDest, mSocket.getInputStream(), mSocket.getOutputStream(), mConnectionHandler);
+            mConnection = new PacketConnection(mSrc, mDest, mSocket.getInputStream(), mSocket.getOutputStream(), mConnectionHandler);
             mIsConnected = true;
             setState(STATE_CONNECTED);
         } catch (IOException e) {
@@ -171,10 +168,10 @@ public final class BluetoothConnection implements ConnectionFilter {
     }
 
     @Override
-    public synchronized boolean isAllowed(String address) {
+    public synchronized boolean accept(String address) {
         if (mAddress.length() > 0) {
             return  address.equals(mAddress);
-        } else if (mFilter.isAllowed(address)) {
+        } else if (mFilter.allow(address)) {
             mAddress = address;
             return true;
         }
@@ -243,25 +240,25 @@ public final class BluetoothConnection implements ConnectionFilter {
         @Override
         public void handleMessage(Message msg) {
             switch (msg.what) {
-                case PacketManager.MSG_SENT_PACKET:
+                case PacketConnection.MSG_SENT_PACKET:
                     mListener.onPacketSent(BluetoothConnection.this, msg.arg2);
                     break;
-                case PacketManager.MSG_SENT_MSG:
+                case PacketConnection.MSG_SENT_MSG:
                     mListener.onMessageSent(BluetoothConnection.this, msg.arg2);
                     break;
-                case PacketManager.MSG_RECEIVED_PACKET:
+                case PacketConnection.MSG_RECEIVED_PACKET:
                     mListener.onPacketReceived(BluetoothConnection.this, msg.arg2);
                     break;
-                case PacketManager.MSG_RECEIVED_MSG:
+                case PacketConnection.MSG_RECEIVED_MSG:
                     mListener.onMessageReceived(BluetoothConnection.this, msg.arg2);
                     break;
-                case PacketManager.MSG_CONFIRMED_PACKET:
+                case PacketConnection.MSG_CONFIRMED_PACKET:
                     mListener.onPacketConfirmed(BluetoothConnection.this, msg.arg2);
                     break;
-                case PacketManager.MSG_CONFIRMED_MSG:
+                case PacketConnection.MSG_CONFIRMED_MSG:
                     mListener.onMessageConfirmed(BluetoothConnection.this, msg.arg2);
                     break;
-                case PacketManager.MSG_DISCONNECTED:
+                case PacketConnection.MSG_DISCONNECTED:
                     mIsConnected = false;
                     setState(STATE_NONE);
                     if (!mCancelled) {
