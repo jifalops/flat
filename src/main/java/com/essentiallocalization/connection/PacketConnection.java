@@ -125,7 +125,7 @@ public class PacketConnection extends StreamConnection implements StreamConnecti
         return msgParts;
     }
 
-    public void send(final Packet packet) throws IOException {
+    protected void send(final Packet packet) throws IOException {
         send(new Sendable() {
             @Override
             public int length() {
@@ -143,11 +143,6 @@ public class PacketConnection extends StreamConnection implements StreamConnecti
     //
     // StreamConnection.Listener methods
     //
-
-    @Override
-    public void onDisconnected(String name) {
-        //
-    }
 
     @Override
     public void onDataReceived(long javaTime, byte[] data) {

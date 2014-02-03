@@ -17,7 +17,7 @@ public class SnoopPacketReader implements SnoopFilter.Listener, Startable {
     private static final String TAG = SnoopPacketReader.class.getSimpleName();
 
     @Override
-    public void onFail() {
+    public void onFinished() {
         //
     }
 

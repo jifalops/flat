@@ -4,7 +4,6 @@ import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
 import android.util.Log;
 
-import com.essentiallocalization.util.Filter;
 import com.essentiallocalization.util.lifecycle.Cancelable;
 import com.essentiallocalization.util.lifecycle.Connectable;
 import com.essentiallocalization.util.lifecycle.Finishable;
@@ -26,11 +25,15 @@ public final class BluetoothClient extends Thread implements Cancelable, Finisha
     private static final int MAX_ATTEMPTS = 1;
 
     public static interface Listener {
-        void onConnected(BluetoothClient btc);
-        void onFinished(BluetoothClient btc);
+        /**
+         * Called on separate thread (this). Implementations should
+         * return whether the connection was accepted or not.
+         */
+        boolean onConnected(String macAddress, BluetoothClient btClient);
+        /** called on separate thread (this). */
+        void onFinished(BluetoothClient btClient);
     }
 
-    private final Filter mFilter;
     private final Listener mListener;
     private final BluetoothDevice mTargetDevice;
     private BluetoothSocket mSocket;
@@ -40,10 +43,13 @@ public final class BluetoothClient extends Thread implements Cancelable, Finisha
     private boolean mConnected;
     private boolean mFinished;
 
-    public BluetoothClient(BluetoothDevice device, Filter filter, Listener listener) {
+    public BluetoothClient(BluetoothDevice device, Listener listener) {
         mTargetDevice = device;
-        mFilter = filter;
         mListener = listener;
+    }
+
+    public BluetoothDevice getTarget() {
+        return mTargetDevice;
     }
 
     public synchronized BluetoothSocket getSocket() {
@@ -60,13 +66,15 @@ public final class BluetoothClient extends Thread implements Cancelable, Finisha
             if (isConnected() || isCanceled()) break;
             tryConnection(i);
         }
-        setFinished(true);
+        if (!isCanceled()) {
+            finish();
+        }
     }
 
     private void tryConnection(int i) {
         mUuid = BluetoothConnectionManager.UUIDS[i];
         for (int j = 0; j < MAX_ATTEMPTS; j++) {
-            if (isConnected() || isCanceled()) {
+            if (mConnected || isCanceled()) {
                 break;
             }
 
@@ -86,7 +94,7 @@ public final class BluetoothClient extends Thread implements Cancelable, Finisha
                 }
 
                 BluetoothDevice device = mSocket.getRemoteDevice();
-                if (device != null && mFilter.allow(device.getAddress())) {
+                if (device != null && mListener.onConnected(device.getAddress(), this)) {
                     setConnected(true);
 //                    mHandler.obtainMessage(MSG_CONNECTED, this).sendToTarget();
                     break;
@@ -103,25 +111,12 @@ public final class BluetoothClient extends Thread implements Cancelable, Finisha
 
     private synchronized void setConnected(boolean connected) {
         mConnected = connected;
-        if (mConnected) {
-            mListener.onConnected(this);
-        }
     }
-
-    private synchronized void setFinished(boolean finished) {
-        mFinished = finished;
-        if (mFinished) {
-            mListener.onFinished(this);
-        }
-    }
-
 
     @Override
     public synchronized boolean isConnected() {
         return mConnected;
     }
-
-
 
     @Override
     public synchronized boolean isFinished() {
@@ -137,6 +132,12 @@ public final class BluetoothClient extends Thread implements Cancelable, Finisha
     public synchronized void cancel() {
         mCanceled = true;
         close();
+    }
+
+    private synchronized void finish() {
+        mFinished = true;
+        close();
+        mListener.onFinished(this);
     }
 
     private void close() {

@@ -1,7 +1,7 @@
 package com.essentiallocalization.util.lifecycle;
 
 /**
- * Created by Jake on 1/27/14.
+ * Something that can be canceled, i.e. a Thread.
  */
 public interface Cancelable {
     void cancel();

@@ -4,18 +4,25 @@ import android.bluetooth.BluetoothDevice;
 import android.os.Looper;
 import android.util.Log;
 
-import com.essentiallocalization.util.Filter;
+import com.essentiallocalization.connection.AckPacket;
+import com.essentiallocalization.connection.AckTimePacket;
+import com.essentiallocalization.connection.DataPacket;
 import com.essentiallocalization.connection.Message;
+import com.essentiallocalization.connection.PacketConnection;
+import com.essentiallocalization.connection.SnoopPacketReader;
+import com.essentiallocalization.util.io.Connection;
+import com.essentiallocalization.util.lifecycle.Restartable;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 /**
  * Created by Jake on 9/15/13.
  */
-public final class BluetoothConnectionManager implements Filter {
+public final class BluetoothConnectionManager implements Restartable, PendingConnection.Listener,
+            PacketConnection.Listener, SnoopPacketReader.Listener {
     private static final String TAG = BluetoothConnectionManager.class.getSimpleName();
 
     static final UUID[] UUIDS = {
@@ -29,46 +36,144 @@ public final class BluetoothConnectionManager implements Filter {
     };
     public static final int MAX_CONNECTIONS = UUIDS.length;
 
-    private final List<BluetoothConnection> mConnections;
-    private final BluetoothConnection.Listener mListener;
-    private int mMaxConnections;
-    private final Looper mLooper;
-
-    public BluetoothConnectionManager(BluetoothConnection.Listener listener, Looper looper) {
-        mLooper = looper;
-        mConnections = new ArrayList<BluetoothConnection>(MAX_CONNECTIONS);
-        mListener = listener;
-        mMaxConnections = MAX_CONNECTIONS;
+    public static interface Listener {
+        void onPacketCompleted(DataPacket dp);
+        void onStateChanged(Connection conn, int oldState, int newState);
     }
 
-    public synchronized void setMaxConnections(int connections) {
+    private final Map<BluetoothDevice, Connection> mConnections;
+    private final Map<BluetoothDevice, Connection.Listener> mStates;
+//    private final List<PendingConnection> mPending;
+//    private final List<BluetoothConnection> mConnections;
+//    private final Map<Connection.Listener, Connection> mStates;
+    private final Looper mLooper;
+    private final Listener mListener;
+
+    private int mConnLimit;
+
+    public BluetoothConnectionManager(Looper sendAndEventLooper, Listener listener) {
+//        mPending = new ArrayList<PendingConnection>(MAX_CONNECTIONS);
+//        mConnections = new ArrayList<BluetoothConnection>(MAX_CONNECTIONS);
+//        mStates = new HashMap<Connection.Listener, Connection>(MAX_CONNECTIONS);
+        mConnections = new HashMap<BluetoothDevice, Connection>(MAX_CONNECTIONS);
+        mStates = new HashMap<BluetoothDevice, Connection.Listener>(MAX_CONNECTIONS);
+
+        mLooper = sendAndEventLooper;
+        mListener = listener;
+        mConnLimit = MAX_CONNECTIONS;
+    }
+
+
+    public synchronized void setMaxConnections(int limit) {
         stop();
-        if (connections > MAX_CONNECTIONS) connections = MAX_CONNECTIONS;
-        mMaxConnections = connections;
+        if (limit > MAX_CONNECTIONS) limit = MAX_CONNECTIONS;
+        mConnLimit = limit;
     }
 
     public synchronized int getMaxConnections() {
-        return mMaxConnections;
+        return mConnLimit;
     }
 
-    public synchronized List<BluetoothConnection> getConnections() {
-        return mConnections;
-    }
 
-    public synchronized int addDevice(BluetoothDevice device) {
-        mConnections.add(new BluetoothConnection(this, mListener, device, mLooper));
-        return mConnections.size() - 1;
-    }
-
-//    public synchronized void start(int index) {
-//        mConnections.get(index).start();
-//    }
-//
-//    public synchronized void stop(int index) {
-//        mConnections.get(index).stop();
-////        mConnections.remove(index);
+//    public synchronized int addDevice(BluetoothDevice device) {
+//        mConnections.add(new BluetoothConnection(this, mListener, device, mLooper));
+//        return mConnections.size() - 1;
 //    }
 
+
+    public synchronized Connection getConnection(BluetoothDevice device) {
+        return mConnections.get(device);
+    }
+
+    public synchronized Connection.Listener getListener(BluetoothDevice device) {
+        return mStates.get(device);
+    }
+
+    public synchronized BluetoothConnection findConnectionByAddress(String address) {
+        for (Connection conn : mConnections) {
+            if (conn.getRemoteDevice().getAddress().equals(address)) {
+                return conn;
+            }
+        }
+        return null;
+    }
+
+    public synchronized BluetoothConnection getConnectionByName(String name) {
+        for (BluetoothConnection conn : mConnections) {
+            if (conn.getRemoteDevice().getName().equals(name)) {
+                return conn;
+            }
+        }
+        return null;
+    }
+
+    public synchronized PendingConnection getPending(BluetoothDevice device) {
+        return getPendingByAddress(device.getAddress());
+    }
+
+    public synchronized PendingConnection getPending(byte dest) {
+        for (PendingConnection conn : mPending) {
+            if (BluetoothConnection.idFromName(conn.getTarget().getName()) == dest) {
+                return conn;
+            }
+        }
+        return null;
+    }
+
+    public synchronized PendingConnection getPendingByAddress(String address) {
+        for (PendingConnection conn : mPending) {
+            if (conn.getTarget().getAddress().equals(address)) {
+                return conn;
+            }
+        }
+        return null;
+    }
+
+    public synchronized PendingConnection getPendingByName(String name) {
+        for (PendingConnection conn : mPending) {
+            if (conn.getTarget().getName().equals(name)) {
+                return conn;
+            }
+        }
+        return null;
+    }
+
+    public synchronized Connection.Listener getListener(Connection conn) {
+        for (Map.Entry<Connection.Listener, Connection> e : mStates.entrySet()) {
+            if (e.getValue() == conn) {
+                return e.getKey();
+            }
+        }
+        return null;
+    }
+
+    public synchronized void start(BluetoothDevice device) {
+        stop(device);
+        PendingConnection pc = getPending(device);
+        if (pc != null) {
+
+        }
+
+        mConnections.get(index).start();
+    }
+
+    public synchronized void stop(BluetoothDevice device) {
+        PendingConnection pc = getPending(device);
+        if (pc != null) {
+            pc.cancel();
+            mPending.remove(pc);
+            pc = null;
+        }
+
+        BluetoothConnection bc = getConnection(device);
+        if () {
+
+        }
+        mConnections.get(index).stop();
+        mConnections.remove(index);
+    }
+
+    @Override
     public synchronized void start() {
         stop();
         for (BluetoothConnection conn : mConnections) {
@@ -76,6 +181,7 @@ public final class BluetoothConnectionManager implements Filter {
         }
     }
 
+    @Override
     public synchronized void stop() {
         for (BluetoothConnection conn : mConnections) {
             conn.stop();
@@ -111,5 +217,69 @@ public final class BluetoothConnectionManager implements Filter {
             }
         }
         return true;
+    }
+
+
+    //
+    // PendingConnection.Listener
+    //
+
+    @Override
+    public synchronized boolean onConnected(BluetoothConnection conn) {
+        if (getConnection(conn.getRemoteDevice()) != null) {
+            Log.e(TAG, "Connection already established: " + conn.getName());
+            return false;
+        }
+
+        PendingConnection pc = getPending(conn.getRemoteDevice());
+        if (pc != null) {
+            // expected outcome.
+            mPending.remove(pc);
+            mConnections.add(conn);
+            return true;
+        } else {
+            Log.e(TAG, "Received unexpected connection: " + conn.getName());
+            return false;
+        }
+    }
+
+    @Override
+    public void onFinished(PendingConnection conn) {
+
+    }
+
+
+    //
+    // PacketConnection.Listener
+    //
+
+    @Override
+    public void onSendAck(PacketConnection pc, AckPacket ap) {
+
+    }
+
+    @Override
+    public void onPacketCompleted(PacketConnection pc, DataPacket dp) {
+
+    }
+
+
+    //
+    // SnoopPacketReader.Listener
+    //
+
+    @Override
+    public void onSendAck(AckPacket ap) {
+
+    }
+
+    @Override
+    public void onSendAckTime(AckTimePacket atp) {
+
+    }
+
+    @Override
+    public void onPacketCompleted(DataPacket dp) {
+
     }
 }

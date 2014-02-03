@@ -18,6 +18,7 @@ public class BasicConnection implements Connection {
 
     @Override
     public final synchronized void setState(int state) {
+        if (state == mState) return;
         int old = mState;
         mState = state;
         if (mListener != null) mListener.onStateChange(old, mState);

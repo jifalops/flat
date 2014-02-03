@@ -1,7 +1,8 @@
 package com.essentiallocalization.util.lifecycle;
 
 /**
- * Created by Jake on 9/20/13.
+ * Something that will end at some point, i.e. on another thread.
+ * Does not imply the user can stop it or that it failed.
  */
 public interface Finishable {
     boolean isFinished();

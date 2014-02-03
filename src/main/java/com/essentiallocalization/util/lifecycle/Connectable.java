@@ -1,7 +1,7 @@
 package com.essentiallocalization.util.lifecycle;
 
 /**
- * Created by Jake on 1/28/14.
+ * Something that can be connected and disconnected
  */
 public interface Connectable {
     boolean isConnected();

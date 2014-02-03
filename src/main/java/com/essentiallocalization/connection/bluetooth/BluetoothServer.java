@@ -4,10 +4,10 @@ import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothServerSocket;
 import android.bluetooth.BluetoothSocket;
-import android.os.Handler;
 import android.util.Log;
 
-import com.essentiallocalization.util.Filter;
+import com.essentiallocalization.util.lifecycle.Cancelable;
+import com.essentiallocalization.util.lifecycle.Connectable;
 import com.essentiallocalization.util.lifecycle.Finishable;
 
 import java.io.IOException;
@@ -16,18 +16,28 @@ import java.util.UUID;
 /**
  * Created by Jake on 9/20/13.
  */
-public final class BluetoothServer extends Thread implements Finishable {
+public final class BluetoothServer extends Thread implements Cancelable, Finishable, Connectable {
     private static final String TAG = BluetoothServer.class.getSimpleName();
-    private static final String SERVICE_NAME = "EssentialLocalizationBluetoothService";
+    private static final String SERVICE_NAME = "EssLocBT";
 
-    /** obj = BluetoothServer */
-    public static final int MSG_CONNECTED = 1;
-    /** obj = BluetoothServer */
-    public static final int MSG_FINISHED = 2;
+//    /** obj = BluetoothServer */
+//    public static final int MSG_CONNECTED = 1;
+//    /** obj = BluetoothServer */
+//    public static final int MSG_FINISHED = 2;
 
+    public static interface Listener {
+        /**
+         * Called on separate thread (this). Implementations should
+         * return whether the connection was accepted or not.
+         */
+        boolean onConnected(String macAddress, BluetoothServer btServer);
+        /** called on separate thread (this). */
+        void onFinished(BluetoothServer btServer);
+    }
+
+    private final Listener mListener;
     private final BluetoothAdapter mAdapter;
-    private final Filter mManager;
-    private final Handler mHandler;
+
     private BluetoothServerSocket mServerSocket;
     private boolean mCanceled;
     private boolean mConnected;
@@ -35,9 +45,8 @@ public final class BluetoothServer extends Thread implements Finishable {
     private BluetoothSocket mSocket;
     private UUID mUuid;
 
-    public BluetoothServer(Filter connMgr, Handler handler) {
-        mManager = connMgr;
-        mHandler = handler;
+    public BluetoothServer(Listener listener) {
+        mListener = listener;
         mAdapter = BluetoothAdapter.getDefaultAdapter();
     }
 
@@ -50,15 +59,9 @@ public final class BluetoothServer extends Thread implements Finishable {
     }
 
     @Override
-    public synchronized void start() {
-        super.start();
-    }
-
-
-    @Override
     public void run() {
         for (int i = 0; i < BluetoothConnectionManager.MAX_CONNECTIONS; i++) {
-            if (isConnected() || isCanceled()) break;
+            if (mConnected || isCanceled()) break;
 
             mUuid = BluetoothConnectionManager.UUIDS[i];
             try {
@@ -79,25 +82,26 @@ public final class BluetoothServer extends Thread implements Finishable {
 
                 if (mSocket != null) {
                     BluetoothDevice device = mSocket.getRemoteDevice();
-                    if (device != null && mManager.allow(device.getAddress())) {
+                    if (device != null && mListener.onConnected(device.getAddress(), this)) {
                         setConnected(true);
-                        mHandler.obtainMessage(MSG_CONNECTED, this).sendToTarget();
+//                        mHandler.obtainMessage(MSG_CONNECTED, this).sendToTarget();
                     }
                 }
             }
         }
-        setFinished(true);
+        if (!isCanceled()) {
+            finish();
+        }
     }
 
     private synchronized void setConnected(boolean connected) {
         mConnected = connected;
     }
 
-    private synchronized void setFinished(boolean finished) {
-        mFinished = finished;
-        if (mFinished) {
-            mHandler.obtainMessage(MSG_FINISHED, this).sendToTarget();
-        }
+    private synchronized void finish() {
+        mFinished = true;
+        close();
+        mListener.onFinished(this);
     }
 
     public synchronized boolean isConnected() {

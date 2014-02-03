@@ -3,7 +3,7 @@ package com.essentiallocalization.util.io;
 import android.util.Log;
 
 import com.essentiallocalization.util.lifecycle.Cancelable;
-import com.essentiallocalization.util.lifecycle.Failable;
+import com.essentiallocalization.util.lifecycle.Finishable;
 
 import java.io.BufferedInputStream;
 import java.io.File;
@@ -19,7 +19,7 @@ import java.util.Arrays;
  * and is passed the timestamp and message. The message passed will begin with the character
  * AFTER the prefix string.
  */
-public class SnoopFilter extends Thread implements Cancelable, Failable {
+public class SnoopFilter extends Thread implements Cancelable, Finishable {
     private static final String TAG = SnoopFilter.class.getSimpleName();
                                             // Big endian
 //    static final class FileHeader {
@@ -42,8 +42,8 @@ public class SnoopFilter extends Thread implements Cancelable, Failable {
     private static final int MSG_MESSAGE_FOUND = 1;
 
     // Bundle keys (for handler messages)
-    private static final String KEY_TIMESTAMP = "timestamp";
-    private static final String KEY_MESSAGE = "message";
+//    private static final String KEY_TIMESTAMP = "timestamp";
+//    private static final String KEY_MESSAGE = "message";
 
     private static final int FILE_HEADER_SIZE = 16;
     private static final int PACKET_HEADER_SIZE = 24;
@@ -61,7 +61,7 @@ public class SnoopFilter extends Thread implements Cancelable, Failable {
     private static final int TASK_READ_PACKET_PAYLOAD = 3;
 
 
-    public static interface Listener extends Failable.Listener {
+    public static interface Listener extends Finishable.Listener {
         /** Called on the SnoopFilter thread. */
         void onMessageFound(long ts, byte[] msg);
     }
@@ -79,7 +79,7 @@ public class SnoopFilter extends Thread implements Cancelable, Failable {
     private final String mFilter;
 
     private volatile int mPacketsRead, mMessagesFound;
-    private boolean mCanceled, mFailed;
+    private boolean mCanceled, mFinished;
 
     public SnoopFilter(File snoopFile, /*File outFile,*/ String msgPrefix, Listener listener) throws IOException {
         mSnoopFile = snoopFile;
@@ -142,16 +142,16 @@ public class SnoopFilter extends Thread implements Cancelable, Failable {
         return mCanceled;
     }
 
-    private synchronized void fail() {
-        mFailed = true;
-        Log.e(TAG, "The snoop filter has failed!");
+    private synchronized void finish() {
+        mFinished = true;
+        Log.d(TAG, "The snoop filter has finished.");
         close();
-        mListener.onFail();
+        mListener.onFinished();
     }
 
     @Override
-    public synchronized boolean hasFailed() {
-        return mFailed;
+    public synchronized boolean isFinished() {
+        return mFinished;
     }
 
 
@@ -186,9 +186,9 @@ public class SnoopFilter extends Thread implements Cancelable, Failable {
 //            }
 //        };
 //        mObserver.startWatching();
-        while (!isCanceled() && !hasFailed()) {
+        while (!isCanceled() && !mFinished) {
             if (readFileHeader()) {
-                while (!isCanceled() && !hasFailed()) {
+                while (!isCanceled() && !mFinished) {
                     readPacketHeader();
                     readPacketPayload();
                 }
@@ -203,7 +203,7 @@ public class SnoopFilter extends Thread implements Cancelable, Failable {
         int attempts = 0;
         while (!isCanceled()) {
             if (++attempts >= MAX_ATTEMPTS) {
-                fail();
+                finish();
                 return false;
             }
             mInStream.mark(FILE_HEADER_SIZE);
@@ -235,7 +235,7 @@ public class SnoopFilter extends Thread implements Cancelable, Failable {
         int attempts = 0;
         while (!isCanceled()) {
             if (++attempts >= MAX_ATTEMPTS) {
-                fail();
+                finish();
                 return false;
             }
             mInStream.mark(PACKET_HEADER_SIZE);
@@ -275,7 +275,7 @@ public class SnoopFilter extends Thread implements Cancelable, Failable {
         int attempts = 0;
         while (!isCanceled()) {
             if (++attempts >= MAX_ATTEMPTS) {
-                fail();
+                finish();
                 return false;
             }
             mInStream.mark(mPayloadSize);
@@ -336,9 +336,12 @@ public class SnoopFilter extends Thread implements Cancelable, Failable {
 
     @Override
     protected void finalize() throws Throwable {
-        try{
+        try {
             close();
-        } finally {
+        } catch (Throwable t) {
+            Log.e(TAG, "Exception in finalize().");
+        }
+        finally {
             super.finalize();
         }
     }

@@ -1,7 +1,7 @@
 package com.essentiallocalization.util.lifecycle;
 
 /**
- * Created by Jake on 1/27/14.
+ * Something that can be started more than once.
  */
 public interface Restartable {
     void start();

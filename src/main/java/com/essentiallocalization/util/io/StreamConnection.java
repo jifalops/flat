@@ -13,7 +13,7 @@ import java.io.OutputStream;
 /**
  * Represents a InputStream/OutputStream pair as a connection.
  */
-public class StreamConnection extends BasicConnection implements Startable, Connection.Listener {
+public class StreamConnection extends BasicConnection implements Startable {
     private static final String TAG = StreamConnection.class.getSimpleName();
 
     public static interface Sendable {
@@ -22,8 +22,6 @@ public class StreamConnection extends BasicConnection implements Startable, Conn
     }
 
     public static interface Listener {
-        /** Called on separate thread (instream waiter, before finishing). */
-        void onDisconnected(String name);
         /** Called on separate thread (sendAndEventLooper). */
         void onDataReceived(long time, byte[] data);
     }
@@ -43,7 +41,6 @@ public class StreamConnection extends BasicConnection implements Startable, Conn
         mOut = out;
         mBufferSize = bufferSize;
         mSendAndEventHandler = new Handler(sendAndEventLooper);
-        setConnectionListener(this);
     }
 
     public void setStreamConnectionListener(StreamConnection.Listener listener) {
@@ -52,13 +49,6 @@ public class StreamConnection extends BasicConnection implements Startable, Conn
 
     public final String getName() {
         return mName;
-    }
-
-    @Override
-    public void onStateChange(int oldState, int newState) {
-        if (isDisconnected()) {
-            if (mListener != null) mListener.onDisconnected(mName);
-        }
     }
 
     public void send(final byte[] data) throws IOException {
@@ -156,9 +146,12 @@ public class StreamConnection extends BasicConnection implements Startable, Conn
 
     @Override
     protected void finalize() throws Throwable {
-        try{
+        try {
             close();
-        } finally {
+        } catch (Throwable t) {
+            Log.e(TAG, "Exception in finalize().");
+        }
+        finally {
             super.finalize();
         }
     }
