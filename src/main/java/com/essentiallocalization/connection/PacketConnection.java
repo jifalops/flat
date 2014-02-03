@@ -125,7 +125,7 @@ public class PacketConnection extends StreamConnection implements StreamConnecti
         return msgParts;
     }
 
-    protected void send(final Packet packet) throws IOException {
+    public void send(final Packet packet) throws IOException {
         send(new Sendable() {
             @Override
             public int length() {

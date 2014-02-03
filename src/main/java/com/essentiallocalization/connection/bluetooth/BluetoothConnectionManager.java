@@ -9,6 +9,7 @@ import com.essentiallocalization.connection.AckPacket;
 import com.essentiallocalization.connection.AckTimePacket;
 import com.essentiallocalization.connection.DataPacket;
 import com.essentiallocalization.connection.Message;
+import com.essentiallocalization.connection.Packet;
 import com.essentiallocalization.connection.PacketConnection;
 import com.essentiallocalization.connection.SnoopPacketReader;
 import com.essentiallocalization.util.io.Connection;
@@ -17,6 +18,7 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+
 
 /**
  * Created by Jake on 9/15/13.
@@ -41,14 +43,14 @@ public final class BluetoothConnectionManager implements PendingConnection.Liste
         void onStateChanged(BluetoothDevice device, int oldState, int newState);
     }
 
-    private final Map<BluetoothDevice, Pair<Connection, Connection.StateChangeListener>> mConnections;
+    private final Map<BluetoothDevice, Pair<DeviceConnection, Connection.StateChangeListener>> mConnections;
     private final Looper mLooper;
     private final Listener mListener;
 
     private int mConnLimit;
 
     public BluetoothConnectionManager(Looper sendAndEventLooper, Listener listener) {
-        mConnections = new HashMap<BluetoothDevice, Pair<Connection, Connection.StateChangeListener>>(MAX_CONNECTIONS);
+        mConnections = new HashMap<BluetoothDevice, Pair<DeviceConnection, Connection.StateChangeListener>>(MAX_CONNECTIONS);
 
         mLooper = sendAndEventLooper;
         mListener = listener;
@@ -59,7 +61,16 @@ public final class BluetoothConnectionManager implements PendingConnection.Liste
     // Shortcut methods
     //
 
-    public synchronized Connection getConnection(BluetoothDevice device) {
+    public synchronized DeviceConnection getConnection(byte dest) {
+        for (Map.Entry<BluetoothDevice, Pair<DeviceConnection, Connection.StateChangeListener>> e : mConnections.entrySet()) {
+            DeviceConnection conn = e.getValue().first;
+            byte id = BluetoothConnection.idFromName(conn.getDevice().getName());
+            if (id == dest) return conn;
+        }
+        return null;
+    }
+
+    public synchronized DeviceConnection getConnection(BluetoothDevice device) {
         return mConnections.get(device).first;
     }
 
@@ -67,15 +78,15 @@ public final class BluetoothConnectionManager implements PendingConnection.Liste
         return mConnections.get(device).second;
     }
 
-    public synchronized BluetoothDevice getDevice(Connection conn) {
-        for (Map.Entry<BluetoothDevice, Pair<Connection, Connection.StateChangeListener>> e : mConnections.entrySet()) {
+    public synchronized BluetoothDevice getDevice(DeviceConnection conn) {
+        for (Map.Entry<BluetoothDevice, Pair<DeviceConnection, Connection.StateChangeListener>> e : mConnections.entrySet()) {
             if (e.getValue().first == conn) return e.getKey();
         }
         return null;
     }
 
     public synchronized BluetoothDevice getDevice(Connection.StateChangeListener listener) {
-        for (Map.Entry<BluetoothDevice, Pair<Connection, Connection.StateChangeListener>> e : mConnections.entrySet()) {
+        for (Map.Entry<BluetoothDevice, Pair<DeviceConnection, Connection.StateChangeListener>> e : mConnections.entrySet()) {
             if (e.getValue().second == listener) return e.getKey();
         }
         return null;
@@ -87,7 +98,7 @@ public final class BluetoothConnectionManager implements PendingConnection.Liste
     //
 
     public synchronized void stop(BluetoothDevice device) {
-        Pair<Connection, Connection.StateChangeListener> pair = mConnections.get(device);
+        Pair<DeviceConnection, Connection.StateChangeListener> pair = mConnections.get(device);
         if (pair != null) {
             pair.first.cancel();
             mConnections.remove(device);
@@ -95,13 +106,13 @@ public final class BluetoothConnectionManager implements PendingConnection.Liste
     }
 
     public synchronized void stopAll() {
-        for (Map.Entry<BluetoothDevice, Pair<Connection, Connection.StateChangeListener>> e : mConnections.entrySet()) {
+        for (Map.Entry<BluetoothDevice, Pair<DeviceConnection, Connection.StateChangeListener>> e : mConnections.entrySet()) {
             stop(e.getKey());
         }
     }
 
     public synchronized int send(BluetoothDevice device, String msg) throws IOException, Message.MessageTooLongException {
-        Connection conn = getConnection(device);
+        DeviceConnection conn = getConnection(device);
         if (conn.isConnected()) {
             return ((BluetoothConnection) conn).send(msg);
         } else {
@@ -116,7 +127,7 @@ public final class BluetoothConnectionManager implements PendingConnection.Liste
         PendingConnection pc = new PendingConnection(device, this, mLooper);
         StateListener listener = new StateListener();
         pc.setStateChangeListener(listener);
-        mConnections.put(device, new Pair<Connection, Connection.StateChangeListener>(pc, listener));
+        mConnections.put(device, new Pair<DeviceConnection, Connection.StateChangeListener>(pc, listener));
         pc.start();
     }
 
@@ -145,10 +156,13 @@ public final class BluetoothConnectionManager implements PendingConnection.Liste
     // PendingConnection.Listener
     //
 
+    /**
+     * This function determines if a connection is accepted or not.
+     */
     @Override
     public synchronized boolean onConnected(BluetoothConnection btconn) {
-        BluetoothDevice device = btconn.getRemoteDevice();
-        Connection conn = getConnection(device);
+        BluetoothDevice device = btconn.getDevice();
+        DeviceConnection conn = getConnection(device);
         if (conn != null) {
             if (conn.isConnected()) {
                 Log.e(TAG, "Connection already established: " + btconn.getName());
@@ -157,7 +171,7 @@ public final class BluetoothConnectionManager implements PendingConnection.Liste
                 mConnections.remove(device);
                 StateListener listener = new StateListener();
                 btconn.setStateChangeListener(listener);
-                mConnections.put(device, new Pair<Connection, Connection.StateChangeListener>(btconn, listener));
+                mConnections.put(device, new Pair<DeviceConnection, Connection.StateChangeListener>(btconn, listener));
                 btconn.setState(Connection.STATE_CONNECTED);
                 btconn.start();
                 return true;
@@ -170,7 +184,11 @@ public final class BluetoothConnectionManager implements PendingConnection.Liste
 
     @Override
     public void onFinished(PendingConnection conn) {
-        conn.setState(Connection.STATE_NONE);
+        if (conn.getState() != Connection.STATE_CONNECTED) {
+            conn.setState(Connection.STATE_NONE);
+        } else {
+            Log.w(TAG, "Expected no connection on finish: " + conn.getDevice().getName());
+        }
     }
 
 
@@ -180,7 +198,7 @@ public final class BluetoothConnectionManager implements PendingConnection.Liste
 
     @Override
     public void onSendAck(PacketConnection pc, AckPacket ap) {
-
+        if (ap.)
     }
 
     @Override
@@ -207,4 +225,36 @@ public final class BluetoothConnectionManager implements PendingConnection.Liste
     public void onPacketCompleted(DataPacket dp) {
 
     }
+
+    //
+    // Other packet management
+    //
+
+    private static class PacketWatcher {
+        static void process(PacketConnection pc, AckPacket ap) {
+            if (
+                    && pc.getPackets()) {
+                pc.send(ap);
+            }
+        }
+
+        /**
+         * Used to determine if packets found are from this session
+         * (they may be stale in the hci log file).
+         */
+        static boolean isValid(PacketConnection pc, AckPacket ap) {
+            for (DataPacket dp : pc.getPackets()) {
+                if ((dp.hciDestReceived == ap.hciDestReceived && ap.hciDestReceived > 0)
+                        || (dp.javaDestReceived == ap.javaDestReceived && ap.javaDestReceived > 0)
+                        || (dp.javaDestSent == ap.javaDestSent && ap.javaDestSent > 0)) {
+                    return true;
+                }
+            }
+            // todo: make sure this will be called AFTER the packet is added to the list.
+            return ;
+        }
+    }
+
+
+
 }

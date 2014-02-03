@@ -15,7 +15,8 @@ import java.util.UUID;
 /**
  * Created by Jake on 2/2/14.
  */
-public final class PendingConnection extends BasicConnection implements Finishable, BluetoothClient.Listener, BluetoothServer.Listener {
+public final class PendingConnection extends BasicConnection implements DeviceConnection, Finishable,
+        BluetoothClient.Listener, BluetoothServer.Listener {
     private static final String TAG = PendingConnection.class.getSimpleName();
 
     public static interface Listener {
@@ -45,7 +46,8 @@ public final class PendingConnection extends BasicConnection implements Finishab
         mClient = new BluetoothClient(target, this);
     }
 
-    public BluetoothDevice getTarget() {
+    @Override
+    public BluetoothDevice getDevice() {
         return mClient.getTarget();
     }
 

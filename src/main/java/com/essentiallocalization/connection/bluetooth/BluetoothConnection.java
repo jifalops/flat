@@ -13,7 +13,7 @@ import java.util.UUID;
 /**
  * Created by Jake on 9/20/13.
  */
-public final class BluetoothConnection extends PacketConnection {
+public final class BluetoothConnection extends PacketConnection implements DeviceConnection {
     private static final String TAG = BluetoothConnection.class.getSimpleName();
 
     // TODO belongs elsewhere
@@ -51,7 +51,8 @@ public final class BluetoothConnection extends PacketConnection {
         return mUuid;
     }
 
-    public BluetoothDevice getRemoteDevice() {
+    @Override
+    public BluetoothDevice getDevice() {
         return mRemoteDevice;
     }
 }
