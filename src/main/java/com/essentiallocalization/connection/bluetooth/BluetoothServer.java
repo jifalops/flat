@@ -6,7 +6,6 @@ import android.bluetooth.BluetoothServerSocket;
 import android.bluetooth.BluetoothSocket;
 import android.util.Log;
 
-import com.essentiallocalization.util.lifecycle.Cancelable;
 import com.essentiallocalization.util.lifecycle.Connectable;
 import com.essentiallocalization.util.lifecycle.Finishable;
 
@@ -16,7 +15,7 @@ import java.util.UUID;
 /**
  * Created by Jake on 9/20/13.
  */
-public final class BluetoothServer extends Thread implements Cancelable, Finishable, Connectable {
+public final class BluetoothServer extends Thread implements Finishable, Connectable {
     private static final String TAG = BluetoothServer.class.getSimpleName();
     private static final String SERVICE_NAME = "EssLocBT";
 

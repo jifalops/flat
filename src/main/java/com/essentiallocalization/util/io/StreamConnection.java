@@ -4,8 +4,6 @@ import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
 
-import com.essentiallocalization.util.lifecycle.Startable;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -13,7 +11,7 @@ import java.io.OutputStream;
 /**
  * Represents a InputStream/OutputStream pair as a connection.
  */
-public class StreamConnection extends BasicConnection implements Startable {
+public class StreamConnection extends BasicConnection {
     private static final String TAG = StreamConnection.class.getSimpleName();
 
     public static interface Sendable {

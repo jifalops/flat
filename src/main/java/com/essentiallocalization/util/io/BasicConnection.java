@@ -3,11 +3,11 @@ package com.essentiallocalization.util.io;
 /**
  * Created by Jake on 1/28/14.
  */
-public class BasicConnection implements Connection {
+public abstract class BasicConnection implements Connection {
     private int mState = STATE_NONE;
-    private Listener mListener;
+    private StateChangeListener mListener;
 
-    public final void setConnectionListener(Listener listener) {
+    public final void setStateChangeListener(StateChangeListener listener) {
         mListener = listener;
     }
 

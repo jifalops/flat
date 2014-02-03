@@ -6,9 +6,8 @@ import android.os.Looper;
 import android.util.Log;
 
 import com.essentiallocalization.util.io.BasicConnection;
-import com.essentiallocalization.util.lifecycle.Connectable;
+import com.essentiallocalization.util.io.Connection;
 import com.essentiallocalization.util.lifecycle.Finishable;
-import com.essentiallocalization.util.lifecycle.Startable;
 
 import java.io.IOException;
 import java.util.UUID;
@@ -16,7 +15,7 @@ import java.util.UUID;
 /**
  * Created by Jake on 2/2/14.
  */
-public final class PendingConnection extends BasicConnection implements Startable, Finishable, Connectable, BluetoothClient.Listener, BluetoothServer.Listener  {
+public final class PendingConnection extends BasicConnection implements Finishable, BluetoothClient.Listener, BluetoothServer.Listener {
     private static final String TAG = PendingConnection.class.getSimpleName();
 
     public static interface Listener {
@@ -52,6 +51,7 @@ public final class PendingConnection extends BasicConnection implements Startabl
 
     @Override
     public synchronized void start() {
+        setState(Connection.STATE_CONNECTING);
         mServer.start();
         mClient.start();
     }
@@ -95,7 +95,7 @@ public final class PendingConnection extends BasicConnection implements Startabl
     @Override
     public synchronized void onFinished(BluetoothServer btServer) {
         if (!isConnected() && (mClient.isFinished() || mClient.isCanceled())) {
-                finish();
+            finish();
         }
     }
 

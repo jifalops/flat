@@ -17,7 +17,7 @@ public interface Connection extends Connectable {
     boolean isConnecting();
     boolean isDisconnected();
 
-    static interface Listener {
+    static interface StateChangeListener {
         void onStateChange(int oldState, int newState);
     }
 }
