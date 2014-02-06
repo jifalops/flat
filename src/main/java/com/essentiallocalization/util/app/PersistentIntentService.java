@@ -1,4 +1,4 @@
-package com.essentiallocalization.service;
+package com.essentiallocalization.util.app;
 
 import android.app.Service;
 import android.content.BroadcastReceiver;
@@ -17,7 +17,7 @@ import android.os.Message;
  */
 public abstract class PersistentIntentService extends Service {
 
-    protected Looper mServiceLooper;
+    private Looper mServiceLooper;
     private ServiceHandler mServiceHandler;
     private final IBinder mBinder = new LocalBinder();
     private final IntentReceiver mReceiver = new IntentReceiver();
@@ -28,7 +28,7 @@ public abstract class PersistentIntentService extends Service {
 
     @Override
     public void onCreate() {
-        HandlerThread thread = new HandlerThread(getClass().getName(), getThreadPriority());
+        HandlerThread thread = new HandlerThread(PersistentIntentService.class.getName(), getThreadPriority());
         thread.start();
 
         // Get the HandlerThread's Looper and use it for our Handler
@@ -37,7 +37,11 @@ public abstract class PersistentIntentService extends Service {
         mFilter = new IntentFilter();
     }
 
-    public boolean isPersistent() {
+    public final Looper getLooper() {
+        return mServiceLooper;
+    }
+
+    public final boolean isPersistent() {
         return mPersist;
     }
 

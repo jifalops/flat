@@ -7,7 +7,7 @@ public abstract class BasicConnection implements Connection {
     private int mState = STATE_NONE;
     private StateChangeListener mListener;
 
-    public final void setStateChangeListener(StateChangeListener listener) {
+    public final synchronized void setStateChangeListener(StateChangeListener listener) {
         mListener = listener;
     }
 

@@ -24,7 +24,7 @@ public final class BluetoothServer extends Thread implements Finishable, Connect
 //    /** obj = BluetoothServer */
 //    public static final int MSG_FINISHED = 2;
 
-    public static interface Listener {
+    public static interface ServerListener {
         /**
          * Called on separate thread (this). Implementations should
          * return whether the connection was accepted or not.
@@ -34,7 +34,7 @@ public final class BluetoothServer extends Thread implements Finishable, Connect
         void onFinished(BluetoothServer btServer);
     }
 
-    private final Listener mListener;
+    private final ServerListener mListener;
     private final BluetoothAdapter mAdapter;
 
     private BluetoothServerSocket mServerSocket;
@@ -44,7 +44,7 @@ public final class BluetoothServer extends Thread implements Finishable, Connect
     private BluetoothSocket mSocket;
     private UUID mUuid;
 
-    public BluetoothServer(Listener listener) {
+    public BluetoothServer(ServerListener listener) {
         mListener = listener;
         mAdapter = BluetoothAdapter.getDefaultAdapter();
     }

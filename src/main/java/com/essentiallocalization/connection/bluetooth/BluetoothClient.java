@@ -23,7 +23,7 @@ public final class BluetoothClient extends Thread implements Finishable, Connect
 
     private static final int MAX_ATTEMPTS = 1;
 
-    public static interface Listener {
+    public static interface ClientListener {
         /**
          * Called on separate thread (this). Implementations should
          * return whether the connection was accepted or not.
@@ -33,7 +33,7 @@ public final class BluetoothClient extends Thread implements Finishable, Connect
         void onFinished(BluetoothClient btClient);
     }
 
-    private final Listener mListener;
+    private final ClientListener mListener;
     private final BluetoothDevice mTargetDevice;
     private BluetoothSocket mSocket;
     private UUID mUuid;
@@ -42,7 +42,7 @@ public final class BluetoothClient extends Thread implements Finishable, Connect
     private boolean mConnected;
     private boolean mFinished;
 
-    public BluetoothClient(BluetoothDevice device, Listener listener) {
+    public BluetoothClient(BluetoothDevice device, ClientListener listener) {
         mTargetDevice = device;
         mListener = listener;
     }

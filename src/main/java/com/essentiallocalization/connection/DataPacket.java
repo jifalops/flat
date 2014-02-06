@@ -12,12 +12,11 @@ public final class DataPacket extends Packet {
     public long hciDestSent;
     public long hciSrcReceived;
 
-    public long javaSrcSent;
     public long javaDestReceived;
     public long javaDestSent;
     public long javaSrcReceived; 
 
-    private static final int HEADER_SIZE = (8 * 8) + (4 * 0) + (2 * 0) + (1 * 0); // see properties above
+    private static final int HEADER_SIZE = (8 * 7) + (4 * 0) + (2 * 0) + (1 * 0); // see properties above
     public static final int MAX_PAYLOAD = BUFFER_SIZE - (HEADER_SIZE + Packet.HEADER_SIZE + PREFIX.length());
 
     public byte[] payload;
@@ -51,14 +50,13 @@ public final class DataPacket extends Packet {
 
         ByteBuffer bb = ByteBuffer.wrap(dataPacket);
         bb.position(Packet.HEADER_SIZE + PREFIX.length());
+        javaDestReceived = bb.getLong();
+        javaDestSent = bb.getLong();
+        javaSrcReceived = bb.getLong();
         hciSrcSent = bb.getLong();
         hciDestReceived = bb.getLong();
         hciDestSent = bb.getLong();
         hciSrcReceived = bb.getLong();
-        javaSrcSent = bb.getLong();
-        javaDestReceived = bb.getLong();
-        javaDestSent = bb.getLong();
-        javaSrcReceived = bb.getLong();
         payload = new byte[bb.limit() - bb.position()];
         bb.get(payload);
 
@@ -67,18 +65,49 @@ public final class DataPacket extends Packet {
 
     @Override
     public byte[] getBytes(boolean sending) {
-        return getBuffer()
+        return getBuffer(sending)
+                .putLong(javaDestReceived)
+                .putLong(javaDestSent)
+                .putLong(javaSrcReceived)
                 .putLong(hciSrcSent)
                 .putLong(hciDestReceived)
                 .putLong(hciDestSent)
                 .putLong(hciSrcReceived)
-                .putLong(sending ? javaSrcSent = System.nanoTime()
-                                 : javaSrcSent)
-                .putLong(javaDestReceived)
-                .putLong(javaDestSent)
-                .putLong(javaSrcReceived)
                 .put(payload)
                 .array();
+    }
+
+    public boolean isAckReady() {
+        return javaSrcSent != 0 && javaDestReceived != 0 && hciDestReceived != 0;
+    }
+
+    public AckPacket toAckPacket() {
+        AckPacket ap = new AckPacket(this);
+        ap.javaDestReceived = javaDestReceived;
+        ap.hciDestReceived = hciDestReceived;
+        return ap;
+    }
+
+    public boolean isAckTimeReady() {
+        return hciDestSent != 0;
+    }
+
+    public AckTimePacket toAckTimePacket() {
+        AckTimePacket atp = new AckTimePacket(this);
+        atp.hciDestSent = hciDestSent;
+        return atp;
+    }
+    
+    public boolean isTimingComplete() {
+        return isHciComplete() && isJavaComplete();
+    }
+
+    public boolean isHciComplete() {
+        return hciSrcSent != 0 && hciDestReceived != 0 && hciDestSent != 0 && hciSrcReceived != 0;
+    }
+
+    public boolean isJavaComplete() {
+        return javaSrcSent != 0 && javaDestReceived != 0 && javaDestSent != 0 && javaSrcReceived != 0;
     }
 
     @Override

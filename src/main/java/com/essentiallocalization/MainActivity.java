@@ -3,7 +3,7 @@ package com.essentiallocalization;
 import android.app.Activity;
 import android.os.Bundle;
 
-public class MainActivity extends Activity implements BluetoothFragment.Listener {
+public class MainActivity extends Activity implements BluetoothFragment.BluetoothFragmentListener {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {

@@ -7,7 +7,7 @@ public interface Cancelable {
     void cancel();
     boolean isCanceled();
 
-    static interface Listener {
+    static interface CancelListener {
         void onCanceled();
     }
 }

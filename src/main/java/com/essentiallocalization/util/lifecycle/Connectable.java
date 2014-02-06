@@ -6,7 +6,7 @@ package com.essentiallocalization.util.lifecycle;
 public interface Connectable extends Startable {
     boolean isConnected();
 
-    static interface Listener {
+    static interface ConnectionListener {
         void onConnect();
         void onDisconnect();
     }

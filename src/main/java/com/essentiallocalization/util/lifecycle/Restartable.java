@@ -7,7 +7,7 @@ public interface Restartable {
     void start();
     void stop();
 
-    static interface Listener {
+    static interface StartStopListener {
         void onStart();
         void onStop();
     }

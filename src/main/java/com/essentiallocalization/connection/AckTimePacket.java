@@ -30,7 +30,7 @@ public final class AckTimePacket extends Packet {
 
     @Override
     public byte[] getBytes(boolean sending) {
-        return getBuffer()
+        return getBuffer(false)
                 .putLong(hciDestSent)
                 .array();
     }

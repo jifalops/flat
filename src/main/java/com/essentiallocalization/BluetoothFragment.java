@@ -3,13 +3,11 @@ package com.essentiallocalization;
 import android.app.ActionBar;
 import android.app.Activity;
 import android.app.AlertDialog;
-import android.app.Fragment;
 import android.bluetooth.BluetoothAdapter;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
-import android.content.ServiceConnection;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
@@ -34,8 +32,8 @@ import android.widget.Toast;
 
 import com.essentiallocalization.connection.bluetooth.BluetoothConnection;
 import com.essentiallocalization.connection.bluetooth.BluetoothConnectionManager;
-import com.essentiallocalization.service.bluetooth.BluetoothService;
-import com.essentiallocalization.service.PersistentIntentService;
+import com.essentiallocalization.util.app.PersistentIntentServiceController;
+import com.essentiallocalization.util.app.PersistentIntentService;
 import com.essentiallocalization.util.io.LogFile;
 
 import java.io.File;
@@ -46,17 +44,25 @@ import java.util.List;
 /**
  * Created by Jake on 9/1/13.
  */
-public final class BluetoothFragment extends Fragment implements ServiceConnection {
-    /** Tag for Android's Logcat */
+public final class BluetoothFragment extends PersistentIntentServiceController {
     private static final String TAG = BluetoothFragment.class.getSimpleName();
 
     public static final String LOG_FILE = "log.csv";
 
     /** Interface the containing activity must implement */
-    static interface Listener {
+    static interface BluetoothFragmentListener {
         void onRequestBluetoothEnabled();
         void onRequestDiscoverable();
         void onBluetoothSupported(boolean supported);
+    }
+
+    public static class BluetoothConnectionService extends PersistentIntentService {
+        private  static final String TAG = BluetoothConnectionService.class.getSimpleName();
+        @Override
+        protected void onHandleIntent(Intent intent) {
+            // listen to system bt broadcasts
+//        BluetoothAdapter.ACTION_
+        }
     }
 
     // Message types sent from the BluetoothService Handler
@@ -69,13 +75,10 @@ public final class BluetoothFragment extends Fragment implements ServiceConnecti
     /** This device's BT adapter */
     private BluetoothAdapter mBluetoothAdapter;
 
-    private BluetoothService mService;
-
-    /** Whether the service is bound */
-    private boolean mBound;
+    private BluetoothConnectionService mService;
 
     /** Contains callback methods for this class. */
-    private Listener mListener;
+    private BluetoothFragmentListener mListener;
 
     private TextView[] mStateViews;
     private int mMaxConnections = 4;
@@ -97,7 +100,7 @@ public final class BluetoothFragment extends Fragment implements ServiceConnecti
         super.onAttach(activity);
         Log.v(TAG, "onAttach()");
         try {
-            mListener = (Listener) activity;
+            mListener = (BluetoothFragmentListener) activity;
         } catch (ClassCastException e) {
             throw new ClassCastException(TAG + ": Activity must implement the fragment's listener.");
         }
@@ -153,7 +156,7 @@ public final class BluetoothFragment extends Fragment implements ServiceConnecti
         mServicePersist.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                setServicePersist(isChecked);
+                setPersistent(isChecked);
             }
         });
     }
@@ -281,19 +284,19 @@ public final class BluetoothFragment extends Fragment implements ServiceConnecti
         }
     }
 
-    private void setServicePersist(boolean persist) {
+    private void setPersistent(boolean persist) {
         Log.v(TAG, "setServicePersist(" + persist + ")");
         Activity a = getActivity();
         if (persist) {
-            a.startService(new Intent(a, BluetoothService.class));
+            a.startService(new Intent(a, BluetoothConnectionService.class));
         } else {
-            a.stopService(new Intent(a, BluetoothService.class));
+            a.stopService(new Intent(a, BluetoothConnectionService.class));
             // doBindService();
         }
     }
 
     private void doBindService() {
-        getActivity().bindService(new Intent(getActivity(), BluetoothService.class), this, Context.BIND_AUTO_CREATE);
+        getActivity().bindService(new Intent(getActivity(), BluetoothConnectionService.class), this, Context.BIND_AUTO_CREATE);
     }
 
     private void doUnbindService() {
@@ -333,7 +336,7 @@ public final class BluetoothFragment extends Fragment implements ServiceConnecti
     public void onServiceConnected(ComponentName className, IBinder service) {
         Log.v(TAG, "onServiceConnected()");
         PersistentIntentService.LocalBinder binder = (PersistentIntentService.LocalBinder) service;
-        mService = (BluetoothService) binder.getService();
+        mService = (BluetoothConnectionService) binder.getService();
         if (mMaxConnections != mService.getMaxConnections()) {
             setMaxConnections(mMaxConnections);
         }
@@ -349,6 +352,11 @@ public final class BluetoothFragment extends Fragment implements ServiceConnecti
         mBound = false;
     }
 
+    @Override
+    public void onServiceConnected(PersistentIntentService service) {
+        mService = service;
+    }
+
 
     private final Handler mHandler = new Handler() {
         @Override
@@ -360,36 +368,39 @@ public final class BluetoothFragment extends Fragment implements ServiceConnecti
                 name = String.valueOf(index);
             }
             switch (msg.what) {
-                case BluetoothService.MSG_STATE_CHANGE:
+                case BluetoothConnectionService.MSG_STATE_CHANGE:
                     if (index >= 0) {
                         mStateViews[index].setVisibility(View.VISIBLE);
                         mStateViews[index].setText(name + ": " + BluetoothConnection.getState(msg.arg1));
                     }
                     break;
-                case BluetoothService.MSG_SENT_PACKET:
+                case BluetoothConnectionService.MSG_SENT_PACKET:
 
                     break;
 
-                case BluetoothService.MSG_SENT_MSG:
+                case BluetoothConnectionService.MSG_SENT_MSG:
 
                     break;
 
-                case BluetoothService.MSG_RECEIVED_PACKET:
+                case BluetoothConnectionService.MSG_RECEIVED_PACKET:
 
                     break;
 
-                case BluetoothService.MSG_RECEIVED_MSG:
+                case BluetoothConnectionService.MSG_RECEIVED_MSG:
 
                     break;
 
-                case BluetoothService.MSG_CONFIRMED_PACKET:
+                case BluetoothConnectionService.MSG_CONFIRMED_PACKET:
 
                     break;
 
-                case BluetoothService.MSG_CONFIRMED_MSG:
+                case BluetoothConnectionService.MSG_CONFIRMED_MSG:
 
                     break;
             }
         }
     };
+
+
+
 }

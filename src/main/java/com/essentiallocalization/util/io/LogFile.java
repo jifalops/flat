@@ -17,6 +17,7 @@ import java.util.Locale;
 /**
  * Created by Jake on 9/20/13.
  */
+// todo learn how to use logcat instead of this
 public final class LogFile {
     private static final String TAG = LogFile.class.getSimpleName();
 

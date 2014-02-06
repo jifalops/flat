@@ -3,6 +3,7 @@ package com.essentiallocalization.connection;
 import android.util.Log;
 
 import com.essentiallocalization.util.io.SnoopFilter;
+import com.essentiallocalization.util.lifecycle.Finishable;
 import com.essentiallocalization.util.lifecycle.Startable;
 
 import java.io.File;
@@ -13,12 +14,12 @@ import java.util.List;
 /**
  * Created by Jake on 1/26/14.
  */
-public class SnoopPacketReader implements SnoopFilter.Listener, Startable {
+public class SnoopPacketReader implements PacketList, SnoopFilter.SnoopFilterListener, Startable {
     private static final String TAG = SnoopPacketReader.class.getSimpleName();
 
     @Override
     public void onFinished() {
-        //
+        mListener.onFinished();
     }
 
     @Override
@@ -39,23 +40,24 @@ public class SnoopPacketReader implements SnoopFilter.Listener, Startable {
     /**
      * Events are called based with their related HCI timestamps completed.
      * Java timestamps may or may not be completed.
+     * All methods are called on a separate thread (the underlying SnoopFilter thread).
      */
-    public static interface Listener {
+    public static interface SnoopPacketListener extends Finishable.FinishListener {
         /** called on separate (SnoopFilter) thread. */
-        void onSendAck(AckPacket ap);
+        void onDataReceived(DataPacket dp);
         /** called on separate (SnoopFilter) thread. */
         void onSendAckTime(AckTimePacket atp);
         /** called on separate (SnoopFilter) thread. */
-        void onPacketCompleted(DataPacket dp);
+        void onHciTimingComplete(DataPacket dp);
     }
 
 
     private final List<DataPacket> mPackets;
     private final byte mSrc;
-    private final Listener mListener;
+    private final SnoopPacketListener mListener;
     private final SnoopFilter mFilter;
 
-    public SnoopPacketReader(File snoopFile, byte src, Listener listener) throws IOException {
+    public SnoopPacketReader(File snoopFile, byte src, SnoopPacketListener listener) throws IOException {
         mSrc = src;
         mListener = listener;
         mPackets = new ArrayList<DataPacket>();
@@ -70,7 +72,7 @@ public class SnoopPacketReader implements SnoopFilter.Listener, Startable {
         switch (Packet.getType(packet)) {
             case Packet.TYPE_DATA:
                 dp = new DataPacket(packet);
-                if (findPacket(dp.src, dp.dest, dp.pktIndex) == null) {
+                if (findPacket(dp.src, dp.dest, dp.pktIndex, dp.javaSrcSent) == null) {
                     if (dp.src == mSrc) {
                         // Data packet sent
                         dp.hciSrcSent = hciTime;
@@ -85,9 +87,7 @@ public class SnoopPacketReader implements SnoopFilter.Listener, Startable {
                         mPackets.add(dp);
 
                         // hci time for ack is ready
-                        ap = new AckPacket(dp);
-                        ap.hciDestReceived = hciTime;
-                        mListener.onSendAck(ap);
+                        mListener.onDataReceived(dp);
                     } else {
                         Log.e(TAG, "Processing data packet not for this device");
                     }
@@ -97,7 +97,7 @@ public class SnoopPacketReader implements SnoopFilter.Listener, Startable {
                 break;
             case Packet.TYPE_ACK:
                 ap = new AckPacket(packet);
-                dp = findPacket(ap.src, ap.dest, ap.pktIndex);
+                dp = findPacket(ap.src, ap.dest, ap.pktIndex, ap.javaSrcSent);
                 if (dp == null) {
                     Log.e(TAG, "Received ack without data packet.");
                 } else {
@@ -122,7 +122,7 @@ public class SnoopPacketReader implements SnoopFilter.Listener, Startable {
                 break;
             case Packet.TYPE_ACK_TIME:
                 atp = new AckTimePacket(packet);
-                dp = findPacket(atp.src, atp.dest, atp.pktIndex);
+                dp = findPacket(atp.src, atp.dest, atp.pktIndex, atp.javaSrcSent);
                 if (dp == null) {
                     Log.e(TAG, "Received ack time without data packet.");
                 } else {
@@ -138,7 +138,7 @@ public class SnoopPacketReader implements SnoopFilter.Listener, Startable {
                             if (!mPackets.remove(dp)) {
                                 Log.e(TAG, "Failed to remove completed packet");
                             }
-                            mListener.onPacketCompleted(dp);
+                            mListener.onHciTimingComplete(dp);
                         } else {
                             Log.e(TAG, "Packet was expected to be HCI complete.");
                         }
@@ -152,9 +152,10 @@ public class SnoopPacketReader implements SnoopFilter.Listener, Startable {
         }
     }
 
-    private DataPacket findPacket(byte src, byte dest, int pktIndex) {
+    @Override
+    public DataPacket findPacket(byte src, byte dest, int pktIndex, long javaSrcSent) {
         for (DataPacket dp : mPackets) {
-            if (dp.src == src && dp.dest == dest && dp.pktIndex == pktIndex) {
+            if (dp.src == src && dp.dest == dest && dp.pktIndex == pktIndex && dp.javaSrcSent == javaSrcSent) {
                 return dp;
             }
         }

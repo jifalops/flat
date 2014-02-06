@@ -19,7 +19,7 @@ public class StreamConnection extends BasicConnection {
         byte[] onSend();
     }
 
-    public static interface Listener {
+    public static interface StreamListener {
         /** Called on separate thread (sendAndEventLooper). */
         void onDataReceived(long time, byte[] data);
     }
@@ -28,7 +28,7 @@ public class StreamConnection extends BasicConnection {
     private final InputStream mIn;
     private final OutputStream mOut;
     private final int mBufferSize;
-    private Listener mListener;
+    private StreamListener mListener;
     protected final Handler mSendAndEventHandler;
 
     private boolean mCanceled;
@@ -41,7 +41,7 @@ public class StreamConnection extends BasicConnection {
         mSendAndEventHandler = new Handler(sendAndEventLooper);
     }
 
-    public void setStreamConnectionListener(StreamConnection.Listener listener) {
+    public void setStreamConnectionListener(StreamListener listener) {
         mListener = listener;
     }
 

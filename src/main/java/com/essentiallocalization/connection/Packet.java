@@ -27,8 +27,10 @@ public abstract class Packet {
     public byte msgParts;   // 1 based
     public byte attempt;    // 1 based
 
+    public long javaSrcSent;
+
     /** does not include the PREFIX string. */
-    protected static final int HEADER_SIZE = (8 * 0) + (4 * 2) + (2 * 1) + (1 * 6); // see properties above
+    protected static final int HEADER_SIZE = (8 * 1) + (4 * 2) + (2 * 1) + (1 * 6); // see properties above
 
     public static int getType(byte[] packet) {
         return packet[PREFIX.length() + 2];
@@ -51,6 +53,7 @@ public abstract class Packet {
         msgPart = bb.get();
         msgParts = bb.get();
         attempt = bb.get();
+        javaSrcSent = bb.getLong();
     }
 
     public abstract int marginalHeaderSize();
@@ -68,7 +71,7 @@ public abstract class Packet {
         return PREFIX.length() + size;
     }
 
-    protected final ByteBuffer getBuffer() {
+    protected final ByteBuffer getBuffer(boolean updateJavaSrcSent) {
         return ByteBuffer.allocate(size())
                 .put(PREFIX.getBytes())
                 .putShort(size)
@@ -79,7 +82,10 @@ public abstract class Packet {
                 .putInt(msgIndex)
                 .put(msgPart)
                 .put(msgParts)
-                .put(attempt);
+                .put(attempt)
+                .putLong(updateJavaSrcSent
+                        ? javaSrcSent = System.nanoTime()
+                        : javaSrcSent);
     }
 
     Packet() {}
@@ -94,6 +100,7 @@ public abstract class Packet {
         msgPart = p.msgPart;
         msgParts = p.msgParts;
         attempt = p.attempt;
+        javaSrcSent = p.javaSrcSent;
     }
 
     @Override

@@ -31,12 +31,15 @@ public final class BluetoothConnection extends PacketConnection implements Devic
         return Byte.valueOf(name.substring(name.length() - 1));
     }
 
+    public static final String SELF_NAME = BluetoothAdapter.getDefaultAdapter().getName();
+    public static final byte SELF_ID = idFromName(SELF_NAME);
+
     private final UUID mUuid;
     private final boolean mIsServer;
     private final BluetoothDevice mRemoteDevice;
 
     BluetoothConnection(BluetoothSocket socket, UUID uuid, boolean selfIsServer, Looper sendAndEventLooper) throws IOException {
-        super(idFromName(BluetoothAdapter.getDefaultAdapter().getName()), idFromName(socket.getRemoteDevice().getName()),
+        super(idFromName(SELF_NAME), idFromName(socket.getRemoteDevice().getName()),
                 socket.getInputStream(), socket.getOutputStream(), sendAndEventLooper);
         mUuid = uuid;
         mIsServer = selfIsServer;

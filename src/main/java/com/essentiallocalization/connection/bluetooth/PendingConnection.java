@@ -16,10 +16,10 @@ import java.util.UUID;
  * Created by Jake on 2/2/14.
  */
 public final class PendingConnection extends BasicConnection implements DeviceConnection, Finishable,
-        BluetoothClient.Listener, BluetoothServer.Listener {
+        BluetoothClient.ClientListener, BluetoothServer.ServerListener {
     private static final String TAG = PendingConnection.class.getSimpleName();
 
-    public static interface Listener {
+    public static interface PendingListener {
         /**
          * Called on separate thread (client or server). Implementations should
          * return whether the connection was accepted or not.
@@ -31,7 +31,7 @@ public final class PendingConnection extends BasicConnection implements DeviceCo
 
     private final BluetoothServer mServer;
     private final BluetoothClient mClient;
-    private final Listener mListener;
+    private final PendingListener mListener;
     private final Looper mLooper;
 
     private BluetoothSocket mSocket;
@@ -39,7 +39,7 @@ public final class PendingConnection extends BasicConnection implements DeviceCo
     private boolean mCanceled;
     private boolean mFinished;
 
-    public PendingConnection(BluetoothDevice target, Listener listener, Looper connectionSendAndEventLooper) {
+    public PendingConnection(BluetoothDevice target, PendingListener listener, Looper connectionSendAndEventLooper) {
         mListener = listener;
         mLooper = connectionSendAndEventLooper;
         mServer = new BluetoothServer(this);

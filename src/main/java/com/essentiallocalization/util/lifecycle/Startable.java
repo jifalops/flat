@@ -6,7 +6,7 @@ package com.essentiallocalization.util.lifecycle;
 public interface Startable extends Cancelable {
     void start();
 
-    static interface Listener extends Cancelable.Listener {
+    static interface StartListener extends CancelListener{
         void onStart();
     }
 }

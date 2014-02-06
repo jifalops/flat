@@ -16,7 +16,7 @@ import java.util.List;
 /**
  * Manages sending Messages back and forth, internally breaking them into Packets.
  */
-public class PacketConnection extends StreamConnection implements StreamConnection.Listener {
+public class PacketConnection extends StreamConnection implements PacketList, StreamConnection.StreamListener {
     private static final String TAG = PacketConnection.class.getSimpleName();
 
 //    /** arg1 = to, arg2 = pktIndex, obj = ActiveConnection */
@@ -38,11 +38,11 @@ public class PacketConnection extends StreamConnection implements StreamConnecti
      * Events are called based with their related java timestamps completed.
      * HCI timestamps may or may not be completed.
      */
-    public static interface Listener {
+    public static interface PacketListener {
         /** Called on separate thread (sendAndEventLooper). */
-        void onSendAck(PacketConnection pc, AckPacket ap);
+        void onDataPacketReceived(PacketConnection pc, DataPacket dp);
         /** Called on separate thread (sendAndEventLooper). */
-        void onPacketCompleted(PacketConnection pc, DataPacket dp);
+        void onJavaTimingComplete(PacketConnection pc, DataPacket dp);
     }
 
 
@@ -52,7 +52,7 @@ public class PacketConnection extends StreamConnection implements StreamConnecti
     private final List<Message> mMessages;
     private final SparseArray<String[]> mPartialMessages;
 
-    private Listener mListener;
+    private PacketListener mListener;
 
     private int mSentPacketIndex;
     private int mSentMessageIndex;
@@ -69,7 +69,7 @@ public class PacketConnection extends StreamConnection implements StreamConnecti
         setStreamConnectionListener(this);
     }
 
-    public void setPacketConnectionListener(PacketConnection.Listener listener) {
+    public void setPacketConnectionListener(PacketListener listener) {
         mListener = listener;
     }
 
@@ -153,7 +153,7 @@ public class PacketConnection extends StreamConnection implements StreamConnecti
             case Packet.TYPE_DATA:
                 // Data packet received
                 dp = new DataPacket(data);
-                if (findPacket(dp.src, dp.dest, dp.pktIndex) == null) {
+                if (findPacket(dp.src, dp.dest, dp.pktIndex, dp.javaSrcSent) == null) {
                     if (dp.dest == mSrc) {
                         dp.javaDestReceived = javaTime;
                         mPackets.add(dp);
@@ -166,10 +166,8 @@ public class PacketConnection extends StreamConnection implements StreamConnecti
 //                Log.v(TAG, "Received packet " + dp.pktIndex + " (" + dp.msgPart + " of " + dp.msgParts + ")");
 
                 if (mListener != null) {
-                    // hci time for ack is ready
-                    ap = new AckPacket(dp);
-                    ap.javaDestReceived = javaTime;
-                    mListener.onSendAck(this, ap);
+                    // java time for ack is ready
+                    mListener.onDataPacketReceived(this, dp);
                 }
 
                 //
@@ -198,7 +196,7 @@ public class PacketConnection extends StreamConnection implements StreamConnecti
             case Packet.TYPE_ACK:
                 // Received an ack packet back from the destination (we are the original sender)
                 ap = new AckPacket(data);
-                dp = findPacket(ap.src, ap.dest, ap.pktIndex);
+                dp = findPacket(ap.src, ap.dest, ap.pktIndex, ap.javaSrcSent);
                 if (dp == null) {
                     Log.e(TAG, "Received ack without data packet.");
                 } else if (dp.src == mSrc) {
@@ -222,12 +220,16 @@ public class PacketConnection extends StreamConnection implements StreamConnecti
                 // Received a packet containing the HCI time that the corresponding ack packet was sent (we are original sender).
                 // Unlike the java time, the HCI time sent can only be retrieved AFTER the packet is sent.
                 atp = new AckTimePacket(data);
-                dp = findPacket(atp.src, atp.dest, atp.pktIndex);
+                dp = findPacket(atp.src, atp.dest, atp.pktIndex, atp.javaSrcSent);
                 if (dp == null) {
                     Log.e(TAG, "Received ack time without data packet.");
                 } else if (dp.src == mSrc) {
                     dp.hciDestSent = atp.hciDestSent;
-                    if (mListener != null) mListener.onPacketCompleted(this, dp);
+                    if (mListener != null
+                            && dp.javaSrcSent != 0 && dp.javaDestReceived != 0
+                            && dp.javaDestSent != 0 && dp.javaSrcReceived != 0) {
+                        mListener.onJavaTimingComplete(this, dp);
+                    }
                 } else {
                     Log.e(TAG, "Processing ack time packet not for this device");
                 }
@@ -236,9 +238,10 @@ public class PacketConnection extends StreamConnection implements StreamConnecti
         }
     }
 
-    private DataPacket findPacket(byte src, byte dest, int pktIndex) {
+    @Override
+    public DataPacket findPacket(byte src, byte dest, int pktIndex, long javaSrcSent) {
         for (DataPacket dp : mPackets) {
-            if (dp.src == src && dp.dest == dest && dp.pktIndex == pktIndex) {
+            if (dp.src == src && dp.dest == dest && dp.pktIndex == pktIndex && dp.javaSrcSent == javaSrcSent) {
                 return dp;
             }
         }

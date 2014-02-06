@@ -1,5 +1,6 @@
 package com.essentiallocalization.util.io;
 
+import android.os.Environment;
 import android.util.Log;
 
 import com.essentiallocalization.util.lifecycle.Cancelable;
@@ -61,10 +62,14 @@ public class SnoopFilter extends Thread implements Cancelable, Finishable {
     private static final int TASK_READ_PACKET_PAYLOAD = 3;
 
 
-    public static interface Listener extends Finishable.Listener {
+    /** All methods are called on the SnoopFilter thread. */
+    public static interface SnoopFilterListener extends FinishListener {
         /** Called on the SnoopFilter thread. */
         void onMessageFound(long ts, byte[] msg);
     }
+
+    public static final String DEFUALT_SNOOP_NAME = "btsnoop_hci.log";
+    public static final File DEFAULT_SNOOP_FILE = new File(Environment.getExternalStorageDirectory(), DEFUALT_SNOOP_NAME);
 
     private int mTask;
     private long mTimestamp;
@@ -75,13 +80,13 @@ public class SnoopFilter extends Thread implements Cancelable, Finishable {
 //    private final BufferedOutputStream mOutStream;
     private final BufferedInputStream mInStream;
 //    private final Handler mHandler;
-    private final Listener mListener;
+    private final SnoopFilterListener mListener;
     private final String mFilter;
 
     private volatile int mPacketsRead, mMessagesFound;
     private boolean mCanceled, mFinished;
 
-    public SnoopFilter(File snoopFile, /*File outFile,*/ String msgPrefix, Listener listener) throws IOException {
+    public SnoopFilter(File snoopFile, /*File outFile,*/ String msgPrefix, SnoopFilterListener listener) throws IOException {
         mSnoopFile = snoopFile;
 //        mOutFile = outFile;
         mFilter = msgPrefix;

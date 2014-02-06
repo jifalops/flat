@@ -26,7 +26,7 @@ public final class AckPacket extends Packet {
 
     @Override
     public byte[] getBytes(boolean sending) {
-        return getBuffer()
+        return getBuffer(false)
                 .putLong(hciDestReceived)
                 .putLong(javaDestReceived)
                 .putLong(sending ? javaDestSent = System.nanoTime()

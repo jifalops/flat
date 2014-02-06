@@ -7,7 +7,7 @@ package com.essentiallocalization.util.lifecycle;
 public interface Finishable {
     boolean isFinished();
 
-    static interface Listener {
+    static interface FinishListener {
         void onFinished();
     }
 }
