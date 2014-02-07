@@ -94,7 +94,7 @@ public final class BluetoothConnectionManager {
     public synchronized void sendToAll(String msg) throws IOException, Message.MessageTooLongException {
         for (Map.Entry<BluetoothDevice, Pair<DeviceConnection, Connection.StateChangeListener>> e : mConnections.entrySet()) {
             DeviceConnection conn = getConnection(e.getKey());
-            if (conn.isConnected()) {
+            if (conn.isConnected() && conn instanceof BluetoothConnection) {
                 ((BluetoothConnection) conn).send(msg);
             }
         }
@@ -115,8 +115,10 @@ public final class BluetoothConnectionManager {
 
     public synchronized void disconnect() {
         for (Map.Entry<BluetoothDevice, Pair<DeviceConnection, Connection.StateChangeListener>> e : mConnections.entrySet()) {
-            disconnect(e.getKey());
+            e.getValue().first.cancel();
+            e.getValue().first.setState(Connection.STATE_NONE);
         }
+        mConnections.clear();
     }
 
 

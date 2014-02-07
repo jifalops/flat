@@ -1,5 +1,6 @@
 package com.essentiallocalization.util;
 
+import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.Locale;
 
@@ -15,6 +16,13 @@ public final class Util {
 
         public static final SimpleDateFormat LOG = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US);
         public static final SimpleDateFormat LOG_MS = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.US);
+
+        public static final DecimalFormat BASIC_0DEC = new DecimalFormat("##############0");
+        public static final DecimalFormat BASIC_2DEC = new DecimalFormat("##############0.00");
+        public static final DecimalFormat SEPARATOR_0DEC = new DecimalFormat("###,###,###,###,##0");
+        public static final DecimalFormat SEPARATOR_2DEC = new DecimalFormat("###,###,###,###,##0.00");
+        public static final DecimalFormat SCIENTIFIC_3SIG = new DecimalFormat("0.##E0");
+        public static final DecimalFormat SCIENTIFIC_5SIG = new DecimalFormat("0.####E0");
     }
 
 
@@ -31,10 +39,16 @@ public final class Util {
     public static final class Calc {
         private Calc() { throw new AssertionError("Non-instantiable"); }
 
-        public static float timeOfFlightDistance1(long aSent, long bReceived, long bSent, long aReceived) {
+        public static double timeOfFlightDistanceNano(long aSent, long bReceived, long bSent, long aReceived) {
             long roundTrip = (aReceived - aSent) - (bSent - bReceived);
             double distance = (Const.SPEED_OF_LIGHT_VACUUM * (roundTrip * 1E-9)) / 2;
-            return Math.round(distance * 100) / 100;
+            return distance;
+        }
+
+        public static double timeOfFlightDistanceMicro(long aSent, long bReceived, long bSent, long aReceived) {
+            long roundTrip = (aReceived - aSent) - (bSent - bReceived);
+            double distance = (Const.SPEED_OF_LIGHT_VACUUM * (roundTrip * 1E-6)) / 2;
+            return distance;
         }
     }
 }

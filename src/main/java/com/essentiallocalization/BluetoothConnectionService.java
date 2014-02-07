@@ -132,8 +132,8 @@ public class BluetoothConnectionService extends PersistentIntentService {
         @Override
         public synchronized void onTimingComplete(DataPacket dp, BluetoothConnection conn) {
             if (mTimeLog != null) {
-                float javaDist = Util.Calc.timeOfFlightDistance1(dp.javaSrcSent, dp.javaDestReceived, dp.javaDestSent, dp.javaSrcReceived);
-                float hciDist = Util.Calc.timeOfFlightDistance1(dp.hciSrcSent, dp.hciDestReceived, dp.hciDestSent, dp.hciSrcReceived);
+                double javaDist = Util.Calc.timeOfFlightDistanceNano(dp.javaSrcSent, dp.javaDestReceived, dp.javaDestSent, dp.javaSrcReceived);
+                double hciDist = Util.Calc.timeOfFlightDistanceMicro(dp.hciSrcSent, dp.hciDestReceived, dp.hciDestSent, dp.hciSrcReceived);
                 try {
                     mTimeLog.log(dp, javaDist, hciDist);
                 } catch (IOException e) {

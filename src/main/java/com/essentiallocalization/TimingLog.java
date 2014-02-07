@@ -6,6 +6,7 @@ import android.util.SparseArray;
 
 import com.essentiallocalization.connection.DataPacket;
 import com.essentiallocalization.connection.bluetooth.BluetoothConnectionManager;
+import com.essentiallocalization.util.Util;
 
 import java.io.File;
 import java.io.FileReader;
@@ -41,7 +42,7 @@ public class TimingLog implements PacketLog {
         findConnectionCounts();
     }
 
-    public void log(DataPacket dp, float javaDist, float hciDist) throws IOException {
+    public void log(DataPacket dp, double javaDist, double hciDist) throws IOException {
         mWriter.writeNext(new Record(dp, mConnectionCounts.get(dp.dest), javaDist, hciDist).toStringArray());
         mWriter.flush();
     }
@@ -152,11 +153,11 @@ public class TimingLog implements PacketLog {
             hciDestReceived  = r[9];
             hciDestSent      = r[10];
             hciSrcReceived   = r[11];
-            javaDist         = r[12];
-            hciDist          = r[13];
+            javaDist         = Util.Format.BASIC_2DEC.format(r[12]);
+            hciDist          = Util.Format.BASIC_2DEC.format(r[13]);
         }
 
-        Record(DataPacket dp, int connCount, float javaDist, float hciDist) {
+        Record(DataPacket dp, int connCount, double javaDist, double hciDist) {
             this.src = String.valueOf(dp.src);
             this.dest = String.valueOf(dp.dest);
             this.connCount = String.valueOf(connCount);
@@ -169,8 +170,8 @@ public class TimingLog implements PacketLog {
             this.hciDestReceived = String.valueOf(dp.hciDestReceived);
             this.hciDestSent = String.valueOf(dp.hciDestSent);
             this.hciSrcReceived = String.valueOf(dp.hciSrcReceived);
-            this.javaDist = String.valueOf(javaDist);
-            this.hciDist = String.valueOf(hciDist);
+            this.javaDist = Util.Format.BASIC_2DEC.format(javaDist);
+            this.hciDist = Util.Format.BASIC_2DEC.format(hciDist);
         }
 
         public String[] toStringArray() {

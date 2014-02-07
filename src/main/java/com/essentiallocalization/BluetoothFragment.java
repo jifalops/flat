@@ -274,7 +274,7 @@ public final class BluetoothFragment extends PersistentIntentServiceController {
             case R.id.bt_test:
                 if (isBound()) {
                     try {
-                        mService.getConnectionManager().sendToAll("Testing");
+                        mService.getConnectionManager().sendToAll("TW5C0IpW2fWeDBfrqoaPp028JCRcuFdaCoN65e4LX8YhlQ6QQfRLMotNUJCTQ91pH8fk1Y56RlGaAHMsd25DZOmESoQJ9ezB67T8Zu4fzhUKfm78xvOrBcrjBTpAlCr3eUjW2m9CMEZfoyU9Kl3bzHDSswlFT8kM0o12SRkkPNvzMT2bTUMr1epmOoieEDHtZdBYAZPKsL6I6l8EWQhrlxyUwFlqtgP2GJXWEMvQ04bUlWFeqd67Lp8xKuTKH9rH");
                     } catch (IOException e) {
                         Log.e(TAG, "Failed sending test message to all devices");
                     } catch (com.essentiallocalization.connection.Message.MessageTooLongException ignored) {}
@@ -351,14 +351,14 @@ public final class BluetoothFragment extends PersistentIntentServiceController {
 
                 @Override
                 public synchronized void onTimingComplete(final DataPacket dp, BluetoothConnection conn) {
-                    final float javaDist = Util.Calc.timeOfFlightDistance1(dp.javaSrcSent, dp.javaDestReceived, dp.javaDestSent, dp.javaSrcReceived);
-                    final float hciDist = Util.Calc.timeOfFlightDistance1(dp.hciSrcSent, dp.hciDestReceived, dp.hciDestSent, dp.hciSrcReceived);
+                    final double javaDist = Util.Calc.timeOfFlightDistanceNano(dp.javaSrcSent, dp.javaDestReceived, dp.javaDestSent, dp.javaSrcReceived);
+                    final double hciDist = Util.Calc.timeOfFlightDistanceMicro(dp.hciSrcSent, dp.hciDestReceived, dp.hciDestSent, dp.hciSrcReceived);
                     mUiHandler.post(new Runnable() {
                         @Override
                         public void run() {
                             Toast.makeText(getActivity(), "packet " + dp.pktIndex + " to " + dp.dest + ":\n"
-                                    + "java: " + javaDist + "\n"
-                                    + "hci: " + hciDist, Toast.LENGTH_LONG).show();
+                                    + "java: " + Util.Format.SEPARATOR_2DEC.format(javaDist) + "\n"
+                                    + "hci: " + Util.Format.SEPARATOR_2DEC.format(hciDist), Toast.LENGTH_LONG).show();
                         }
                     });
                 }

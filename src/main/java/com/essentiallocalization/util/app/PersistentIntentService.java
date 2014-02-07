@@ -5,12 +5,8 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.os.Binder;
-import android.os.Handler;
-import android.os.HandlerThread;
-import android.os.IBinder;
-import android.os.Looper;
-import android.os.Message;
+import android.os.*;
+import android.os.Process;
 
 /**
  * Created by jake on 8/14/13.
@@ -92,7 +88,8 @@ public abstract class PersistentIntentService extends Service {
     }
 
     protected int getThreadPriority() {
-        return android.os.Process.THREAD_PRIORITY_BACKGROUND;
+        return Process.THREAD_PRIORITY_MORE_FAVORABLE;
+        //return android.os.Process.THREAD_PRIORITY_BACKGROUND;
     }
 
     protected int getStartType() {
