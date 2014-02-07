@@ -65,7 +65,7 @@ public final class BluetoothClient extends Thread implements Finishable, Connect
             if (isConnected() || isCanceled()) break;
             tryConnection(i);
         }
-        if (!isCanceled()) {
+        if (!isCanceled() && !isConnected()) {
             finish();
         }
     }
@@ -95,6 +95,7 @@ public final class BluetoothClient extends Thread implements Finishable, Connect
                 BluetoothDevice device = mSocket.getRemoteDevice();
                 if (device != null && mListener.onConnected(device.getAddress(), this)) {
                     setConnected(true);
+                    mSocket = null;
 //                    mHandler.obtainMessage(MSG_CONNECTED, this).sendToTarget();
                     break;
                 }

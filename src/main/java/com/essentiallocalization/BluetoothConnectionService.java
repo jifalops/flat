@@ -141,7 +141,7 @@ public class BluetoothConnectionService extends PersistentIntentService {
 
         @Override
         public synchronized void onStateChanged(BluetoothDevice device, int oldState, int newState) {
-            if (newState == Connection.STATE_CONNECTED) {
+            if (newState == Connection.STATE_CONNECTED && mTimeLog != null && device != null) {
                 mTimeLog.incConnectionCount(BluetoothConnection.idFromName(device.getName()));
             }
             if (mUserListener != null) mUserListener.onStateChanged(device, oldState, newState);

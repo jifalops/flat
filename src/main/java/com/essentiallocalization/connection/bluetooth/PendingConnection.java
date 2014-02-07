@@ -29,8 +29,8 @@ public final class PendingConnection extends BasicConnection implements DeviceCo
         void onFinished(PendingConnection conn);
     }
 
-    private final BluetoothServer mServer;
-    private final BluetoothClient mClient;
+    private  BluetoothServer mServer;
+    private  BluetoothClient mClient;
     private final PendingListener mListener;
     private final Looper mLooper;
 
@@ -71,8 +71,16 @@ public final class PendingConnection extends BasicConnection implements DeviceCo
     }
 
     private void close() {
-        mServer.cancel();
-        mClient.cancel();
+        if (mClient != null) {
+            mClient.cancel();
+            mClient = null;
+        }
+
+        if (mServer != null) {
+            mServer.cancel();
+            mServer = null;
+        }
+
         if (mSocket != null) {
             try {
                 mSocket.close();
@@ -111,6 +119,7 @@ public final class PendingConnection extends BasicConnection implements DeviceCo
     @Override
     public synchronized boolean onConnected(String macAddress, BluetoothClient btClient) {
         if (mListener.onConnected(makeConnection(false))) {
+            setState(STATE_CONNECTED);
             mServer.cancel();
             return true;
         }
@@ -120,6 +129,7 @@ public final class PendingConnection extends BasicConnection implements DeviceCo
     @Override
     public synchronized boolean onConnected(String macAddress, BluetoothServer btServer) {
         if (mListener.onConnected(makeConnection(true))) {
+            setState(STATE_CONNECTED);
             mClient.cancel();
             return true;
         }

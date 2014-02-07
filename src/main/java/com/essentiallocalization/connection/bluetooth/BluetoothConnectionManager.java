@@ -221,7 +221,9 @@ public final class BluetoothConnectionManager {
         public void onFinished(PendingConnection conn) {
             // todo: disconnected and connecting are handled in StreamConnection and PendingConnection.start(),
             // respectively (they should probably be handled in this class).
-            conn.setState(Connection.STATE_NONE);
+            if (conn != null && !conn.isConnected()) {
+                conn.setState(Connection.STATE_NONE);
+            }
         }
     };
 
@@ -289,6 +291,10 @@ public final class BluetoothConnectionManager {
     //
 
     private boolean sendAck(PacketConnection pc, DataPacket dp) {
+        if (pc == null || dp == null) {
+            Log.w(TAG, "Cannot send ack to null");
+            return false;
+        }
         if (!pc.isConnected()) {
             Log.w(TAG, "Received packet without being connected");
             return false;
