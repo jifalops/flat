@@ -41,11 +41,14 @@ public class TimingLog implements PacketLog {
         findConnectionCounts();
     }
 
-    public void log(DataPacket dp, int javaDist, int hciDist) {
+    public void log(DataPacket dp, float javaDist, float hciDist) {
         mWriter.writeNext(new Record(dp, mConnectionCounts.get(dp.dest), javaDist, hciDist).toStringArray());
     }
 
-    // todo: might be done on ui thread
+    public List<String[]> readAllBlocking() throws IOException {
+        return mReader.readAll();
+    }
+
     public void readAll() throws IOException {
         new AsyncTask<Void, Void, List<String[]>>() {
             @Override
@@ -75,8 +78,10 @@ public class TimingLog implements PacketLog {
     }
 
     public void incConnectionCount(byte dest) {
-        int count = mConnectionCounts.get(dest) + 1;
-        mConnectionCounts.put(dest, count);
+        Integer count = mConnectionCounts.get(dest);
+        if (count != null) {
+            mConnectionCounts.put(dest, count + 1);
+        }
     }
 
     private void open(boolean append) throws IOException {
@@ -86,10 +91,15 @@ public class TimingLog implements PacketLog {
 
     @Override
     public void close() throws IOException {
-        mWriter.close();
-        mReader.close();
-        mWriter = null;
-        mReader = null;
+        if (mWriter != null) {
+            mWriter.close();
+            mWriter = null;
+        }
+
+        if (mReader != null) {
+            mReader.close();
+            mReader = null;
+        }
     }
 
     private void findConnectionCounts() {
@@ -139,7 +149,7 @@ public class TimingLog implements PacketLog {
             hciDist          = r[13];
         }
 
-        Record(DataPacket dp, int connCount, int javaDist, int hciDist) {
+        Record(DataPacket dp, int connCount, float javaDist, float hciDist) {
             this.src = String.valueOf(dp.src);
             this.dest = String.valueOf(dp.dest);
             this.connCount = String.valueOf(connCount);

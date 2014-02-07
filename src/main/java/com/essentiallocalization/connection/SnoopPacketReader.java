@@ -64,6 +64,10 @@ public class SnoopPacketReader implements PacketList, SnoopFilter.SnoopFilterLis
         mFilter = new SnoopFilter(snoopFile, Packet.PREFIX, this);
     }
 
+    public File getSnoopFile() {
+        return mFilter.getSnoopFile();
+    }
+
     @Override
     public void onMessageFound(long hciTime, byte[] packet) {
         DataPacket dp;

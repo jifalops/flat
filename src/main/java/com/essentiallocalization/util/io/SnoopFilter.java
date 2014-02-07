@@ -118,6 +118,10 @@ public class SnoopFilter extends Thread implements Cancelable, Finishable {
         return mMessagesFound;
     }
 
+    public File getSnoopFile() {
+        return mSnoopFile;
+    }
+
     private boolean resetStream() {
         try { mInStream.reset(); }
         catch (IOException e) {

@@ -140,10 +140,12 @@ public final class BluetoothClient extends Thread implements Finishable, Connect
     }
 
     private void close() {
-        try {
-            mSocket.close();
-        } catch (IOException e) {
-            Log.e(TAG, "Unable to close client socket!");
+        if (mSocket != null) {
+            try {
+                mSocket.close();
+            } catch (IOException e) {
+                Log.e(TAG, "Unable to close client socket!");
+            }
         }
     }
 }

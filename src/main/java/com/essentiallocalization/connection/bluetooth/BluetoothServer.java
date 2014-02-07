@@ -121,10 +121,12 @@ public final class BluetoothServer extends Thread implements Finishable, Connect
     }
 
     private synchronized void close() {
-        try {
-            mServerSocket.close();
-        } catch (IOException e) {
-            Log.e(TAG, "Failed to close server socket!");
+        if (mServerSocket != null) {
+            try {
+                mServerSocket.close();
+            } catch (IOException e) {
+                Log.e(TAG, "Failed to close server socket!");
+            }
         }
     }
 }

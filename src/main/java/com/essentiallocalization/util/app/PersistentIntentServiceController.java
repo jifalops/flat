@@ -31,7 +31,7 @@ public abstract class PersistentIntentServiceController extends Fragment impleme
     }
 
     protected void doBindService() {
-        getActivity().bindService(new Intent(getActivity(), this.getClass()), this, Context.BIND_AUTO_CREATE);
+        getActivity().bindService(new Intent(getActivity(), getServiceClass()), this, Context.BIND_AUTO_CREATE);
     }
 
     protected void doUnbindService() {
@@ -44,9 +44,9 @@ public abstract class PersistentIntentServiceController extends Fragment impleme
     protected void setPersistent(boolean persist) {
         Activity a = getActivity();
         if (persist) {
-            a.startService(new Intent(a, this.getClass()));
+            a.startService(new Intent(a, getServiceClass()));
         } else {
-            a.stopService(new Intent(a, this.getClass()));
+            a.stopService(new Intent(a, getServiceClass()));
             // doBindService();
         }
     }
@@ -63,6 +63,7 @@ public abstract class PersistentIntentServiceController extends Fragment impleme
     }
 
     abstract public void onServiceConnected(PersistentIntentService service);
+    protected abstract Class<? extends PersistentIntentService> getServiceClass();
 
     public boolean isBound() {
         return mBound;

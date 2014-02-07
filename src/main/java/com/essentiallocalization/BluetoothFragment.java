@@ -3,19 +3,16 @@ package com.essentiallocalization;
 import android.app.ActionBar;
 import android.app.Activity;
 import android.app.AlertDialog;
-import android.bluetooth.BluetoothManager;
-import android.content.ComponentName;
-import android.content.Context;
+import android.bluetooth.BluetoothDevice;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
-import android.os.IBinder;
-import android.os.Message;
 import android.text.TextUtils;
 import android.util.Log;
+import android.util.SparseArray;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -29,12 +26,13 @@ import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.Switch;
 import android.widget.TextView;
-import android.widget.Toast;
 
+import com.essentiallocalization.connection.DataPacket;
 import com.essentiallocalization.connection.bluetooth.BluetoothConnection;
 import com.essentiallocalization.connection.bluetooth.BluetoothConnectionManager;
 import com.essentiallocalization.util.app.PersistentIntentService;
 import com.essentiallocalization.util.app.PersistentIntentServiceController;
+import com.essentiallocalization.util.io.Connection;
 
 import java.io.File;
 import java.io.IOException;
@@ -71,12 +69,16 @@ public final class BluetoothFragment extends PersistentIntentServiceController {
     /** Contains callback methods for this class. */
     private BluetoothFragmentListener mListener;
 
-    private TextView[] mStateViews;
+    private ViewGroup mStateViewsContainer;
+    private SparseArray<TextView> mStateViews;
     private Switch mServiceSwitch;
     private CheckBox mServicePersist;
     private ListView mListView;
     private ArrayAdapter<String> mListAdapter;
 
+    private TimingLog mTimeLog;
+
+    private final Handler mUiHandler = new Handler();
 
 
 //    private FileObserver mObserver;
@@ -107,8 +109,23 @@ public final class BluetoothFragment extends PersistentIntentServiceController {
         View controls = ab.getCustomView();
         mServiceSwitch = (Switch) controls.findViewById(R.id.service_power);
         mServicePersist = (CheckBox) controls.findViewById(R.id.service_persist);
+        mStateViews = new SparseArray<TextView>(BluetoothConnectionManager.MAX_CONNECTIONS);
+        try {
+            mTimeLog = new TimingLog(LOG_FILE, true, new TimingLog.TimeLogListener() {
+                @Override
+                public void onInitialized() {
+                    //todo
+                }
 
-
+                @Override
+                public void onReadAll(List<String[]> lines) {
+                    //todo
+                }
+            });
+        } catch (IOException e) {
+            Log.e(TAG, "Couldn't open log file.", e);
+            //Toast.makeText(this, "Logging disabled", Toast.LENGTH_SHORT).show();
+        }
     }
 
     private void setupServiceControls() {
@@ -133,6 +150,41 @@ public final class BluetoothFragment extends PersistentIntentServiceController {
         });
     }
 
+    private void setServiceEnabled(boolean enabled) {
+        if (!isBound()) return;
+        if (enabled) {
+            mService.setConnectionListener(mConnectionListener);
+            mService.setTimingLog(mTimeLog);
+            mService.getConnectionManager().setReconnect(false);
+
+            try {
+                mService.getConnectionManager().startSnoopReader();
+            } catch (IOException e) {
+                Log.e(TAG, "Failed to start snoop packet reader");
+            }
+
+            // Attempt connections to all paired devices!
+            for (BluetoothDevice device : BluetoothConnection.SELF.getBondedDevices()) {
+                makeStateView(device);
+                mService.getConnectionManager().connect(device);
+            }
+
+        } else {
+
+            mService.getConnectionManager().setReconnect(false);
+            mService.getConnectionManager().stopSnoopReader();
+            mService.getConnectionManager().disconnect();
+            try {
+                mService.setTimingLog(null);
+                mTimeLog.close();
+            } catch (IOException e) {
+                Log.e(TAG, "Failed to close Time log");
+            }
+//            mService.setTimingLog(null, null);
+//            mService.setConnectionListener(null);
+        }
+    }
+
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         Log.v(TAG, "onCreateView()");
@@ -140,13 +192,13 @@ public final class BluetoothFragment extends PersistentIntentServiceController {
 
         // Add all connection state views to the layout,
         // hiding views which are beyond the current max connections.
-        ViewGroup states = (ViewGroup) root.findViewById(R.id.states);
-        mStateViews = new TextView[BluetoothConnectionManager.MAX_CONNECTIONS];
-        for (int i = 0; i < BluetoothConnectionManager.MAX_CONNECTIONS; ++i) {
-            mStateViews[i] = (TextView) inflater.inflate(R.layout.state_textview, null);
-            mStateViews[i].setVisibility(View.GONE);
-            states.addView(mStateViews[i]);
-        }
+        mStateViewsContainer = (ViewGroup) root.findViewById(R.id.states);
+
+//        for (int i = 0; i < BluetoothConnectionManager.MAX_CONNECTIONS; ++i) {
+//            mStateViews[i] = (TextView) inflater.inflate(R.layout.state_textview, null);
+//            mStateViews[i].setVisibility(View.GONE);
+//            states.addView(mStateViews[i]);
+//        }
 
         mListView = (ListView) root.findViewById(R.id.list);
         mListAdapter = new ArrayAdapter<String>(getActivity(), R.layout.listitem_textview, R.id.text, readLog());
@@ -163,11 +215,19 @@ public final class BluetoothFragment extends PersistentIntentServiceController {
         return root;
     }
 
+    private void makeStateView(BluetoothDevice device) {
+        final TextView tv = (TextView) getActivity().getLayoutInflater().inflate(R.layout.state_textview, null);
+        byte dest = BluetoothConnection.idFromName(device.getName());
+        mStateViewsContainer.removeView(mStateViews.get(dest));
+        mStateViews.put(dest, tv);
+        mStateViewsContainer.addView(tv);
+    }
+
     private List<String> readLog() {
         List<String> lines = new ArrayList<String>();
         List<String[]> lineParts = null;
         try {
-            lineParts = mTimeLog.readAll();
+            lineParts = mTimeLog.readAllBlocking();
             for (String[] s : lineParts) {
                 lines.add(TextUtils.join(",", s));
             }
@@ -200,7 +260,9 @@ public final class BluetoothFragment extends PersistentIntentServiceController {
                 alert.setView(input);
                 alert.setPositiveButton(R.string.dialog_ok, new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int whichButton) {
-                        mService.getConnectionManager().setMaxConnections(Integer.valueOf(input.getText().toString()));
+                        if (isBound()) {
+                            mService.getConnectionManager().setMaxConnections(Integer.valueOf(input.getText().toString()));
+                        }
                     }
                 });
                 alert.setNegativeButton(R.string.dialog_cancel, null);
@@ -235,7 +297,7 @@ public final class BluetoothFragment extends PersistentIntentServiceController {
 
             case R.id.bt_view_log:
                 Intent i = new Intent(Intent.ACTION_VIEW);
-                i.setDataAndType(Uri.fromFile(mTimeLog.getFile()), "text/*");
+                i.setDataAndType(Uri.fromFile(LOG_FILE), "text/*");
                 i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                 startActivity(i);
                 break;
@@ -259,74 +321,62 @@ public final class BluetoothFragment extends PersistentIntentServiceController {
 //    }
 
     @Override
-    public void onServiceConnected(ComponentName className, IBinder service) {
-        Log.v(TAG, "onServiceConnected()");
-        PersistentIntentService.LocalBinder binder = (PersistentIntentService.LocalBinder) service;
-        mService = (BluetoothConnectionService) binder.getService();
-        if (mMaxConnections != mService.getMaxConnections()) {
-            setMaxConnections(mMaxConnections);
+    public void onServiceConnected(PersistentIntentService service) {
+        mService = (BluetoothConnectionService) service;
+        if (mMaxConnections != mService.getConnectionManager().getMaxConnections()) {
+            mService.getConnectionManager().setMaxConnections(mMaxConnections);
         }
-        mService.setHandler(mHandler);
-        mService.setLogFile(mTimeLog);
-        mBound = true;
         setupServiceControls();
     }
 
     @Override
-    public void onServiceDisconnected(ComponentName arg0) {
-        Log.v(TAG, "onServiceDisconnected()");
-        mBound = false;
+    protected Class<? extends PersistentIntentService> getServiceClass() {
+        return BluetoothConnectionService.class;
     }
 
-    @Override
-    public void onServiceConnected(PersistentIntentService service) {
-        mService = (BluetoothConnectionService) service;
-    }
+    private final BluetoothConnectionManager.BluetoothConnectionListener mConnectionListener =
+            new BluetoothConnectionManager.BluetoothConnectionListener() {
+                @Override
+                public synchronized void onPacketReceived(DataPacket dp, BluetoothConnection conn) {
 
+                }
 
-    private final Handler mHandler = new Handler() {
-        @Override
-        public void handleMessage(Message msg) {
-            BluetoothConnection connection = (BluetoothConnection) msg.obj;
-            String name = connection.getName();
-            int index = mService.getConnectionManager().getConnections().indexOf(connection);
-            if (name == null || name.length() == 0) {
-                name = String.valueOf(index);
-            }
-            switch (msg.what) {
-                case BluetoothConnectionService.MSG_STATE_CHANGE:
-                    if (index >= 0) {
-                        mStateViews[index].setVisibility(View.VISIBLE);
-                        mStateViews[index].setText(name + ": " + BluetoothConnection.getState(msg.arg1));
+                @Override
+                public synchronized void onTimingComplete(DataPacket dp, BluetoothConnection conn) {
+
+                }
+
+                @Override
+                public synchronized void onStateChanged(final BluetoothDevice device, final int oldState, final int newState) {
+                    if (newState == Connection.STATE_CONNECTED) {
+                        int x = 1; //breakpoint
                     }
-                    break;
-                case BluetoothConnectionService.MSG_SENT_PACKET:
 
-                    break;
+                    if (device == null) return;
 
-                case BluetoothConnectionService.MSG_SENT_MSG:
+                    final byte dest = BluetoothConnection.idFromName(device.getName());
 
-                    break;
+                    mUiHandler.post(new Runnable() {
+                        @Override
+                        public void run() {
+                            mStateViews.get(dest).setText(device.getName() + ": " + getState(newState));
+                        }
+                    });
+                }
 
-                case BluetoothConnectionService.MSG_RECEIVED_PACKET:
+                @Override
+                public synchronized void onSnoopPacketReaderFinished() {
 
-                    break;
-
-                case BluetoothConnectionService.MSG_RECEIVED_MSG:
-
-                    break;
-
-                case BluetoothConnectionService.MSG_CONFIRMED_PACKET:
-
-                    break;
-
-                case BluetoothConnectionService.MSG_CONFIRMED_MSG:
-
-                    break;
-            }
-        }
+                }
     };
 
-
-
+    private String getState(int state) {
+        switch (state) {
+            case Connection.STATE_NONE:         return "None";
+            case Connection.STATE_CONNECTING:   return "Connecting";
+            case Connection.STATE_CONNECTED:    return "Connected";
+            case Connection.STATE_DISCONNECTED: return "Disconnected";
+        }
+        return "Unknown";
+    }
 }

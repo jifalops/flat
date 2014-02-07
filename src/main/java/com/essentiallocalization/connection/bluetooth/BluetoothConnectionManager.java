@@ -67,24 +67,18 @@ public final class BluetoothConnectionManager {
     }
 
     private final Map<BluetoothDevice, Pair<DeviceConnection, Connection.StateChangeListener>> mConnections;
+    private boolean mReconnect;
     private final Looper mLooper;
-    private BluetoothConnectionListener mBluetoothListener;
+    private final BluetoothConnectionListener mBluetoothListener;
 
     private SnoopPacketReader mSnoopReader;
     private int mConnLimit;
 
-    public BluetoothConnectionManager(Looper sendAndEventLooper) {
+    public BluetoothConnectionManager(Looper sendAndEventLooper, BluetoothConnectionListener listener) {
         mConnections = new HashMap<BluetoothDevice, Pair<DeviceConnection, Connection.StateChangeListener>>(MAX_CONNECTIONS);
-
+        mBluetoothListener = listener;
         mLooper = sendAndEventLooper;
         mConnLimit = MAX_CONNECTIONS;
-
-    }
-
-    public void setConnectionListener(final BluetoothConnectionListener listener) {
-        synchronized (mBluetoothListener) {
-            mBluetoothListener = listener;
-        }
     }
 
     public synchronized int send(BluetoothDevice device, String msg) throws IOException, Message.MessageTooLongException {
@@ -114,6 +108,7 @@ public final class BluetoothConnectionManager {
         Pair<DeviceConnection, Connection.StateChangeListener> pair = mConnections.get(device);
         if (pair != null) {
             pair.first.cancel();
+            pair.first.setState(Connection.STATE_NONE);
             mConnections.remove(device);
         }
     }
@@ -142,6 +137,14 @@ public final class BluetoothConnectionManager {
         }
     }
 
+    public synchronized void setReconnect(boolean reconnect) {
+        mReconnect = reconnect;
+    }
+
+    public synchronized boolean shouldReconnect() {
+        return mReconnect;
+    }
+
     public void startSnoopReader(File snoopFile) throws IOException {
         stopSnoopReader();
         mSnoopReader = new SnoopPacketReader(snoopFile, BluetoothConnection.SELF_ID, mSnoopPacketListener);
@@ -162,7 +165,12 @@ public final class BluetoothConnectionManager {
     private class StateListener implements Connection.StateChangeListener {
         @Override
         public void onStateChange(int oldState, int newState) {
-            if (mBluetoothListener != null) mBluetoothListener.onStateChanged(getDevice(this), oldState, newState);
+            BluetoothDevice device = getDevice(this);
+            if (mBluetoothListener != null) mBluetoothListener.onStateChanged(device, oldState, newState);
+            if ((newState == Connection.STATE_NONE || newState == Connection.STATE_DISCONNECTED)
+                && shouldReconnect() && getConnection(device) != null && !getConnection(device).isCanceled()) {
+                connect(device);
+            }
         }
     }
 
@@ -213,11 +221,7 @@ public final class BluetoothConnectionManager {
         public void onFinished(PendingConnection conn) {
             // todo: disconnected and connecting are handled in StreamConnection and PendingConnection.start(),
             // respectively (they should probably be handled in this class).
-            if (conn.getState() != Connection.STATE_CONNECTED) {
-                conn.setState(Connection.STATE_NONE);
-            } else {
-                Log.w(TAG, "Expected no connection on finish: " + conn.getDevice().getName());
-            }
+            conn.setState(Connection.STATE_NONE);
         }
     };
 
@@ -268,7 +272,15 @@ public final class BluetoothConnectionManager {
 
         @Override
         public void onFinished() {
+            Log.d(TAG, "SnoopPacketReader finished");
             if (mBluetoothListener != null) mBluetoothListener.onSnoopPacketReaderFinished();
+            if (shouldReconnect() && !mSnoopReader.isCanceled()) {
+                try {
+                    startSnoopReader(mSnoopReader.getSnoopFile());
+                } catch (IOException e) {
+                    Log.e(TAG, "Failed to restart snoop packet reader");
+                }
+            }
         }
     };
 
@@ -358,14 +370,17 @@ public final class BluetoothConnectionManager {
     }
 
     public synchronized DeviceConnection getConnection(BluetoothDevice device) {
+        if (device == null) return null;
         return mConnections.get(device).first;
     }
 
     public synchronized Connection.StateChangeListener getListener(BluetoothDevice device) {
+        if (device == null) return null;
         return mConnections.get(device).second;
     }
 
     public synchronized BluetoothDevice getDevice(DeviceConnection conn) {
+        if (conn == null) return null;
         for (Map.Entry<BluetoothDevice, Pair<DeviceConnection, Connection.StateChangeListener>> e : mConnections.entrySet()) {
             if (e.getValue().first == conn) return e.getKey();
         }
@@ -373,6 +388,7 @@ public final class BluetoothConnectionManager {
     }
 
     public synchronized BluetoothDevice getDevice(Connection.StateChangeListener listener) {
+        if (listener == null) return null;
         for (Map.Entry<BluetoothDevice, Pair<DeviceConnection, Connection.StateChangeListener>> e : mConnections.entrySet()) {
             if (e.getValue().second == listener) return e.getKey();
         }

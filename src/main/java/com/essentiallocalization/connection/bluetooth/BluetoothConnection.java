@@ -16,17 +16,6 @@ import java.util.UUID;
 public final class BluetoothConnection extends PacketConnection implements DeviceConnection {
     private static final String TAG = BluetoothConnection.class.getSimpleName();
 
-    // TODO belongs elsewhere
-    public static String getState(int state) {
-        switch (state) {
-            case STATE_NONE:         return "None";
-            case STATE_CONNECTING:   return "Connecting";
-            case STATE_CONNECTED:    return "Connected";
-            case STATE_DISCONNECTED: return "Disconnected";
-        }
-        return "Unknown";
-    }
-
     public static byte idFromName(String name) {
         if (name == null) return -1;
         return Byte.valueOf(name.substring(name.length() - 1));
