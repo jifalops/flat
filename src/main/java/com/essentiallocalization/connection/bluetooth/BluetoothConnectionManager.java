@@ -15,8 +15,11 @@ import com.essentiallocalization.util.io.SnoopFilter;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 
@@ -84,6 +87,25 @@ public final class BluetoothConnectionManager {
         }
     }
 
+    public synchronized int send(BluetoothDevice device, String msg) throws IOException, Message.MessageTooLongException {
+        DeviceConnection conn = getConnection(device);
+        if (conn.isConnected()) {
+            return ((BluetoothConnection) conn).send(msg);
+        } else {
+            Log.e(TAG, "Cannot send: connection not connected.");
+        }
+        return 0;
+    }
+
+    public synchronized void sendToAll(String msg) throws IOException, Message.MessageTooLongException {
+        for (Map.Entry<BluetoothDevice, Pair<DeviceConnection, Connection.StateChangeListener>> e : mConnections.entrySet()) {
+            DeviceConnection conn = getConnection(e.getKey());
+            if (conn.isConnected()) {
+                ((BluetoothConnection) conn).send(msg);
+            }
+        }
+    }
+
     //
     // start and stop (and helper class StateListener)
     //
@@ -102,15 +124,7 @@ public final class BluetoothConnectionManager {
         }
     }
 
-    public synchronized int send(BluetoothDevice device, String msg) throws IOException, Message.MessageTooLongException {
-        DeviceConnection conn = getConnection(device);
-        if (conn.isConnected()) {
-            return ((BluetoothConnection) conn).send(msg);
-        } else {
-            Log.e(TAG, "Cannot send: connection not connected.");
-        }
-        return 0;
-    }
+
 
     public synchronized void connect(BluetoothDevice device) {
         disconnect(device);
@@ -120,6 +134,12 @@ public final class BluetoothConnectionManager {
         pc.setStateChangeListener(listener);
         mConnections.put(device, new Pair<DeviceConnection, Connection.StateChangeListener>(pc, listener));
         pc.start();
+    }
+
+    public synchronized void connect(Set<BluetoothDevice> devices) {
+        for (BluetoothDevice device : devices) {
+            connect(device);
+        }
     }
 
     public void startSnoopReader(File snoopFile) throws IOException {
@@ -305,6 +325,28 @@ public final class BluetoothConnectionManager {
     //
     // Shortcut methods
     //
+
+    public synchronized boolean hasDevice() {
+        return mConnections.size() > 0;
+    }
+
+    public synchronized boolean isConnectedOrConnecting() {
+        for (Map.Entry<BluetoothDevice, Pair<DeviceConnection, Connection.StateChangeListener>> e : mConnections.entrySet()) {
+            DeviceConnection dc = e.getValue().first;
+            if (dc.isConnected() || dc.isConnecting()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public synchronized List<DeviceConnection> getConnections() {
+        List<DeviceConnection> conns = new ArrayList<DeviceConnection>(MAX_CONNECTIONS);
+        for (Map.Entry<BluetoothDevice, Pair<DeviceConnection, Connection.StateChangeListener>> e : mConnections.entrySet()) {
+            conns.add(e.getValue().first);
+        }
+        return conns;
+    }
 
     public synchronized DeviceConnection getConnection(byte dest) {
         for (Map.Entry<BluetoothDevice, Pair<DeviceConnection, Connection.StateChangeListener>> e : mConnections.entrySet()) {

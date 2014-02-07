@@ -2,6 +2,7 @@ package com.essentiallocalization;
 
 import android.app.Activity;
 import android.os.Bundle;
+import android.widget.Toast;
 
 public class MainActivity extends Activity implements BluetoothFragment.BluetoothFragmentListener {
 
@@ -29,6 +30,8 @@ public class MainActivity extends Activity implements BluetoothFragment.Bluetoot
 
     @Override
     public void onBluetoothSupported(boolean supported) {
-
+        if (!supported) {
+            Toast.makeText(this, getString(R.string.bt_not_supported), Toast.LENGTH_LONG).show();
+        }
     }
 }

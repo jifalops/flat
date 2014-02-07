@@ -22,20 +22,20 @@ import au.com.bytecode.opencsv.CSVWriter;
 public class TimingLog implements PacketLog {
     private static final String TAG = TimingLog.class.getSimpleName();
 
-    public static interface InitializeListener {
+    public static interface TimeLogListener {
         void onInitialized();
+        void onReadAll(List<String[]> lines);
     }
 
     private final File mFile;
     private final SparseArray<Integer> mConnectionCounts;
-    private final CSVWriter mWriter;
-    private final CSVReader mReader;
-    private final InitializeListener mListener;
+    private CSVWriter mWriter;
+    private CSVReader mReader;
+    private final TimeLogListener mListener;
 
-    public TimingLog(String fileName, boolean append, InitializeListener listener) throws IOException {
-        mFile = new File(fileName);
-        mWriter = new CSVWriter(new FileWriter(mFile, append));
-        mReader = new CSVReader(new FileReader(mFile));
+    public TimingLog(File file, boolean append, TimeLogListener listener) throws IOException {
+        mFile = file;
+        open(append);
         mListener = listener;
         mConnectionCounts = new SparseArray<Integer>(BluetoothConnectionManager.MAX_CONNECTIONS);
         findConnectionCounts();
@@ -45,9 +45,51 @@ public class TimingLog implements PacketLog {
         mWriter.writeNext(new Record(dp, mConnectionCounts.get(dp.dest), javaDist, hciDist).toStringArray());
     }
 
+    // todo: might be done on ui thread
+    public void readAll() throws IOException {
+        new AsyncTask<Void, Void, List<String[]>>() {
+            @Override
+            protected List<String[]> doInBackground(Void... params) {
+                List<String[]> lines = null;
+                try {
+                    lines = mReader.readAll();
+                } catch (IOException e) {
+                    Log.e(TAG, "Error reading log file.");
+                }
+                return lines;
+            }
+
+            @Override
+            protected void onPostExecute(List<String[]> lines) {
+                super.onPostExecute(lines);
+                if (mListener != null) mListener.onReadAll(lines);
+            }
+        }.execute();
+    }
+
+    public void clear() throws IOException {
+        close();
+        open(false);
+        close();
+        open(true);
+    }
+
     public void incConnectionCount(byte dest) {
         int count = mConnectionCounts.get(dest) + 1;
         mConnectionCounts.put(dest, count);
+    }
+
+    private void open(boolean append) throws IOException {
+        mWriter = new CSVWriter(new FileWriter(mFile, append));
+        mReader = new CSVReader(new FileReader(mFile));
+    }
+
+    @Override
+    public void close() throws IOException {
+        mWriter.close();
+        mReader.close();
+        mWriter = null;
+        mReader = null;
     }
 
     private void findConnectionCounts() {
@@ -97,8 +139,6 @@ public class TimingLog implements PacketLog {
             hciDist          = r[13];
         }
 
-        Record() {}
-        
         Record(DataPacket dp, int connCount, int javaDist, int hciDist) {
             this.src = String.valueOf(dp.src);
             this.dest = String.valueOf(dp.dest);
@@ -134,11 +174,5 @@ public class TimingLog implements PacketLog {
                 hciDist
             };
         }
-    }
-
-    @Override
-    public void close() throws IOException {
-        mWriter.close();
-        mReader.close();
     }
 }

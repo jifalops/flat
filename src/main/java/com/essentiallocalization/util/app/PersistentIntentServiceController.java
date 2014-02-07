@@ -14,9 +14,8 @@ import android.os.IBinder;
 public abstract class PersistentIntentServiceController extends Fragment implements ServiceConnection {
     private static final String TAG = PersistentIntentServiceController.class.getSimpleName();
 
-    /** Whether the service is bound */
-    protected boolean mBound;
-    protected PersistentIntentService mService;
+    /** Whether the service is bound to a Fragment/Activity */
+    private boolean mBound;
 
     @Override
     public void onStart() {
@@ -64,4 +63,8 @@ public abstract class PersistentIntentServiceController extends Fragment impleme
     }
 
     abstract public void onServiceConnected(PersistentIntentService service);
+
+    public boolean isBound() {
+        return mBound;
+    }
 }

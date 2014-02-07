@@ -3,13 +3,14 @@ package com.essentiallocalization;
 import android.app.ActionBar;
 import android.app.Activity;
 import android.app.AlertDialog;
-import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothManager;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Message;
@@ -32,9 +33,8 @@ import android.widget.Toast;
 
 import com.essentiallocalization.connection.bluetooth.BluetoothConnection;
 import com.essentiallocalization.connection.bluetooth.BluetoothConnectionManager;
-import com.essentiallocalization.util.app.PersistentIntentServiceController;
 import com.essentiallocalization.util.app.PersistentIntentService;
-import com.essentiallocalization.util.io.LogFile;
+import com.essentiallocalization.util.app.PersistentIntentServiceController;
 
 import java.io.File;
 import java.io.IOException;
@@ -47,7 +47,9 @@ import java.util.List;
 public final class BluetoothFragment extends PersistentIntentServiceController {
     private static final String TAG = BluetoothFragment.class.getSimpleName();
 
-    public static final String LOG_FILE = "log.csv";
+    private static final String LOG_NAME = "log.csv";
+    private static final File LOG_FILE = new File(Environment.getExternalStorageDirectory(), LOG_NAME);
+
 
     /** Interface the containing activity must implement */
     static interface BluetoothFragmentListener {
@@ -56,42 +58,26 @@ public final class BluetoothFragment extends PersistentIntentServiceController {
         void onBluetoothSupported(boolean supported);
     }
 
-    public static class BluetoothConnectionService extends PersistentIntentService {
-        private  static final String TAG = BluetoothConnectionService.class.getSimpleName();
-        @Override
-        protected void onHandleIntent(Intent intent) {
-            // listen to system bt broadcasts
-//        BluetoothAdapter.ACTION_
-        }
-    }
-
-    // Message types sent from the BluetoothService Handler
 
 
     // Intent request codes
 //    private static final int REQUEST_ENABLE_BT = 1;
 //    private static final int REQUEST_DISCOVERABLE = 2;
 
-    /** This device's BT adapter */
-    private BluetoothAdapter mBluetoothAdapter;
-
     private BluetoothConnectionService mService;
+
+    private int mMaxConnections = 4;
 
     /** Contains callback methods for this class. */
     private BluetoothFragmentListener mListener;
 
     private TextView[] mStateViews;
-    private int mMaxConnections = 4;
-    private boolean mBluetoothSupported;
     private Switch mServiceSwitch;
     private CheckBox mServicePersist;
     private ListView mListView;
     private ArrayAdapter<String> mListAdapter;
 
-    /** This device's Bluetooth name. */
-    private String mName;
 
-    private LogFile mLogFile;
 
 //    private FileObserver mObserver;
 
@@ -104,16 +90,7 @@ public final class BluetoothFragment extends PersistentIntentServiceController {
         } catch (ClassCastException e) {
             throw new ClassCastException(TAG + ": Activity must implement the fragment's listener.");
         }
-
-        mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
-        if (mBluetoothAdapter == null) {
-            mBluetoothSupported = false;
-            Toast.makeText(getActivity(), getString(R.string.bt_not_supported), Toast.LENGTH_LONG).show();
-        } else {
-            mBluetoothSupported = true;
-            mName = mBluetoothAdapter.getName();
-        }
-        mListener.onBluetoothSupported(mBluetoothSupported);
+        mListener.onBluetoothSupported(BluetoothConnection.SELF != null);
     }
 
     @Override
@@ -124,25 +101,20 @@ public final class BluetoothFragment extends PersistentIntentServiceController {
 
         // Setup Actionbar
         final ActionBar ab = getActivity().getActionBar();
-        if (mName != null) ab.setTitle(mName);
+        if (BluetoothConnection.SELF_NAME != null) ab.setTitle(BluetoothConnection.SELF_NAME);
         ab.setDisplayOptions(ab.getDisplayOptions() | ActionBar.DISPLAY_SHOW_CUSTOM);
         ab.setCustomView(R.layout.service_controls);
         View controls = ab.getCustomView();
         mServiceSwitch = (Switch) controls.findViewById(R.id.service_power);
         mServicePersist = (CheckBox) controls.findViewById(R.id.service_persist);
 
-        try {
-            mLogFile = new LogFile(new File(getActivity().getExternalFilesDir(null), LOG_FILE));
-        } catch (IOException e) {
-            Log.e(TAG, "Couldn't create log file.", e);
-            Toast.makeText(getActivity(), "Logging disabled", Toast.LENGTH_SHORT).show();
-        }
+
     }
 
     private void setupServiceControls() {
-        if (mBound) {
+        if (isBound()) {
             mServiceSwitch.setOnCheckedChangeListener(null);
-            mServiceSwitch.setChecked(mService.isRunning());
+            mServiceSwitch.setChecked(mService.getConnectionManager().hasDevice());
 
             mServicePersist.setOnCheckedChangeListener(null);
             mServicePersist.setChecked(mService.isPersistent());
@@ -180,7 +152,7 @@ public final class BluetoothFragment extends PersistentIntentServiceController {
         mListAdapter = new ArrayAdapter<String>(getActivity(), R.layout.listitem_textview, R.id.text, readLog());
         mListView.setAdapter(mListAdapter);
 
-//        mObserver = new FileObserver(mLogFile.toString(), FileObserver.MODIFY) {
+//        mObserver = new FileObserver(mTimeLog.toString(), FileObserver.MODIFY) {
 //            @Override
 //            public void onEvent(int event, String path) {
 //
@@ -192,10 +164,15 @@ public final class BluetoothFragment extends PersistentIntentServiceController {
     }
 
     private List<String> readLog() {
-        List<String[]> lineParts = mLogFile.read();
-        List<String> lines = new ArrayList<String>(lineParts.size());
-        for (String[] s : lineParts) {
-            lines.add(TextUtils.join(",", s));
+        List<String> lines = new ArrayList<String>();
+        List<String[]> lineParts = null;
+        try {
+            lineParts = mTimeLog.readAll();
+            for (String[] s : lineParts) {
+                lines.add(TextUtils.join(",", s));
+            }
+        } catch (IOException e) {
+            Log.e(TAG, "Failed to read log");
         }
         return lines;
     }
@@ -223,15 +200,19 @@ public final class BluetoothFragment extends PersistentIntentServiceController {
                 alert.setView(input);
                 alert.setPositiveButton(R.string.dialog_ok, new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int whichButton) {
-                        setMaxConnections(Integer.valueOf(input.getText().toString()));
+                        mService.getConnectionManager().setMaxConnections(Integer.valueOf(input.getText().toString()));
                     }
                 });
                 alert.setNegativeButton(R.string.dialog_cancel, null);
                 alert.show();
                 break;
             case R.id.bt_test:
-                if (mBound) {
-                    mService.send("Testing");
+                if (isBound()) {
+                    try {
+                        mService.getConnectionManager().sendToAll("Testing");
+                    } catch (IOException e) {
+                        Log.e(TAG, "Failed sending test message to all devices");
+                    } catch (com.essentiallocalization.connection.Message.MessageTooLongException ignored) {}
                 }
                 break;
 
@@ -244,13 +225,17 @@ public final class BluetoothFragment extends PersistentIntentServiceController {
                 break;
 
             case R.id.bt_clear_log:
-                mLogFile.clear();
+                try {
+                    mTimeLog.clear();
+                } catch (IOException e) {
+                    Log.e(TAG, "Failed to clear log");
+                }
                 updateListView();
                 break;
 
             case R.id.bt_view_log:
                 Intent i = new Intent(Intent.ACTION_VIEW);
-                i.setDataAndType(Uri.fromFile(mLogFile.getFile()), "text/*");
+                i.setDataAndType(Uri.fromFile(mTimeLog.getFile()), "text/*");
                 i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                 startActivity(i);
                 break;
@@ -258,65 +243,6 @@ public final class BluetoothFragment extends PersistentIntentServiceController {
         return true;
     }
 
-    @Override
-    public void onStart() {
-        super.onStart();
-        Log.v(TAG, "onStart()");
-        doBindService();
-    }
-
-
-    @Override
-    public void onStop() {
-        super.onStop();
-        Log.v(TAG, "onStop()");
-        doUnbindService();
-    }
-
-    private void setServiceEnabled(boolean enabled) {
-        Log.v(TAG, "setServiceEnabled(" + enabled + ")");
-        if (mBound) {
-            if (enabled) {
-                mService.start();
-            } else {
-                mService.stop();
-            }
-        }
-    }
-
-    private void setPersistent(boolean persist) {
-        Log.v(TAG, "setServicePersist(" + persist + ")");
-        Activity a = getActivity();
-        if (persist) {
-            a.startService(new Intent(a, BluetoothConnectionService.class));
-        } else {
-            a.stopService(new Intent(a, BluetoothConnectionService.class));
-            // doBindService();
-        }
-    }
-
-    private void doBindService() {
-        getActivity().bindService(new Intent(getActivity(), BluetoothConnectionService.class), this, Context.BIND_AUTO_CREATE);
-    }
-
-    private void doUnbindService() {
-        if (mBound) {
-            getActivity().unbindService(this);
-            mBound = false;
-        }
-    }
-
-    private void setMaxConnections(int connections) {
-        if (connections > BluetoothConnectionManager.MAX_CONNECTIONS) connections = BluetoothConnectionManager.MAX_CONNECTIONS;
-        mMaxConnections = connections;
-        for (int i = 0, value; i < mStateViews.length; ++i) {
-            value = i < mMaxConnections ? View.VISIBLE : View.GONE;
-            mStateViews[i].setVisibility(value);
-        }
-        if (mBound) {
-            mService.setMaxConnections(mMaxConnections);
-        }
-    }
 
 //    public void enableBluetooth(Activity activity) {
 //        if (!mBluetoothAdapter.isEnabled()) {
@@ -341,7 +267,7 @@ public final class BluetoothFragment extends PersistentIntentServiceController {
             setMaxConnections(mMaxConnections);
         }
         mService.setHandler(mHandler);
-        mService.setLogFile(mLogFile);
+        mService.setLogFile(mTimeLog);
         mBound = true;
         setupServiceControls();
     }
@@ -354,7 +280,7 @@ public final class BluetoothFragment extends PersistentIntentServiceController {
 
     @Override
     public void onServiceConnected(PersistentIntentService service) {
-        mService = service;
+        mService = (BluetoothConnectionService) service;
     }
 
 
