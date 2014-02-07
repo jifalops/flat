@@ -50,6 +50,8 @@ public class SnoopFilter extends Thread implements Cancelable, Finishable {
     private static final int PACKET_HEADER_SIZE = 24;
     private static final int MAX_PAYLOAD_SIZE = 1024;
 
+    private static final int PAYLOAD_ORIG_SIZE_OFFSET = 0;
+    private static final int PAYLOAD_ORIG_SIZE_SIZE = 4;
     private static final int PAYLOAD_SIZE_OFFSET = 4;
     private static final int PAYLOAD_SIZE_SIZE = 4;
     private static final int TIME_OFFSET = 16;
@@ -65,7 +67,7 @@ public class SnoopFilter extends Thread implements Cancelable, Finishable {
     /** All methods are called on the SnoopFilter thread. */
     public static interface SnoopFilterListener extends FinishListener {
         /** Called on the SnoopFilter thread. */
-        void onMessageFound(long ts, byte[] msg);
+        void onMessageFound(long ts, byte[] msg, int origSize);
     }
 
     public static final String DEFUALT_SNOOP_NAME = "btsnoop_hci.log";
@@ -74,6 +76,7 @@ public class SnoopFilter extends Thread implements Cancelable, Finishable {
     private int mTask;
     private long mTimestamp;
     private int mPayloadSize;
+    private int mPayloadOrigSize;
 
     private final File mSnoopFile;
 //    private final File mOutFile;
@@ -252,7 +255,7 @@ public class SnoopFilter extends Thread implements Cancelable, Finishable {
             try {
                 bytesRead = mInStream.read(packetHeader);
                 if (bytesRead != PACKET_HEADER_SIZE) {
-                    Log.e(TAG, "Packet header was not the correct length.");
+//                    Log.e(TAG, "Packet header was not the correct length.");
                 }
             } catch (IOException e) {
                 Log.e(TAG, "Could not read file header.");
@@ -262,7 +265,13 @@ public class SnoopFilter extends Thread implements Cancelable, Finishable {
                 resetStream();
 //                return false;
             } else {
+                mPayloadOrigSize = ByteBuffer.wrap(packetHeader, PAYLOAD_ORIG_SIZE_OFFSET, PAYLOAD_ORIG_SIZE_SIZE).getInt();
                 mPayloadSize = ByteBuffer.wrap(packetHeader, PAYLOAD_SIZE_OFFSET, PAYLOAD_SIZE_SIZE).getInt();
+
+                if (mPayloadOrigSize != mPayloadSize) {
+                    Log.v(TAG, "HCI packet shorter than original");
+                }
+
                 if (mPayloadSize < 1) {
                     Log.e(TAG, "Invalid payload size.");
                 }
@@ -314,7 +323,7 @@ public class SnoopFilter extends Thread implements Cancelable, Finishable {
 
                         message = Arrays.copyOfRange(payload, msgStart, mPayloadSize - 1); // -1 for the RFCOMM fcs byte (checksum)
 
-                        mListener.onMessageFound(mTimestamp, message);
+                        mListener.onMessageFound(mTimestamp, message, mPayloadOrigSize);
 
 //                        try {
 //                            mOutStream.write(message);

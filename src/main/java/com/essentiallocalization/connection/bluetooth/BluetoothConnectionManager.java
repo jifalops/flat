@@ -233,15 +233,13 @@ public final class BluetoothConnectionManager {
 
         @Override
         public synchronized void onDataPacketReceived(PacketConnection pc, DataPacket dp) {
-            sendAck(pc, dp);
+            sendAck(pc, dp, false);
             if (mBluetoothListener != null) mBluetoothListener.onPacketReceived(dp, getBtConn(getConnection(pc.getDest())));
         }
 
         @Override
         public synchronized void onJavaTimingComplete(PacketConnection pc, DataPacket dp) {
-            if (dp.isTimingComplete()) {
-                if (mBluetoothListener != null) mBluetoothListener.onTimingComplete(dp, getBtConn(getConnection(dp.dest)));
-            }
+            checkTime(pc, dp, false);
         }
     };
 
@@ -250,7 +248,7 @@ public final class BluetoothConnectionManager {
         @Override
         public synchronized void onDataReceived(DataPacket dp) {
             // lookup the source of this packet
-            sendAck(getBtConn(getConnection(dp.src)), dp);
+            sendAck(getBtConn(getConnection(dp.src)), dp, true);
         }
 
         @Override
@@ -267,9 +265,7 @@ public final class BluetoothConnectionManager {
 
         @Override
         public synchronized void onHciTimingComplete(DataPacket dp) {
-            if (dp.isTimingComplete()) {
-                if (mBluetoothListener != null) mBluetoothListener.onTimingComplete(dp, getBtConn(getConnection(dp.dest)));
-            }
+            checkTime(getBtConn(getConnection(dp.dest)), dp, true);
         }
 
         @Override
@@ -290,7 +286,7 @@ public final class BluetoothConnectionManager {
     // Other packet management
     //
 
-    private boolean sendAck(PacketConnection pc, DataPacket dp) {
+    private synchronized boolean sendAck(PacketConnection pc, DataPacket dp, boolean fromHci) {
         if (pc == null || dp == null) {
             Log.w(TAG, "Cannot send ack to null");
             return false;
@@ -300,15 +296,61 @@ public final class BluetoothConnectionManager {
             return false;
         }
 
-        // check required timestamps and that the packet is from the current connection.
-        if (dp.isAckReady() && pc.findPacket(dp.src, dp.dest, dp.pktIndex, dp.javaSrcSent) != null) {
-            try {
-                pc.send(dp.toAckPacket());
-                return true;
-            } catch (IOException e) {
-                Log.e(TAG, "Error sending ACK to " + pc.getDest() + " for pktIndex " + dp.pktIndex);
+        DataPacket found = pc.findPacket(dp.src, dp.dest, dp.pktIndex, dp.javaSrcSent);
+        if (found != null) {
+            if (fromHci) {
+                found.hciDestReceived = dp.hciDestReceived;
+            } else {
+                found.javaDestReceived = dp.javaDestReceived;
+            }
+
+            // check required timestamps and that the packet is from the current connection.
+            if (found.isAckReady()) {
+                try {
+                    pc.send(found.toAckPacket());
+                    return true;
+                } catch (IOException e) {
+                    Log.e(TAG, "Error sending ACK to " + pc.getDest() + " for pktIndex " + dp.pktIndex);
+                }
             }
         }
+
+
+        return false;
+    }
+
+    private synchronized boolean checkTime(PacketConnection pc, DataPacket dp, boolean fromHci) {
+        if (pc == null || dp == null) {
+            Log.w(TAG, "Cannot checkTime for null");
+            return false;
+        }
+        if (!pc.isConnected()) {
+            Log.w(TAG, "Checking time without being connected");
+            return false;
+        }
+
+        DataPacket found = pc.findPacket(dp.src, dp.dest, dp.pktIndex, dp.javaSrcSent);
+        if (found != null) {
+            if (fromHci) {
+                found.hciSrcSent = dp.hciSrcSent;
+                found.hciDestReceived = dp.hciDestReceived;
+                found.hciDestSent = dp.hciDestSent;
+                found.hciSrcReceived = dp.hciSrcReceived;                
+            } else {
+                found.javaSrcSent = dp.javaSrcSent;
+                found.javaDestReceived = dp.javaDestReceived;
+                found.javaDestSent = dp.javaDestSent;
+                found.javaSrcReceived = dp.javaSrcReceived;
+            }
+
+            // check required timestamps and that the packet is from the current connection.
+            if (found.isTimingComplete()) {
+                if (mBluetoothListener != null) mBluetoothListener.onTimingComplete(found, getBtConn(getConnection(dp.dest)));
+                return true;
+            }
+        }
+
+
         return false;
     }
 

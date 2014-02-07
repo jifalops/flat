@@ -96,7 +96,9 @@ public class StreamConnection extends BasicConnection {
                     mSendAndEventHandler.post(new Runnable() {
                         @Override
                         public void run() {
-                            if (mListener != null) mListener.onDataReceived(time, buffer.clone());
+                            if (mListener != null) {
+                                mListener.onDataReceived(time, buffer.clone());
+                            }
                         }
                     });
 

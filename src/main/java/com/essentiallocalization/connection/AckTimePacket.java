@@ -15,8 +15,8 @@ public final class AckTimePacket extends Packet {
         type = Packet.TYPE_ACK_TIME;
 
         ByteBuffer bb = ByteBuffer.wrap(ackTimePacket);
-        bb.position(Packet.HEADER_SIZE + PREFIX.length());
-        hciDestSent = bb.getLong(Packet.HEADER_SIZE);
+        bb.position(Packet.HEADER_SIZE + PREPEND.length());
+        hciDestSent = bb.getLong();
     }
 
     AckTimePacket() {

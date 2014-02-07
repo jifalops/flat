@@ -134,7 +134,11 @@ public class BluetoothConnectionService extends PersistentIntentService {
             if (mTimeLog != null) {
                 float javaDist = Util.Calc.timeOfFlightDistance1(dp.javaSrcSent, dp.javaDestReceived, dp.javaDestSent, dp.javaSrcReceived);
                 float hciDist = Util.Calc.timeOfFlightDistance1(dp.hciSrcSent, dp.hciDestReceived, dp.hciDestSent, dp.hciSrcReceived);
-                mTimeLog.log(dp, javaDist, hciDist);
+                try {
+                    mTimeLog.log(dp, javaDist, hciDist);
+                } catch (IOException e) {
+                    Log.e(TAG, "Error writing to time log");
+                }
             }
             if (mUserListener != null) mUserListener.onTimingComplete(dp, conn);
         }

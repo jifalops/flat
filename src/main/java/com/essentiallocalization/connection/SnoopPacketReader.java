@@ -61,7 +61,7 @@ public class SnoopPacketReader implements PacketList, SnoopFilter.SnoopFilterLis
         mSrc = src;
         mListener = listener;
         mPackets = new ArrayList<DataPacket>();
-        mFilter = new SnoopFilter(snoopFile, Packet.PREFIX, this);
+        mFilter = new SnoopFilter(snoopFile, Packet.PREPEND, this);
     }
 
     public File getSnoopFile() {
@@ -69,7 +69,19 @@ public class SnoopPacketReader implements PacketList, SnoopFilter.SnoopFilterLis
     }
 
     @Override
-    public void onMessageFound(long hciTime, byte[] packet) {
+    public void onMessageFound(long hciTime, byte[] packet, int origSize) {
+        int size;
+        try {
+            size = Packet.getSize(packet);
+            if (packet.length < size) {
+                Log.e(TAG, "Unexpected data size: " + packet.length + " (expecting " + size + ").");
+                return;
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            return;
+        }
+
         DataPacket dp;
         AckPacket ap;
         AckTimePacket atp;

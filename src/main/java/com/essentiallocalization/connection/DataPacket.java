@@ -17,7 +17,7 @@ public final class DataPacket extends Packet {
     public long javaSrcReceived; 
 
     private static final int HEADER_SIZE = (8 * 7) + (4 * 0) + (2 * 0) + (1 * 0); // see properties above
-    public static final int MAX_PAYLOAD = BUFFER_SIZE - (HEADER_SIZE + Packet.HEADER_SIZE + PREFIX.length());
+    public static final int MAX_PAYLOAD = BUFFER_SIZE - (HEADER_SIZE + Packet.HEADER_SIZE + PREPEND.length());
 
     public byte[] payload;
 
@@ -49,7 +49,7 @@ public final class DataPacket extends Packet {
         type = Packet.TYPE_DATA;
 
         ByteBuffer bb = ByteBuffer.wrap(dataPacket);
-        bb.position(Packet.HEADER_SIZE + PREFIX.length());
+        bb.position(Packet.HEADER_SIZE + PREPEND.length());
         javaDestReceived = bb.getLong();
         javaDestSent = bb.getLong();
         javaSrcReceived = bb.getLong();

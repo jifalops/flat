@@ -26,16 +26,19 @@ import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.Switch;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.essentiallocalization.connection.DataPacket;
 import com.essentiallocalization.connection.bluetooth.BluetoothConnection;
 import com.essentiallocalization.connection.bluetooth.BluetoothConnectionManager;
+import com.essentiallocalization.util.Util;
 import com.essentiallocalization.util.app.PersistentIntentService;
 import com.essentiallocalization.util.app.PersistentIntentServiceController;
 import com.essentiallocalization.util.io.Connection;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -155,7 +158,7 @@ public final class BluetoothFragment extends PersistentIntentServiceController {
         if (enabled) {
             mService.setConnectionListener(mConnectionListener);
             mService.setTimingLog(mTimeLog);
-            mService.getConnectionManager().setReconnect(false);
+            mService.getConnectionManager().setReconnect(true);
 
             try {
                 mService.getConnectionManager().startSnoopReader();
@@ -338,20 +341,30 @@ public final class BluetoothFragment extends PersistentIntentServiceController {
             new BluetoothConnectionManager.BluetoothConnectionListener() {
                 @Override
                 public synchronized void onPacketReceived(DataPacket dp, BluetoothConnection conn) {
-
+                    try {
+                        Toast.makeText(getActivity(), dp.src + " (" + dp.pktIndex + "): " +
+                                new String(dp.payload, "UTF-8"), Toast.LENGTH_SHORT).show();
+                    } catch (UnsupportedEncodingException e) {
+                        Log.e(TAG, "Failed to encode packet payload");
+                    }
                 }
 
                 @Override
-                public synchronized void onTimingComplete(DataPacket dp, BluetoothConnection conn) {
-
+                public synchronized void onTimingComplete(final DataPacket dp, BluetoothConnection conn) {
+                    final float javaDist = Util.Calc.timeOfFlightDistance1(dp.javaSrcSent, dp.javaDestReceived, dp.javaDestSent, dp.javaSrcReceived);
+                    final float hciDist = Util.Calc.timeOfFlightDistance1(dp.hciSrcSent, dp.hciDestReceived, dp.hciDestSent, dp.hciSrcReceived);
+                    mUiHandler.post(new Runnable() {
+                        @Override
+                        public void run() {
+                            Toast.makeText(getActivity(), "packet " + dp.pktIndex + " to " + dp.dest + ":\n"
+                                    + "java: " + javaDist + "\n"
+                                    + "hci: " + hciDist, Toast.LENGTH_LONG).show();
+                        }
+                    });
                 }
 
                 @Override
                 public synchronized void onStateChanged(final BluetoothDevice device, final int oldState, final int newState) {
-                    if (newState == Connection.STATE_CONNECTED) {
-                        int x = 1; //breakpoint
-                    }
-
                     if (device == null) return;
 
                     final byte dest = BluetoothConnection.idFromName(device.getName());
@@ -366,7 +379,7 @@ public final class BluetoothFragment extends PersistentIntentServiceController {
 
                 @Override
                 public synchronized void onSnoopPacketReaderFinished() {
-
+                    Log.d(TAG, "onSnoopPacketReaderFinished");
                 }
     };
 

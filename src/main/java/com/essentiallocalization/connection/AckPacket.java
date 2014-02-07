@@ -18,7 +18,7 @@ public final class AckPacket extends Packet {
         type = Packet.TYPE_ACK;
 
         ByteBuffer bb = ByteBuffer.wrap(ackPacket);
-        bb.position(Packet.HEADER_SIZE + PREFIX.length());
+        bb.position(Packet.HEADER_SIZE + PREPEND.length());
         hciDestReceived = bb.getLong();
         javaDestReceived = bb.getLong();
         javaDestSent = bb.getLong();

@@ -41,11 +41,14 @@ public class TimingLog implements PacketLog {
         findConnectionCounts();
     }
 
-    public void log(DataPacket dp, float javaDist, float hciDist) {
+    public void log(DataPacket dp, float javaDist, float hciDist) throws IOException {
         mWriter.writeNext(new Record(dp, mConnectionCounts.get(dp.dest), javaDist, hciDist).toStringArray());
+        mWriter.flush();
     }
 
     public List<String[]> readAllBlocking() throws IOException {
+        mReader.close();
+        mReader = new CSVReader(new FileReader(mFile));
         return mReader.readAll();
     }
 
@@ -79,7 +82,9 @@ public class TimingLog implements PacketLog {
 
     public void incConnectionCount(byte dest) {
         Integer count = mConnectionCounts.get(dest);
-        if (count != null) {
+        if (count == null || count < 1) {
+            mConnectionCounts.put(dest, 1);
+        } else {
             mConnectionCounts.put(dest, count + 1);
         }
     }
@@ -107,6 +112,8 @@ public class TimingLog implements PacketLog {
             @Override
             protected Void doInBackground(Void... params) {
                 try {
+                    mReader.close();
+                    mReader = new CSVReader(new FileReader(mFile));
                     List<String[]> mLines = mReader.readAll();
                     Record r;
                     for (String[] fields : mLines) {

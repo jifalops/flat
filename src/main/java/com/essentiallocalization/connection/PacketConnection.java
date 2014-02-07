@@ -11,6 +11,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -146,6 +147,19 @@ public class PacketConnection extends StreamConnection implements PacketList, St
 
     @Override
     public void onDataReceived(long javaTime, byte[] data) {
+        int size;
+        try {
+            size = Packet.getSize(data);
+            if (data.length < size) {
+                Log.e(TAG, "Unexpected data size: " + data.length + " (expecting " + size + ").");
+                return;
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            return;
+        }
+
+        data = Arrays.copyOfRange(data, 0, size);
         DataPacket dp;
         AckPacket ap;
         AckTimePacket atp;
