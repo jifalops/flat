@@ -7,6 +7,7 @@ import android.bluetooth.BluetoothDevice;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.net.Uri;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
@@ -26,19 +27,16 @@ import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.Switch;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import com.essentiallocalization.connection.DataPacket;
 import com.essentiallocalization.connection.bluetooth.BluetoothConnection;
 import com.essentiallocalization.connection.bluetooth.BluetoothConnectionManager;
-import com.essentiallocalization.util.Util;
 import com.essentiallocalization.util.app.PersistentIntentService;
 import com.essentiallocalization.util.app.PersistentIntentServiceController;
 import com.essentiallocalization.util.io.Connection;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -51,6 +49,10 @@ public final class BluetoothFragment extends PersistentIntentServiceController {
     private static final String LOG_NAME = "log.csv";
     private static final File LOG_FILE = new File(Environment.getExternalStorageDirectory(), LOG_NAME);
 
+    private static final String TEST_MSG_8   = "Testing.";
+    private static final String TEST_MSG_256 = "TW5C0IpW2fWeDBfrqoaPp028JCRcuFdaCoN65e4LX8YhlQ6QQfRLMotNUJCTQ91pH8fk1Y56RlGaAHMsd25DZOmESoQJ9ezB67T8Zu4fzhUKfm78xvOrBcrjBTpAlCr3eUjW2m9CMEZfoyU9Kl3bzHDSswlFT8kM0o12SRkkPNvzMT2bTUMr1epmOoieEDHtZdBYAZPKsL6I6l8EWQhrlxyUwFlqtgP2GJXWEMvQ04bUlWFeqd67Lp8xKuTKH9rH";
+    private static final String TEST_MSG     = TEST_MSG_8;
+    private static final int TEST_MULTIPLIER   = 5;
 
     /** Interface the containing activity must implement */
     static interface BluetoothFragmentListener {
@@ -272,13 +274,28 @@ public final class BluetoothFragment extends PersistentIntentServiceController {
                 alert.show();
                 break;
             case R.id.bt_test:
-                if (isBound()) {
-                    try {
-                        mService.getConnectionManager().sendToAll("TW5C0IpW2fWeDBfrqoaPp028JCRcuFdaCoN65e4LX8YhlQ6QQfRLMotNUJCTQ91pH8fk1Y56RlGaAHMsd25DZOmESoQJ9ezB67T8Zu4fzhUKfm78xvOrBcrjBTpAlCr3eUjW2m9CMEZfoyU9Kl3bzHDSswlFT8kM0o12SRkkPNvzMT2bTUMr1epmOoieEDHtZdBYAZPKsL6I6l8EWQhrlxyUwFlqtgP2GJXWEMvQ04bUlWFeqd67Lp8xKuTKH9rH");
-                    } catch (IOException e) {
-                        Log.e(TAG, "Failed sending test message to all devices");
-                    } catch (com.essentiallocalization.connection.Message.MessageTooLongException ignored) {}
-                }
+                new AsyncTask<Void, Void, Void>() {
+
+                    @Override
+                    protected Void doInBackground(Void... params) {
+                        for (int i = 0; i < TEST_MULTIPLIER; ++i) {
+                            if (isBound()) {
+                                try {
+                                    mService.getConnectionManager().sendToAll(TEST_MSG);
+                                } catch (IOException e) {
+                                    Log.e(TAG, "Failed sending test message to all devices");
+                                } catch (com.essentiallocalization.connection.Message.MessageTooLongException ignored) {}
+                            }
+                            try {
+                                Thread.sleep(10);
+                            } catch (InterruptedException e) {
+                                Log.e(TAG, "Thread interrupted when sending multiple tests.");
+                            }
+                        }
+                        return null;
+                    }
+                }.execute();
+
                 break;
 
             case R.id.bt_reset_hci:
@@ -341,26 +358,26 @@ public final class BluetoothFragment extends PersistentIntentServiceController {
             new BluetoothConnectionManager.BluetoothConnectionListener() {
                 @Override
                 public synchronized void onPacketReceived(DataPacket dp, BluetoothConnection conn) {
-                    try {
-                        Toast.makeText(getActivity(), dp.src + " (" + dp.pktIndex + "): " +
-                                new String(dp.payload, "UTF-8"), Toast.LENGTH_SHORT).show();
-                    } catch (UnsupportedEncodingException e) {
-                        Log.e(TAG, "Failed to encode packet payload");
-                    }
+//                    try {
+//                        Toast.makeText(getActivity(), dp.src + " (" + dp.pktIndex + "): " +
+//                                new String(dp.payload, "UTF-8"), Toast.LENGTH_SHORT).show();
+//                    } catch (UnsupportedEncodingException e) {
+//                        Log.e(TAG, "Failed to encode packet payload");
+//                    }
                 }
 
                 @Override
                 public synchronized void onTimingComplete(final DataPacket dp, BluetoothConnection conn) {
-                    final double javaDist = Util.Calc.timeOfFlightDistanceNano(dp.javaSrcSent, dp.javaDestReceived, dp.javaDestSent, dp.javaSrcReceived);
-                    final double hciDist = Util.Calc.timeOfFlightDistanceMicro(dp.hciSrcSent, dp.hciDestReceived, dp.hciDestSent, dp.hciSrcReceived);
-                    mUiHandler.post(new Runnable() {
-                        @Override
-                        public void run() {
-                            Toast.makeText(getActivity(), "packet " + dp.pktIndex + " to " + dp.dest + ":\n"
-                                    + "java: " + Util.Format.SEPARATOR_2DEC.format(javaDist) + "\n"
-                                    + "hci: " + Util.Format.SEPARATOR_2DEC.format(hciDist), Toast.LENGTH_LONG).show();
-                        }
-                    });
+//                    final double javaDist = Util.Calc.timeOfFlightDistanceNano(dp.javaSrcSent, dp.javaDestReceived, dp.javaDestSent, dp.javaSrcReceived);
+//                    final double hciDist = Util.Calc.timeOfFlightDistanceMicro(dp.hciSrcSent, dp.hciDestReceived, dp.hciDestSent, dp.hciSrcReceived);
+//                    mUiHandler.post(new Runnable() {
+//                        @Override
+//                        public void run() {
+//                            Toast.makeText(getActivity(), "packet " + dp.pktIndex + " to " + dp.dest + ":\n"
+//                                    + "java: " + Util.Format.SEPARATOR_2DEC.format(javaDist) + "\n"
+//                                    + "hci: " + Util.Format.SEPARATOR_2DEC.format(hciDist), Toast.LENGTH_LONG).show();
+//                        }
+//                    });
                 }
 
                 @Override

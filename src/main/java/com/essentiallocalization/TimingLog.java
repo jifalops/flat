@@ -118,8 +118,13 @@ public class TimingLog implements PacketLog {
                     List<String[]> mLines = mReader.readAll();
                     Record r;
                     for (String[] fields : mLines) {
-                        r = new Record(fields);
-                        mConnectionCounts.put(Integer.valueOf(r.dest), Integer.valueOf(r.connCount));
+                        try {
+                            r = new Record(fields);
+                            mConnectionCounts.put(Integer.valueOf(r.dest), Integer.valueOf(r.connCount));
+                        } catch (IllegalArgumentException e) {
+                            // stop weird error
+                        }
+
                     }
                 } catch (IOException e) {
                     Log.e(TAG, "Error reading log file.");
@@ -153,8 +158,8 @@ public class TimingLog implements PacketLog {
             hciDestReceived  = r[9];
             hciDestSent      = r[10];
             hciSrcReceived   = r[11];
-            javaDist         = Util.Format.BASIC_2DEC.format(r[12]);
-            hciDist          = Util.Format.BASIC_2DEC.format(r[13]);
+            javaDist         = Util.Format.newBasic2dec().format(r[12]);
+            hciDist          = Util.Format.newBasic2dec().format(r[13]);
         }
 
         Record(DataPacket dp, int connCount, double javaDist, double hciDist) {
@@ -170,8 +175,8 @@ public class TimingLog implements PacketLog {
             this.hciDestReceived = String.valueOf(dp.hciDestReceived);
             this.hciDestSent = String.valueOf(dp.hciDestSent);
             this.hciSrcReceived = String.valueOf(dp.hciSrcReceived);
-            this.javaDist = Util.Format.BASIC_2DEC.format(javaDist);
-            this.hciDist = Util.Format.BASIC_2DEC.format(hciDist);
+            this.javaDist = Util.Format.newBasic2dec().format(javaDist);
+            this.hciDist = Util.Format.newBasic2dec().format(hciDist);
         }
 
         public String[] toStringArray() {
