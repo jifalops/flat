@@ -6,6 +6,7 @@ import android.util.SparseArray;
 
 import com.essentiallocalization.connection.DataPacket;
 import com.essentiallocalization.connection.bluetooth.BluetoothConnectionManager;
+import com.essentiallocalization.util.CsvBuffer;
 import com.essentiallocalization.util.Util;
 
 import java.io.File;
@@ -20,65 +21,26 @@ import au.com.bytecode.opencsv.CSVWriter;
 /**
  * Created by Jake on 2/6/14.
  */
-public class TimingLog implements PacketLog {
+public class TimingLog extends CsvBuffer {
     private static final String TAG = TimingLog.class.getSimpleName();
 
-    public static interface TimeLogListener {
-        void onInitialized();
-        void onReadAll(List<String[]> lines);
-    }
-
-    private final File mFile;
     private final SparseArray<Integer> mConnectionCounts;
-    private CSVWriter mWriter;
-    private CSVReader mReader;
-    private final TimeLogListener mListener;
 
-    public TimingLog(File file, boolean append, TimeLogListener listener) throws IOException {
-        mFile = file;
-        open(append);
-        mListener = listener;
+    public TimingLog(File file, boolean append, Runnable onInitialized) throws IOException {
         mConnectionCounts = new SparseArray<Integer>(BluetoothConnectionManager.MAX_CONNECTIONS);
-        findConnectionCounts();
-    }
-
-    public void log(DataPacket dp, double javaDist, double hciDist) throws IOException {
-        mWriter.writeNext(new Record(dp, mConnectionCounts.get(dp.dest), javaDist, hciDist).toStringArray());
-        mWriter.flush();
-    }
-
-    public List<String[]> readAllBlocking() throws IOException {
-        mReader.close();
-        mReader = new CSVReader(new FileReader(mFile));
-        return mReader.readAll();
-    }
-
-    public void readAll() throws IOException {
-        new AsyncTask<Void, Void, List<String[]>>() {
-            @Override
-            protected List<String[]> doInBackground(Void... params) {
-                List<String[]> lines = null;
-                try {
-                    lines = mReader.readAll();
-                } catch (IOException e) {
-                    Log.e(TAG, "Error reading log file.");
+        if (append) {
+            addAllFromFile(file, new Runnable() {
+                @Override
+                public void run() {
+                    findConnectionCounts();
                 }
-                return lines;
-            }
-
-            @Override
-            protected void onPostExecute(List<String[]> lines) {
-                super.onPostExecute(lines);
-                if (mListener != null) mListener.onReadAll(lines);
-            }
-        }.execute();
+            });
+        }
+        setWriteThroughFile(file, append);
     }
 
-    public void clear() throws IOException {
-        close();
-        open(false);
-        close();
-        open(true);
+    public void add(DataPacket dp, double javaDist, double hciDist) throws IOException {
+       add(new Record(dp, mConnectionCounts.get(dp.dest), javaDist, hciDist).toStringArray());
     }
 
     public void incConnectionCount(byte dest) {
@@ -90,54 +52,16 @@ public class TimingLog implements PacketLog {
         }
     }
 
-    private void open(boolean append) throws IOException {
-        mWriter = new CSVWriter(new FileWriter(mFile, append));
-        mReader = new CSVReader(new FileReader(mFile));
-    }
-
-    @Override
-    public void close() throws IOException {
-        if (mWriter != null) {
-            mWriter.close();
-            mWriter = null;
-        }
-
-        if (mReader != null) {
-            mReader.close();
-            mReader = null;
-        }
-    }
-
     private void findConnectionCounts() {
-        new AsyncTask<Void, Void, Void>() {
-            @Override
-            protected Void doInBackground(Void... params) {
-                try {
-                    mReader.close();
-                    mReader = new CSVReader(new FileReader(mFile));
-                    List<String[]> mLines = mReader.readAll();
-                    Record r;
-                    for (String[] fields : mLines) {
-                        try {
-                            r = new Record(fields);
-                            mConnectionCounts.put(Integer.valueOf(r.dest), Integer.valueOf(r.connCount));
-                        } catch (IllegalArgumentException e) {
-                            // stop weird error
-                        }
-
-                    }
-                } catch (IOException e) {
-                    Log.e(TAG, "Error reading log file.");
-                }
-                return null;
+        Record r;
+        for (String[] fields : mData) {
+            try {
+                r = new Record(fields);
+                mConnectionCounts.put(Integer.valueOf(r.dest), Integer.valueOf(r.connCount));
+            } catch (IllegalArgumentException e) {
+                // stop weird error
             }
-
-            @Override
-            protected void onPostExecute(Void aVoid) {
-                super.onPostExecute(aVoid);
-                if (mListener != null) mListener.onInitialized();
-            }
-        }.execute();
+        }
     }
     
     private static class Record {

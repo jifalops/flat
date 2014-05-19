@@ -1,3 +1,22 @@
 <resources>
+    <dimen name="textSizeMicro">12sp</dimen>
+    <dimen name="textSizeSmall">14sp</dimen>
+    <dimen name="textSizeMedium">16sp</dimen>
+    <dimen name="textSizeLarge">18sp</dimen>
 
+    <!--  ~Everything! http://developer.android.com/design/style/metrics-grids.html#examples -->
+    <dimen name="padding">4dp</dimen>
+    <dimen name="margins">4dp</dimen>
+
+    <dimen name="section_content_indent">8dp</dimen>
+
+    <dimen name="lineHeight">48dp</dimen>
+    <dimen name="iconSize">32dp</dimen>
+    <dimen name="buttonHeight">40dp</dimen>
+
+    <dimen name="lineHeightSmall">32dp</dimen>
+    <dimen name="iconSmall">24dp</dimen>
+
+    <dimen name="lineHeightMicro">24dp</dimen>
+    <dimen name="iconMicro">16dp</dimen>
 </resources>

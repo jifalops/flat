@@ -42,7 +42,7 @@ public class BluetoothConnectionService extends PersistentIntentService {
             try {
                 mTimeLog.close();
             } catch (IOException e) {
-                Log.e(TAG, "Failed to close time log");
+                Log.e(TAG, "Failed to close time write");
             }
         }
     }
@@ -135,9 +135,9 @@ public class BluetoothConnectionService extends PersistentIntentService {
                 double javaDist = Util.Calc.timeOfFlightDistanceNano(dp.javaSrcSent, dp.javaDestReceived, dp.javaDestSent, dp.javaSrcReceived);
                 double hciDist = Util.Calc.timeOfFlightDistanceMicro(dp.hciSrcSent, dp.hciDestReceived, dp.hciDestSent, dp.hciSrcReceived);
                 try {
-                    mTimeLog.log(dp, javaDist, hciDist);
+                    mTimeLog.add(dp, javaDist, hciDist);
                 } catch (IOException e) {
-                    Log.e(TAG, "Error writing to time log");
+                    Log.e(TAG, "Error writing to time write");
                 }
             }
             if (mUserListener != null) mUserListener.onTimingComplete(dp, conn);

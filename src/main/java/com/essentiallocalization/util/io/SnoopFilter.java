@@ -70,7 +70,7 @@ public class SnoopFilter extends Thread implements Cancelable, Finishable {
         void onMessageFound(long ts, byte[] msg, int origSize);
     }
 
-    public static final String DEFUALT_SNOOP_NAME = "btsnoop_hci.log";
+    public static final String DEFUALT_SNOOP_NAME = "btsnoop_hci.write";
     public static final File DEFAULT_SNOOP_FILE = new File(Environment.getExternalStorageDirectory(), DEFUALT_SNOOP_NAME);
 
     private int mTask;

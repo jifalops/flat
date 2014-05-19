@@ -46,7 +46,7 @@ import java.util.List;
 public final class BluetoothFragment extends PersistentIntentServiceController {
     private static final String TAG = BluetoothFragment.class.getSimpleName();
 
-    private static final String LOG_NAME = "log.csv";
+    private static final String LOG_NAME = "write.csv";
     private static final File LOG_FILE = new File(Environment.getExternalStorageDirectory(), LOG_NAME);
 
     private static final String TEST_MSG_8   = "Testing.";
@@ -115,20 +115,22 @@ public final class BluetoothFragment extends PersistentIntentServiceController {
         mServiceSwitch = (Switch) controls.findViewById(R.id.service_power);
         mServicePersist = (CheckBox) controls.findViewById(R.id.service_persist);
         mStateViews = new SparseArray<TextView>(BluetoothConnectionManager.MAX_CONNECTIONS);
-        try {
-            mTimeLog = new TimingLog(LOG_FILE, true, new TimingLog.TimeLogListener() {
-                @Override
-                public void onInitialized() {
-                    //todo
-                }
+        initTimeLog();
+    }
 
+    private void initTimeLog() {
+        try {
+            if (mTimeLog != null) {
+                mTimeLog.close();
+            }
+            mTimeLog = new TimingLog(LOG_FILE, true, new Runnable() {
                 @Override
-                public void onReadAll(List<String[]> lines) {
-                    //todo
+                public void run() {
+                    // initialized
                 }
             });
         } catch (IOException e) {
-            Log.e(TAG, "Couldn't open log file.", e);
+            Log.e(TAG, "Couldn't open write file.", e);
             //Toast.makeText(this, "Logging disabled", Toast.LENGTH_SHORT).show();
         }
     }
@@ -183,7 +185,7 @@ public final class BluetoothFragment extends PersistentIntentServiceController {
                 mService.setTimingLog(null);
                 mTimeLog.close();
             } catch (IOException e) {
-                Log.e(TAG, "Failed to close Time log");
+                Log.e(TAG, "Failed to close Time write");
             }
 //            mService.setTimingLog(null, null);
 //            mService.setConnectionListener(null);
@@ -231,14 +233,14 @@ public final class BluetoothFragment extends PersistentIntentServiceController {
     private List<String> readLog() {
         List<String> lines = new ArrayList<String>();
         List<String[]> lineParts = null;
-        try {
-            lineParts = mTimeLog.readAllBlocking();
+//        try {
+            lineParts = mTimeLog.getAll();
             for (String[] s : lineParts) {
                 lines.add(TextUtils.join(",", s));
             }
-        } catch (IOException e) {
-            Log.e(TAG, "Failed to read log");
-        }
+//        } catch (IOException e) {
+//            Log.e(TAG, "Failed to read write");
+//        }
         return lines;
     }
 
@@ -307,11 +309,11 @@ public final class BluetoothFragment extends PersistentIntentServiceController {
                 break;
 
             case R.id.bt_clear_log:
-                try {
-                    mTimeLog.clear();
-                } catch (IOException e) {
-                    Log.e(TAG, "Failed to clear log");
-                }
+//                try {
+                    initTimeLog();
+//                } catch (IOException e) {
+//                    Log.e(TAG, "Failed to clear write");
+//                }
                 updateListView();
                 break;
 

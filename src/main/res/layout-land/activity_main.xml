@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"   
+    android:orientation="horizontal"
+    style="@style/Match">
+    <fragment
+        android:name="com.essentiallocalization.MainFragment"
+        android:id="@+id/groupListFragment"
+        style="@style/LeftPane" />	
+    <FrameLayout 
+        android:id="@+id/detailsFragmentWrapper"
+        style="@style/RightPane" />	    
+</LinearLayout>
