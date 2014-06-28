@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
-    android:fillViewport="true"
-    style="@style/Match">
-    <TextView
-        android:id="@+id/text"
-        style="@style/Wrap"/>
-</ScrollView>

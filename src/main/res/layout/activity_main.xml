@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <merge xmlns:android="http://schemas.android.com/apk/res/android">
     <fragment
-        android:name="com.essentiallocalization.MainFragment"
+        android:name="com.essentiallocalization.app.MainFragment"
         android:id="@+id/mainFragment"
         style="@style/Match" />
     <!--<fragment-->
-        <!--android:name="com.essentiallocalization.BluetoothFragment"-->
+        <!--android:name="com.essentiallocalization.app.BluetoothFragment"-->
         <!--android:id="@+id/btFragment"-->
         <!--android:layout_height="match_parent"-->
         <!--android:layout_width="match_parent"/>-->

@@ -4,7 +4,7 @@
 
     <string name="action_settings">Settings</string>
 
-    <string name="action_bt_power">Bluetooth service</string>
+    <string name="action_service_power">Background Service</string>
     <string name="action_bt_test">Send test data</string>
     <string name="action_bt_set_max">Set max connections</string>
 
@@ -25,4 +25,8 @@
     <string name="action_bt_clear_log">Clear Log</string>
     <string name="action_bt_view_log">View Log</string>
     <string name="action_bt_reset_hci">Clear HCI</string>
+
+    <string name="action_wifi_start_scans">Start scans</string>
+    <string name="action_log_scans">Log scans</string>
+    <string name="action_scan_interval">Scan interval...</string>
 </resources>

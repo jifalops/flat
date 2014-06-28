@@ -38,15 +38,23 @@ public class CsvBuffer implements Closeable {
 
     /**
      * If used with the same File as addAllFromFile(), this should be called afterwards.
+     * If a write-through file is set, this should not be called on main thread.
      */
     public void setWriteThroughFile(final File file, boolean append) throws IOException {
-        if (mWriter != null) {
+        if (mWriter != null || file == null) {
             close();
         }
-        mWriter = new CSVWriter(new FileWriter(file, append));
-        mIsClosed = false;
+        if (file != null) {
+            mWriter = new CSVWriter(new FileWriter(file, append));
+            mIsClosed = false;
+        }
     }
 
+    public boolean isWriteThrough() {
+        return !mIsClosed;
+    }
+
+    /** If a write-through file is set, this should not be called on main thread. */
     public void add(final String[] line) {
         String[] clone = line.clone();
         synchronized (mData) {
@@ -55,12 +63,13 @@ public class CsvBuffer implements Closeable {
         if (mWriter != null) {
             synchronized (mWriter) {
                 if (mIsClosed == false) {
-                    mWriter.writeNext(clone); // TODO blocking??
+                    mWriter.writeNext(clone);
                 }
             }
         }
     }
 
+    /** If a write-through file is set, this should not be called on main thread. */
     public void addAll(final List<String[]> lines) {
         List<String[]> data;
         data = new ArrayList<String[]>(lines.size());
@@ -71,7 +80,7 @@ public class CsvBuffer implements Closeable {
         if (mWriter != null) {
             synchronized (mWriter) {
                 if (mIsClosed == false) {
-                    mWriter.writeAll(data); // TODO blocking??
+                    mWriter.writeAll(data);
                 }
             }
         }
@@ -79,34 +88,23 @@ public class CsvBuffer implements Closeable {
 
     /**
      * If used with the same File as setWriteThroughFile(), this should be called first.
+     * This should not be called on main thread.
      */
-    public void addAllFromFile(final File file, final Runnable onContentsLoaded) {
-        new AsyncTask<Void, Void, Void>() {
-            @Override
-            protected Void doInBackground(Void... params) {
-                CSVReader reader = null;
-                try {
-                    reader = new CSVReader(new FileReader(file));
-                    addAll(reader.readAll());
-                } catch (IOException e) {
-                    Log.e(TAG, "Error reading CSV file.");
-                } finally {
-                    tryClose(reader);
-                }
-                return null;
-            }
-
-            @Override
-            protected void onPostExecute(Void lines) {
-                if (onContentsLoaded != null) {
-                    onContentsLoaded.run();
-                }
-            }
-        }.execute();
+    public void addAllFromFile(final File file) {
+        CSVReader reader = null;
+        try {
+            reader = new CSVReader(new FileReader(file));
+            addAll(reader.readAll());
+        } catch (IOException e) {
+            Log.e(TAG, "Error reading CSV file.");
+        } finally {
+            tryClose(reader);
+        }
     }
 
     /**
      * Flush data in the write-through file.
+     * This should not be called on main thread.
      */
     public boolean flush() throws IOException {
         if (mWriter != null) {
@@ -135,32 +133,20 @@ public class CsvBuffer implements Closeable {
         return data;
     }
 
-    public void writeAll(final File file, final boolean append, final Runnable onFileWritten) {
-        new AsyncTask<Void, Void, Void>() {
-            @Override
-            protected Void doInBackground(Void... params) {
-                CSVWriter writer = null;
-                try {
-                    writer = new CSVWriter(new FileWriter(file, append));
-                    synchronized (mData) {
-                        writer.writeAll(mData);
-                    }
-                    writer.flush();
-                } catch (IOException e) {
-                    Log.e(TAG, "Error writing CSV file.");
-                } finally {
-                    tryClose(writer);
-                }
-                return null;
+    /** This should not be called on main thread. */
+    public void writeAll(final File file, final boolean append) {
+        CSVWriter writer = null;
+        try {
+            writer = new CSVWriter(new FileWriter(file, append));
+            synchronized (mData) {
+                writer.writeAll(mData);
             }
-
-            @Override
-            protected void onPostExecute(Void lines) {
-                if (onFileWritten != null) {
-                    onFileWritten.run();
-                }
-            }
-        }.execute();
+            writer.flush();
+        } catch (IOException e) {
+            Log.e(TAG, "Error writing CSV file.");
+        } finally {
+            tryClose(writer);
+        }
     }
 
     private static void tryClose(Closeable c) {

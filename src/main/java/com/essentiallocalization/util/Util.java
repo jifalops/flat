@@ -15,7 +15,7 @@ public final class Util {
         private Format() { throw new AssertionError("Non-instantiable"); }
 
         public static final SimpleDateFormat LOG = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US);
-        public static final SimpleDateFormat LOG_MS = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.US);
+        public static final SimpleDateFormat LOG_MS = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSSZ", Locale.US);
 
         public static final DecimalFormat BASIC_0DEC = new DecimalFormat("##############0");
         public static final DecimalFormat newBasic2dec() { return new DecimalFormat("##############0.00"); }
@@ -23,6 +23,8 @@ public final class Util {
         public static final DecimalFormat SEPARATOR_2DEC = new DecimalFormat("###,###,###,###,##0.00");
         public static final DecimalFormat SCIENTIFIC_3SIG = new DecimalFormat("0.##E0");
         public static final DecimalFormat SCIENTIFIC_5SIG = new DecimalFormat("0.####E0");
+
+        public static final DecimalFormat newBasic6dec() { return new DecimalFormat("#####0.000000"); }
     }
 
 

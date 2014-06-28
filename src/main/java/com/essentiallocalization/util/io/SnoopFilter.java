@@ -183,7 +183,7 @@ public class SnoopFilter extends Thread implements Cancelable, Finishable {
     public void run() {
 //        mObserver = new FileObserver(mSnoopFile.toString(), FileObserver.MODIFY) {
 //            @Override
-//            public void onEvent(int event, String path) {
+//            public void onEvent(int event, String pos) {
 //                if (isCanceled() || isFailed()) return;
 //                switch (mTask) {
 //                case TASK_READ_FILE_HEADER:
@@ -318,7 +318,7 @@ public class SnoopFilter extends Thread implements Cancelable, Finishable {
                     msgStart = new String(payload, "ISO88591").indexOf(mFilter);
                     if (msgStart > -1) {
                         // Uncomment to exclude the filter string from the result
-                        //msgStart += mFilter.length();
+                        //msgStart += mIntentFilter.length();
                         ++mMessagesFound;
 
                         message = Arrays.copyOfRange(payload, msgStart, mPayloadSize - 1); // -1 for the RFCOMM fcs byte (checksum)
