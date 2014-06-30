@@ -82,10 +82,9 @@ public abstract class PersistentIntentServiceFragment extends Fragment {
         @Override
         public final void onServiceConnected(ComponentName name, IBinder service) {
             mBound = true;
-            bindServiceControls((PersistentIntentService) service);
-            PersistentIntentServiceFragment.this
-                    .onServiceConnected(((PersistentIntentService.LocalBinder) service)
-                            .getService());
+            PersistentIntentService s = ((PersistentIntentService.LocalBinder) service).getService();
+            PersistentIntentServiceFragment.this.onServiceConnected(s);
+            bindServiceControls(s);
         }
 
         @Override

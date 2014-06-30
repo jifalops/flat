@@ -28,6 +28,11 @@ public final class MovementSensorService extends PersistentIntentService {
 
     private CsvBuffer mBuffer;
     private SensorManager mSensorManager;
+    private MovementSensor mMovementSensor;
+
+    public MovementSensor getMovementSensor() {
+        return mMovementSensor;
+    }
 
     @Override
     protected void onHandleIntent(Intent intent) {
@@ -38,17 +43,27 @@ public final class MovementSensorService extends PersistentIntentService {
     public void onCreate() {
         super.onCreate();
         mSensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
+        mMovementSensor = new MovementSensor();
         mBuffer = new CsvBuffer();
     }
 
     @Override
     public void onDestroy() {
+        stopSensing();
         try {
             mBuffer.close();
         } catch (IOException e) {
             Log.e(TAG, "Failed to close buffer");
         }
         super.onDestroy();
+    }
+
+    public void startSensing() {
+        mMovementSensor.start(mSensorManager);
+    }
+
+    public void stopSensing() {
+        mMovementSensor.stop(mSensorManager);
     }
 
 //    @Override

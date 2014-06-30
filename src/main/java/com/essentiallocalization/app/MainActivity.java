@@ -11,7 +11,8 @@ import com.essentiallocalization.R;
 import com.essentiallocalization.sensors.RotationVectorDemo;
 import com.essentiallocalization.util.wifi.ScanResultsFragment;
 
-public class MainActivity extends Activity implements MainFragment.Callbacks, BluetoothFragment.BluetoothFragmentListener, ScanResultsFragment.Callback {
+public class MainActivity extends Activity implements MainFragment.Callbacks,
+        BluetoothFragment.BluetoothFragmentListener, ScanResultsFragment.Callback, MovementSensorFragment.Callback {
     private MainFragment mMainFragment;
     private Fragment mDetailsFragment;
 
@@ -21,6 +22,8 @@ public class MainActivity extends Activity implements MainFragment.Callbacks, Bl
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        mDetailsFragment = null;
 
         if (savedInstanceState != null) {
             mCurrentItem = MainItems.getItem(savedInstanceState);

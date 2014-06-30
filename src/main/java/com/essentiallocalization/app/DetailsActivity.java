@@ -7,7 +7,7 @@ import android.os.Bundle;
 
 import com.essentiallocalization.util.wifi.ScanResultsFragment;
 
-public class DetailsActivity extends Activity implements BluetoothFragment.BluetoothFragmentListener, ScanResultsFragment.Callback {
+public class DetailsActivity extends Activity implements BluetoothFragment.BluetoothFragmentListener, ScanResultsFragment.Callback, MovementSensorFragment.Callback {
 	private Fragment mDetailsFragment;
 
     private int mCurrentItem = MainItems.DEFAULT;
@@ -21,7 +21,9 @@ public class DetailsActivity extends Activity implements BluetoothFragment.Bluet
             finish();
             return;
         }
-		
+
+		mDetailsFragment = null;
+
 		if (savedInstanceState != null) {
             mCurrentItem = MainItems.getItem(savedInstanceState);
 
