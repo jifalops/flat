@@ -19,21 +19,24 @@ public final class Trilateration implements Scheme {
 
     @Override
     public Node.State calcNewState(Node node, Bundle args) {
-        Node[] nodes = (Node[]) args.get(ARG_REFERENCE_NODES);
+        Node[] refnodes = (Node[]) args.get(ARG_REFERENCE_NODES);
         double[] ranges = args.getDoubleArray(ARG_RANGES);
 
-        List<double[]> coords = new ArrayList<double[]>(nodes.length);
-        for (Node n : nodes) {
-            coords.add(n.getState().pos);
+        // represent refnodes' coordinates in a primative array
+        double[][] positions = new double[refnodes.length][3];
+        for (int i=0; i<refnodes.length; ++i) {
+            for (int j=0; j<3; ++j) {
+                positions[i][j] = refnodes[i].getState().pos[j];
+            }
         }
 
-        return new Node.State(doTrilateration(coords, ranges));
+        return new Node.State(doTrilateration(positions, ranges));
     }
 
-    public double[] doTrilateration(List<double[]> refNodes, double[] distances) {
+    public double[] doTrilateration(double[][] positions, double[] distances) {
         double[] pos = new double[3];
-        pos[0] = calcX(distances[0], distances[1], refNodes.get(1)[0]);
-        pos[1] = calcY(distances[0], distances[2], refNodes.get(2)[0], refNodes.get(2)[1], pos[0]);
+        pos[0] = calcX(distances[0], distances[1], positions[1][0]);
+        pos[1] = calcY(distances[0], distances[2], positions[2][0], positions[2][1], pos[0]);
         pos[2] = calcZ(distances[0], pos[0], pos[1]);
         return pos;
     }

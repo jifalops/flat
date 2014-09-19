@@ -3,22 +3,26 @@ package com.essentiallocalization.localization;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * @author Jacob Phillips
- * For orientation of angle coordinates,
- * @see <a href='http://developer.android.com/guide/topics/sensors/sensors_overview.html#sensors-coords'>http://developer.android.com/guide/topics/sensors/sensors_overview.html#sensors-coords</a>
- */
+
 public class Node {
+    /**
+
+     */
     public static class State {
         /**
+         * <pre>
          * Position:
          * 0:       x position
          * 1:       y position
          * 2:       z position
+         *
          * Angle:
          * 0:       angle with respect to left-right axis on a vertically held phone.
          * 1:       angle with respect to the up-down axis on a vertically held phone.
          * 2:       angle with respect to the forward-back axis on a vertically held phone.
+         * </pre>
+         * For orientation of angle coordinates, see
+         * <a href='http://developer.android.com/guide/topics/sensors/sensors_overview.html#sensors-coords'>http://developer.android.com/guide/topics/sensors/sensors_overview.html#sensors-coords</a>
          */
         public final double pos[], angle[];
         public final long timestamp;
@@ -28,13 +32,11 @@ public class Node {
             this.angle = angle;
             this.timestamp = timestamp;
         }
-        public State(double[] pos, double[] angle) { this(pos, angle, 0); }
-        public State(double[] pos) { this(pos, null, 0); }
 
         @Override
         public String toString() {
-            return String.format("P{%.3f,%.3f,%.3f} θ{%.1f,%.1f,%.1f}",
-                    pos[0], pos[1], pos[2], angle[0], angle[1], angle[2]);
+            return String.format("P{%.3f,%.3f,%.3f} θ{%.1f,%.1f,%.1f} T{%d}",
+                    pos[0], pos[1], pos[2], angle[0], angle[1], angle[2], timestamp);
         }
     }
 
@@ -67,13 +69,19 @@ public class Node {
         return history.get(index);
     }
 
-    public int getNumStates() {
+    public int getStateCount() {
         return history.size();
     }
 
 
-
-
+    public static double[][] toPositionList(Node[] nodes) {
+        double[][] positions = new double[nodes.length][3];
+        for (int i=0; i<nodes.length; ++i) {
+            for (int j=0; j<3; ++j) {
+                positions[i][j] = nodes[i].getState().pos[j];
+            }
+        }
+    }
 
     /*
      * Allow other objects to react to node changes.
