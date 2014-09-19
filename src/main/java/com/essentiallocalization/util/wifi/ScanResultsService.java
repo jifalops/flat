@@ -2,22 +2,20 @@ package com.essentiallocalization.util.wifi;
 
 import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.net.wifi.ScanResult;
 import android.net.wifi.WifiManager;
-import android.os.Handler;
 import android.util.Log;
 
 import com.essentiallocalization.util.CsvBuffer;
-import com.essentiallocalization.util.Util;
 import com.essentiallocalization.util.app.PersistentIntentService;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Created by Jake on 5/28/2014.
@@ -28,8 +26,14 @@ public final class ScanResultsService extends PersistentIntentService {
 
     private WifiManager mManager;
     private CsvBuffer mBuffer;
-    private long mTimeReference;
+    private int mScanCount;
+
     private int mTimerPeriod;
+    private volatile AtomicInteger mTimerDelay;
+
+    private ScanResultsConfig mConfig;
+
+
 
     public static interface Callback {
         /** Called on service's thread. */
@@ -39,13 +43,17 @@ public final class ScanResultsService extends PersistentIntentService {
 
     @Override
     protected void onHandleIntent(Intent intent) {
-        
+        Log.i(TAG, "scan results received");
         final List<ScanResult> results = mManager.getScanResults();
 
         if (mBuffer.isWriteThrough()) {
-            int i = 0;
             for (ScanResult sr : results) {
-                mBuffer.add(formatScanResult(++i, sr));
+                mBuffer.add(mConfig.formatScanResult(++mScanCount, mTimerDelay.get(), sr));
+            }
+            try {
+                mBuffer.flush();
+            } catch (IOException e) {
+                Log.e(TAG, "Failed to flush output to file.");
             }
         }
 
@@ -60,12 +68,20 @@ public final class ScanResultsService extends PersistentIntentService {
     public void onCreate() {
         super.onCreate();
         mManager = (WifiManager) getSystemService(Context.WIFI_SERVICE);
+        mConfig = ScanResultsConfig.getInstance();
         mBuffer = new CsvBuffer();
+        try {
+            setLogging(mConfig.getLogFile(this), true);
+        } catch (IOException e) {
+            Log.e(TAG, "Failed to open log.");
+        }
+        mTimerDelay = new AtomicInteger(0);
 //        mScanResults = new ArrayList<List<ScanResult>>();
     }
 
     @Override
     public void onDestroy() {
+        Log.i(TAG, "running onDestroy()");
         cancelTimer();
         try {
             mBuffer.close();
@@ -77,12 +93,33 @@ public final class ScanResultsService extends PersistentIntentService {
 
     @Override
     public void unregisterReceiver() {
+        Log.i(TAG, "unregistering receiver");
         cancelTimer();
+        super.unregisterReceiver();
     }
 
     /** Does not stop service instance */
     public void stopScanning() {
         unregisterReceiver();
+    }
+
+    /**
+     * Scan at random intervals with the given bounds.
+     * @param minDelay the minimum time in ms before next scan (inclusive).
+     * @param maxDelay the maximum time in ms before next scan (exclusive).
+     */
+    public void startScanning(final int minDelay, final int maxDelay) {
+        cancelTimer();
+        mTimer = new Timer();
+        mTimerDelay.set(minDelay + new Random().nextInt(maxDelay - minDelay));
+        mTimer.schedule(new TimerTask() {
+            @Override
+            public void run() {
+                mManager.startScan();
+                startScanning(minDelay, maxDelay);
+            }
+        }, mTimerDelay.get());
+
     }
 
     /** @param period the frequency in ms to scan. Use 0 for a single scan. */
@@ -100,6 +137,14 @@ public final class ScanResultsService extends PersistentIntentService {
                 }
             }, 0, period);
         }
+    }
+
+    public int getScanCount() {
+        return mScanCount;
+    }
+
+    public int getTimerDelay() {
+        return mTimerDelay.get();
     }
 
     public int getScanTimerPeriod() {
@@ -120,6 +165,8 @@ public final class ScanResultsService extends PersistentIntentService {
 
     public void setLogging(File file, boolean append) throws IOException {
         mBuffer.setWriteThroughFile(file, append);
+        mBuffer.add(mConfig.getScanResultHeader());
+        mBuffer.flush();
     }
     public void setLogging(File file) throws IOException {
         setLogging(file, true);
@@ -128,25 +175,5 @@ public final class ScanResultsService extends PersistentIntentService {
 
     public boolean isLogging() {
         return mBuffer.isWriteThrough();
-    }
-
-    public String getScanResultHeader() {
-        return " #, Timestamp   , BSSID/MAC        , SSID/name   , RSSI,  Freq\n";
-    }
-
-    public String[] formatScanResult(int id, ScanResult sr) {
-        return new String[]{
-                String.format("%2d", id),
-                String.format("%12s", Util.Format.newBasic6dec().format(calcTimeDiff(sr))),
-                sr.BSSID,
-                String.format("%-12s", sr.SSID),
-                String.format("%4d", sr.level),
-                String.format("%5d", sr.frequency),
-        };
-    }
-
-    private float calcTimeDiff(ScanResult sr) {
-        if (mTimeReference == 0) mTimeReference = sr.timestamp;
-        return (sr.timestamp - mTimeReference) / 1E6f;
     }
 }

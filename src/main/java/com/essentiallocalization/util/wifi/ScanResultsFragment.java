@@ -3,11 +3,13 @@ package com.essentiallocalization.util.wifi;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.content.IntentFilter;
+import android.net.Uri;
 import android.net.wifi.ScanResult;
 import android.net.wifi.WifiManager;
 import android.os.Bundle;
-import android.os.SystemClock;
+import android.text.TextUtils;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -16,8 +18,8 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.EditText;
-import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.essentiallocalization.R;
 import com.essentiallocalization.util.CsvBuffer;
@@ -25,14 +27,12 @@ import com.essentiallocalization.util.Util;
 import com.essentiallocalization.util.app.PersistentIntentService;
 import com.essentiallocalization.util.app.PersistentIntentServiceFragment;
 
-import java.io.File;
 import java.io.IOException;
-import java.util.Date;
 import java.util.List;
 
 public class ScanResultsFragment extends PersistentIntentServiceFragment implements ScanResultsService.Callback {
     private static final String TAG = ScanResultsFragment.class.getSimpleName();
-    private static final String LOG_FILE = "ScanResults.txt";
+
 
     /** Interface the containing activity must implement */
     public static interface Callback {
@@ -41,7 +41,11 @@ public class ScanResultsFragment extends PersistentIntentServiceFragment impleme
 
     private ScanResultsService mService;
     private Callback mCallback;
+
+    private ScanResultsConfig mConfig;
+    private int mScanCount;
     private TextView mTextView;
+    private MenuItem mLogToggle;
 
     @Override
     public void onAttach(Activity activity) {
@@ -58,6 +62,7 @@ public class ScanResultsFragment extends PersistentIntentServiceFragment impleme
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         Log.v(TAG, "onCreate()");
+        mConfig = ScanResultsConfig.getInstance();
         setHasOptionsMenu(true);
     }
 
@@ -74,9 +79,10 @@ public class ScanResultsFragment extends PersistentIntentServiceFragment impleme
     @Override
     public void onResume() {
         super.onResume();
-        if (isBound()) {
-            mTextView.append(mService.getScanResultHeader());
-        }
+//        if (isBound()) {
+            mTextView.append("Session start: " + Util.Format.LOG.format(mConfig.getStartTime()) + "\n");
+            mTextView.append(TextUtils.join(", ", mConfig.getScanResultHeader()) + "\n");
+//        }
     }
 
     /** {@inheritDoc} */
@@ -84,9 +90,8 @@ public class ScanResultsFragment extends PersistentIntentServiceFragment impleme
     public void onScanResults(List<ScanResult> results) {
         if (!isBound()) return;
         final CsvBuffer buffer = new CsvBuffer();
-        int i = 0;
         for (ScanResult sr : results) {
-            buffer.add(mService.formatScanResult(++i, sr));
+            buffer.add(mConfig.formatScanResult(++mScanCount, mService.getTimerDelay(), sr));
         }
         mTextView.post(new Runnable() {
             @Override
@@ -100,7 +105,10 @@ public class ScanResultsFragment extends PersistentIntentServiceFragment impleme
     public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
         super.onCreateOptionsMenu(menu, inflater);
         inflater.inflate(R.menu.scan_results, menu);
+        mLogToggle = menu.findItem(R.id.action_log_scans); // TODO not used
     }
+
+
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
@@ -108,14 +116,16 @@ public class ScanResultsFragment extends PersistentIntentServiceFragment impleme
             case R.id.action_log_scans:
                 if (isBound()) {
                     if (mService.isLogging()) {
+                        Toast.makeText(getActivity(), "logging is enabled, disabling...", Toast.LENGTH_SHORT).show();
                         try {
                             mService.setLogging(null);
                         } catch (IOException e) {
                             Log.e(TAG, "Failed to stop logging scans.");
                         }
                     } else {
+                        Toast.makeText(getActivity(), "logging is disabled, enabling...", Toast.LENGTH_SHORT).show();
                         try {
-                            mService.setLogging(new File(getActivity().getFilesDir(), LOG_FILE), true);
+                            mService.setLogging(mConfig.getLogFile(getActivity()), true);
                         } catch (IOException e) {
                             Log.e(TAG, "Failed to start logging scans.");
                         }
@@ -140,8 +150,32 @@ public class ScanResultsFragment extends PersistentIntentServiceFragment impleme
                 });
                 builder.show();
                 edit.requestFocus();
+                break;
+
+            case R.id.action_view_log:
+                Intent i = new Intent(Intent.ACTION_VIEW);
+                i.setDataAndType(Uri.fromFile(mConfig.getLogFile(getActivity())), "text/*");
+                i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                startActivity(i);
+                break;
+
+            case R.id.action_clear_log:
+                if (isBound()) {
+                    try {
+                        boolean isLogging = mService.isLogging();
+                        mService.setLogging(mConfig.getLogFile(getActivity()), false); //truncate
+                        if (!isLogging) {
+                            mService.setLogging(null);
+                        }
+                    } catch (IOException e) {
+                        Log.e(TAG, "Failed to clear log.");
+                    }
+                }
+                break;
+
             case R.id.action_settings:
                 //todo
+                Toast.makeText(getActivity(), "settings not available", Toast.LENGTH_SHORT).show();
                 break;
         }
         return true;
@@ -151,6 +185,7 @@ public class ScanResultsFragment extends PersistentIntentServiceFragment impleme
     @Override
     public void onServiceConnected(PersistentIntentService service) {
         mService = (ScanResultsService) service;
+        mScanCount = mService.getScanCount();
         mService.setCallback(this);
     }
 
@@ -164,7 +199,7 @@ public class ScanResultsFragment extends PersistentIntentServiceFragment impleme
         if (!isBound()) return;
         if (enabled) {
             mService.registerReceiver(new IntentFilter(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION));
-            mService.startScanning(1000);
+            mService.startScanning(ScanResultsConfig.DEFAULT_RANDOM_MIN, ScanResultsConfig.DEFAULT_RANDOM_MAX);
         } else {
             mService.stopScanning();
         }

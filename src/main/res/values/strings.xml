@@ -27,6 +27,7 @@
     <string name="action_bt_reset_hci">Clear HCI</string>
 
     <string name="action_wifi_start_scans">Start scans</string>
-    <string name="action_log_scans">Log scans</string>
+    <string name="action_log_scans">Toggle logfile</string>
     <string name="action_scan_interval">Scan interval...</string>
+    <string name="action_view_log">View Log</string>
 </resources>

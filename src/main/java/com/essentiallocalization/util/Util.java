@@ -2,6 +2,7 @@ package com.essentiallocalization.util;
 
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.Locale;
 
 /**
@@ -16,6 +17,7 @@ public final class Util {
 
         public static final SimpleDateFormat LOG = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US);
         public static final SimpleDateFormat LOG_MS = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSSZ", Locale.US);
+        public static final SimpleDateFormat LOG_FILENAME = new SimpleDateFormat("yyyy-MM-dd HH-mm-ss", Locale.US);
 
         public static final DecimalFormat BASIC_0DEC = new DecimalFormat("##############0");
         public static final DecimalFormat newBasic2dec() { return new DecimalFormat("##############0.00"); }
@@ -51,6 +53,15 @@ public final class Util {
             long roundTrip = (aReceived - aSent) - (bSent - bReceived);
             double distance = (Const.SPEED_OF_LIGHT_VACUUM * (roundTrip * 1E-6)) / 2;
             return distance;
+        }
+
+        public static double linearDistance(double[] p1, double[] p2) {
+            double d = 0, tmp;
+            for (int i = 0; i < p1.length; ++i) {
+                tmp = p1[i] - p2[i];
+                d += tmp * tmp;
+            }
+            return Math.sqrt(d);
         }
     }
 }
