@@ -3,10 +3,6 @@ package com.essentiallocalization.localization.scheme;
 import android.os.Bundle;
 
 import com.essentiallocalization.localization.Node;
-import com.essentiallocalization.localization.distance.Ranging;
-
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * @author Jacob Phillips

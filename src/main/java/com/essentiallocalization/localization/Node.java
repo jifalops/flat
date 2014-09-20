@@ -57,6 +57,7 @@ public class Node {
     /** Set current state */
     public void setState(State s) {
         history.add(s);
+        notifyNodeChangedListeners();
     }
 
     /** Get current state */
@@ -73,7 +74,9 @@ public class Node {
         return history.size();
     }
 
-
+    /**
+     * Helper function for flattening several nodes' positions into a double[][].
+     */
     public static double[][] toPositionList(Node[] nodes) {
         double[][] positions = new double[nodes.length][3];
         for (int i=0; i<nodes.length; ++i) {
@@ -81,12 +84,12 @@ public class Node {
                 positions[i][j] = nodes[i].getState().pos[j];
             }
         }
+        return positions;
     }
 
-    /*
+    /**
      * Allow other objects to react to node changes.
      */
-
     public static interface NodeChangedListener {
         void onNodeChanged(Node n);
     }

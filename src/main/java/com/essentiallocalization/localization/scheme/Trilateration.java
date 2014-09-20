@@ -30,14 +30,14 @@ public final class Trilateration implements Scheme {
             }
         }
 
-        return new Node.State(doTrilateration(positions, ranges));
+        return new Node.State(doTrilateration(positions, ranges), null, System.nanoTime());
     }
 
-    public double[] doTrilateration(double[][] positions, double[] distances) {
+    public double[] doTrilateration(double[][] positions, double[] ranges) {
         double[] pos = new double[3];
-        pos[0] = calcX(distances[0], distances[1], positions[1][0]);
-        pos[1] = calcY(distances[0], distances[2], positions[2][0], positions[2][1], pos[0]);
-        pos[2] = calcZ(distances[0], pos[0], pos[1]);
+        pos[0] = calcX(ranges[0], ranges[1], positions[1][0]);
+        pos[1] = calcY(ranges[0], ranges[2], positions[2][0], positions[2][1], pos[0]);
+        pos[2] = calcZ(ranges[0], pos[0], pos[1]);
         return pos;
     }
 

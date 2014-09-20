@@ -8,7 +8,7 @@ import android.content.IntentFilter;
 import android.os.*;
 
 /**
- * Created by jake on 8/14/13.
+ *
  */
 public abstract class PersistentIntentService extends Service {
 

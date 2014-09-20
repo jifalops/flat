@@ -1,4 +1,4 @@
-package com.essentiallocalization.sensors;
+package com.essentiallocalization.localization.signal;
 
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
@@ -11,7 +11,7 @@ import java.util.List;
 /**
  * @author Jacob Phillips
  */
-public final class MovementSensor implements SensorEventListener {
+public final class InerntialMovement implements SensorEventListener, Signal {
 
     private final double pos[] = new double[3];
 
@@ -23,7 +23,7 @@ public final class MovementSensor implements SensorEventListener {
     private double t;
 
 
-    public MovementSensor() {
+    public InerntialMovement() {
         // initialize the rotation matrix to identity
         rot[ 0] = 1;
         rot[ 4] = 1;
@@ -67,6 +67,9 @@ public final class MovementSensor implements SensorEventListener {
         return new float[] {0,0,0};
     }
 
+    /*
+     * TODO use the gl graphics function to handle correct multiplication regardless of orientation.
+     */
     private void matrixMultiply() {
         float[] tmp = rotWorld.clone();
         rotWorld[0] = tmp[0]* rot[0] + tmp[1]* rot[4] + tmp[2]* rot[8] + tmp[3]* rot[12];
@@ -112,6 +115,11 @@ public final class MovementSensor implements SensorEventListener {
         calcTrajectory();
         notifyMovementListeners();
         lastEventTime = event.timestamp;
+    }
+
+    @Override
+    public int getType() {
+        return Signal.TYPE_INTERNAL;
     }
 
     public static interface MovementListener { void onMovement(double[] pos, float[] angle, double timeDiff); }

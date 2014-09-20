@@ -1,4 +1,4 @@
-package com.essentiallocalization.localization.distance;
+package com.essentiallocalization.localization.ranging;
 
 
 import android.os.Bundle;

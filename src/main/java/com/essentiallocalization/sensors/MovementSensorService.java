@@ -2,23 +2,14 @@ package com.essentiallocalization.sensors;
 
 import android.content.Context;
 import android.content.Intent;
-import android.hardware.Sensor;
-import android.hardware.SensorEvent;
-import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
-import android.hardware.TriggerEvent;
-import android.hardware.TriggerEventListener;
-import android.net.wifi.ScanResult;
 import android.util.Log;
 
+import com.essentiallocalization.localization.signal.InerntialMovement;
 import com.essentiallocalization.util.CsvBuffer;
-import com.essentiallocalization.util.Util;
 import com.essentiallocalization.util.app.PersistentIntentService;
 
-import java.io.File;
 import java.io.IOException;
-import java.util.Timer;
-import java.util.TimerTask;
 
 /**
  * Created by Jake on 5/28/2014.
@@ -28,9 +19,9 @@ public final class MovementSensorService extends PersistentIntentService {
 
     private CsvBuffer mBuffer;
     private SensorManager mSensorManager;
-    private MovementSensor mMovementSensor;
+    private InerntialMovement mMovementSensor;
 
-    public MovementSensor getMovementSensor() {
+    public InerntialMovement getMovementSensor() {
         return mMovementSensor;
     }
 
@@ -43,7 +34,7 @@ public final class MovementSensorService extends PersistentIntentService {
     public void onCreate() {
         super.onCreate();
         mSensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
-        mMovementSensor = new MovementSensor();
+        mMovementSensor = new InerntialMovement();
         mBuffer = new CsvBuffer();
     }
 

@@ -10,7 +10,7 @@ import android.view.ViewGroup;
 import android.widget.TextView;
 
 import com.essentiallocalization.R;
-import com.essentiallocalization.sensors.MovementSensor;
+import com.essentiallocalization.localization.signal.InerntialMovement;
 import com.essentiallocalization.sensors.MovementSensorService;
 import com.essentiallocalization.util.app.PersistentIntentService;
 import com.essentiallocalization.util.app.PersistentIntentServiceFragment;
@@ -117,7 +117,7 @@ public class MovementSensorFragment extends PersistentIntentServiceFragment {
 //        return true;
 //    }
 
-    MovementSensor.MovementListener mListener = new MovementSensor.MovementListener() {
+    InerntialMovement.MovementListener mListener = new InerntialMovement.MovementListener() {
         @Override
         public void onMovement(double[] pos, float angle[], double time) {
             mTime += time;
