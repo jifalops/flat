@@ -5,7 +5,7 @@ import android.content.Intent;
 import android.hardware.SensorManager;
 import android.util.Log;
 
-import com.essentiallocalization.localization.signal.InerntialMovement;
+import com.essentiallocalization.localization.scheme.InerntialMovement;
 import com.essentiallocalization.util.CsvBuffer;
 import com.essentiallocalization.util.app.PersistentIntentService;
 

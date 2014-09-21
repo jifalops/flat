@@ -12,14 +12,25 @@ import android.os.Message;
 
 import com.essentiallocalization.util.CsvBuffer;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
 
-public class WifiBeacon extends AbstractSignal {
+/**
+ * Obtain WiFi beacons by scanning available networks. Scans can be run periodically or one at a time.
+ * Objects that listen for changes in WiFi beacon signals should use getScanResults() when notified of a change.
+ * This class implements a singleton pattern.
+ */
+public final class WifiBeacon extends AbstractSignal {
+
+    public static final int EVENT_SCAN_RESULTS = 1;
 
     private Timer timer;
-
+    private List<ScanResult> scanResults = new ArrayList<ScanResult>();
+    public List<ScanResult> getScanResults() {
+        return scanResults;
+    }
 
     /*
      * Singleton
@@ -33,21 +44,9 @@ public class WifiBeacon extends AbstractSignal {
         return instance;
     }
 
-    private boolean enabled;
-
     @Override
-    public int getType() {
+    public int getSignalType() {
         return Signal.TYPE_ELECTROMAGNETIC;
-    }
-
-    /**
-     * @param args args[0] is a Context used to get the WifiManager and start a scan.
-     */
-    @Override
-    public void requestSingleUpdate(Object... args) {
-        Context ctx = (Context) args[0];
-        WifiManager manager = (WifiManager) ctx.getSystemService(Context.WIFI_SERVICE);
-        manager.startScan();
     }
 
     /**
@@ -58,62 +57,58 @@ public class WifiBeacon extends AbstractSignal {
     @Override
     public void enable(Object... args) {
         Context ctx = (Context) args[0];
-        WifiManager manager = (WifiManager) ctx.getSystemService(Context.WIFI_SERVICE);
+        final WifiManager manager = (WifiManager) ctx.getSystemService(Context.WIFI_SERVICE);
+
         int scanInterval = 1;
         if (args.length == 2) scanInterval = (Integer) args[1];
+        scanInterval *= 1000;
 
-        if (period == 0) {
-            mManager.startScan();
+        ctx.registerReceiver(scanReceiver, scanFilter);
+
+        cancelTimer();
+        if (scanInterval == 0) {
+            manager.startScan();
         } else {
-            cancelTimer();
-            mTimer = new Timer();
-            mTimer.scheduleAtFixedRate(new TimerTask() {
+            timer = new Timer();
+            timer.scheduleAtFixedRate(new TimerTask() {
                 @Override
                 public void run() {
-                    mManager.startScan();
+                    manager.startScan();
                 }
-            }, 0, period);
+            }, 0, scanInterval);
         }
-
-
-        manager.startScan();
-
-
-
-
-        mTimerPeriod = period;
-        if (period == 0) {
-            mManager.startScan();
-        } else {
-            cancelTimer();
-            mTimer = new Timer();
-            mTimer.scheduleAtFixedRate(new TimerTask() {
-                @Override
-                public void run() {
-                    mManager.startScan();
-                }
-            }, 0, period);
-        }
+        enabled = true;
     }
 
+    /**
+     * @param args args[0] is a Context used to unregister the BroadcastReceiver.
+     */
     @Override
     public void disable(Object... args) {
-
+        cancelTimer();
+        Context ctx = (Context) args[0];
+        ctx.unregisterReceiver(scanReceiver);
+        enabled = false;
     }
 
-    @Override
-    public boolean isEnabled() {
-        return enabled;
+    private void cancelTimer() {
+        if (timer != null) {
+            timer.cancel();
+            timer = null;
+        }
     }
-
-
-
-
 
     private final BroadcastReceiver scanReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            notifyListeners();
+            scanResults = ((WifiManager) context.getSystemService(Context.WIFI_SERVICE)).getScanResults();
+
+            // Disable if not recurring
+            if (timer == null) {
+                disable(context);
+            }
+
+            notifyListeners(EVENT_SCAN_RESULTS);
         }
     };
 

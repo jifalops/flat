@@ -10,7 +10,7 @@ import android.view.ViewGroup;
 import android.widget.TextView;
 
 import com.essentiallocalization.R;
-import com.essentiallocalization.localization.signal.InerntialMovement;
+import com.essentiallocalization.localization.scheme.InerntialMovement;
 import com.essentiallocalization.sensors.MovementSensorService;
 import com.essentiallocalization.util.app.PersistentIntentService;
 import com.essentiallocalization.util.app.PersistentIntentServiceFragment;

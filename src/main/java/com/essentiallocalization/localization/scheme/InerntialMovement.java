@@ -1,9 +1,11 @@
-package com.essentiallocalization.localization.signal;
+package com.essentiallocalization.localization.scheme;
 
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
+
+import com.essentiallocalization.localization.signal.Signal;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -11,7 +13,7 @@ import java.util.List;
 /**
  * @author Jacob Phillips
  */
-public final class InerntialMovement implements SensorEventListener, Signal {
+public final class InerntialMovement implements SensorEventListener {
 
     private final double pos[] = new double[3];
 
@@ -118,7 +120,7 @@ public final class InerntialMovement implements SensorEventListener, Signal {
     }
 
     @Override
-    public int getType() {
+    public int getSignalType() {
         return Signal.TYPE_INTERNAL;
     }
 

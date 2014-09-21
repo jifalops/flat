@@ -9,16 +9,8 @@ public final class FreeSpacePathLoss implements Ranging {
     public static final String ARG_FREQ_IN_MHZ = "frequency";
 
     @Override
-    public int getType() {
+    public int getRangingType() {
         return Ranging.TYPE_SIGNAL_STRENGTH;
-    }
-
-    @Override
-    public double estimateDistance(Bundle args) {
-        double level = args.getDouble(ARG_LEVEL_IN_DB);
-        double freq = args.getDouble(ARG_FREQ_IN_MHZ);
-
-        return calcFsplRange(level, freq);
     }
 
     public double calcFsplRange(double levelInDb, double freqInMHz)    {

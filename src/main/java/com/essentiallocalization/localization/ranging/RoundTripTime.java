@@ -15,7 +15,7 @@ public class RoundTripTime implements Ranging {
     public static final int SPEED_OF_LIGHT_VACUUM = 299792458; // m/s
 
     @Override
-    public int getType() {
+    public int getRangingType() {
         return Ranging.TYPE_SIGNAL_DELAY;
     }
 
