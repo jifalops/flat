@@ -3,6 +3,7 @@ package com.essentiallocalization.util.wifi;
 import android.content.Context;
 import android.net.wifi.ScanResult;
 
+import com.essentiallocalization.localization.ranging.FreeSpacePathLoss;
 import com.essentiallocalization.util.Util;
 import com.essentiallocalization.localization.scheme.Trilateration;
 
@@ -54,7 +55,7 @@ public final class ScanResultsConfig {
                 String.format("%-4s", sr.SSID.substring(0, end)),
                 String.format("%4d", sr.level),
                 String.format("%4d", sr.frequency),
-                String.format("%6.2f", Trilateration.calcFsplDistance(sr.level, sr.frequency))
+                String.format("%6.2f", FreeSpacePathLoss.calcFsplRange(sr.level, sr.frequency))
         };
     }
 

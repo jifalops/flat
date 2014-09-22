@@ -25,7 +25,7 @@
         android:label="@string/app_name"
         android:theme="@style/AppTheme" >
         <activity
-            android:name=".app.MainActivity"
+            android:name=".nsd.NsdChatActivity"
             android:label="@string/app_name">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -35,8 +35,8 @@
         <activity
             android:name=".app.DetailsActivity"
             android:uiOptions="splitActionBarWhenNarrow" />
-        <activity
-            android:name=".sensors.RotationVectorDemo" />
+        <activity android:name=".sensors.RotationVectorDemo" />
+        <!--<activity android:name=".nsd.NsdChatActivity" />-->
         <service android:name=".app.BluetoothConnectionService"/>
         <service android:name=".sensors.MovementSensorService"/>
         <service android:name=".util.wifi.ScanResultsService"/>

@@ -7,12 +7,11 @@ import com.essentiallocalization.localization.Node;
 /**
  * @author Jacob Phillips
  */
-public final class MinMax implements Scheme {
+public final class MinMax {
 
     public static final String ARG_REFERENCE_NODES = "ref_nodes";
     public static final String ARG_RANGES = "ranges";
 
-    @Override
     public Node.State calcNewState(Node node, Bundle args) {
         Node[] refnodes = (Node[]) args.get(ARG_REFERENCE_NODES);
         double[] ranges = args.getDoubleArray(ARG_RANGES);

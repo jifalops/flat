@@ -11,13 +11,14 @@ import com.essentiallocalization.util.wifi.ScanResultsFragment;
  */
 public class MainItems {
 
-    //This correspond to the items in the arrays resource.
+    // NOTE: This correspond to the items in the arrays resource.
     public static final int ROTATION_VECTOR_DEMO = 0;
     public static final int BLUETOOTH = 1;
     public static final int WIFI = 2;
     public static final int MOVEMENT_SENSOR = 3;
+    public static final int NETWORK_SERVICE_DISCOVERY = 4;
 
-    public static final int DEFAULT = MOVEMENT_SENSOR;
+    public static final int DEFAULT = NETWORK_SERVICE_DISCOVERY;
 
     public static final String KEY_ITEM = MainItems.class.getName() + ".ITEM";
 

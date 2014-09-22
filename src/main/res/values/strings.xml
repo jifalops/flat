@@ -30,4 +30,14 @@
     <string name="action_log_scans">Toggle logfile</string>
     <string name="action_scan_interval">Scan interval...</string>
     <string name="action_view_log">View Log</string>
+
+
+
+    <string name="connect">Connect</string>
+
+    <string name="discover">Discover</string>
+
+    <string name="register">Register</string>
+
+    <string name="send">Send</string>
 </resources>

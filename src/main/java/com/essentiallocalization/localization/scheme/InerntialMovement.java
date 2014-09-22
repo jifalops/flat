@@ -119,7 +119,7 @@ public final class InerntialMovement implements SensorEventListener {
         lastEventTime = event.timestamp;
     }
 
-    @Override
+
     public int getSignalType() {
         return Signal.TYPE_INTERNAL;
     }

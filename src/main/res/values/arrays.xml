@@ -5,5 +5,6 @@
         <item>Bluetooth</item>
         <item>Wifi</item>
         <item>Movement sensor</item>
+        <item>Network Service Discovery</item>
     </string-array>
 </resources>

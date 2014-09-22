@@ -13,7 +13,7 @@ public final class FreeSpacePathLoss implements Ranging {
         return Ranging.TYPE_SIGNAL_STRENGTH;
     }
 
-    public double calcFsplRange(double levelInDb, double freqInMHz)    {
+    public static double calcFsplRange(double levelInDb, double freqInMHz)    {
         double exp = (27.55 - (20 * Math.log10(freqInMHz)) + Math.abs(levelInDb)) / 20.0;
         return Math.pow(10.0, exp);
     }

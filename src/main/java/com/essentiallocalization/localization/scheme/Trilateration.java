@@ -12,12 +12,11 @@ import java.util.List;
  * This class assumes a specific set of coordinates for reference nodes.
  * @see <a href='http://en.wikipedia.org/wiki/Trilateration'>wikipedia.org/wiki/Trilateration</a>
  */
-public final class Trilateration implements Scheme {
+public final class Trilateration {
 
     public static final String ARG_REFERENCE_NODES = "ref_nodes";
     public static final String ARG_RANGES = "ranges";
 
-    @Override
     public Node.State calcNewState(Node node, Bundle args) {
         Node[] refnodes = (Node[]) args.get(ARG_REFERENCE_NODES);
         double[] ranges = args.getDoubleArray(ARG_RANGES);
@@ -33,7 +32,7 @@ public final class Trilateration implements Scheme {
         return new Node.State(doTrilateration(positions, ranges), null, System.nanoTime());
     }
 
-    public double[] doTrilateration(double[][] positions, double[] ranges) {
+    public static double[] doTrilateration(double[][] positions, double[] ranges) {
         double[] pos = new double[3];
         pos[0] = calcX(ranges[0], ranges[1], positions[1][0]);
         pos[1] = calcY(ranges[0], ranges[2], positions[2][0], positions[2][1], pos[0]);
@@ -49,7 +48,7 @@ public final class Trilateration implements Scheme {
      * @param r2 Anchor 2's range in meters
      * @param d Anchor 2's X coordinate (distance between anchor 1 and 2).
      */
-    public double calcX(double r1, double r2, double d) {
+    public static double calcX(double r1, double r2, double d) {
         return (r1*r1 - r2*r2 - d*d) / (2*d);
     }
 
@@ -63,7 +62,7 @@ public final class Trilateration implements Scheme {
      * @param j Anchor 3's Y coordinate
      * @param x The nodes X coordinate. See calcX(double,double,double).
      */
-    public double calcY(double r1, double r3, double i, double j, double x) {
+    public static double calcY(double r1, double r3, double i, double j, double x) {
         return ((r1*r1 - r3*r3 + i*i + j*j) / (2*j)) - x*i/j;
     }
 
@@ -75,7 +74,7 @@ public final class Trilateration implements Scheme {
      * @param x The nodes X coordinate. See calcX(double,double,double).
      * @param y The nodes Y coordinate. See calcY(double,double,double).
      */
-    public double calcZ(double r1, double x, double y) {
+    public static double calcZ(double r1, double x, double y) {
         return Math.sqrt(r1 * r1 - x * x - y * y);
     }
 }

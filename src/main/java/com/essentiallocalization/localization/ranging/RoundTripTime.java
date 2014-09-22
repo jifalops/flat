@@ -19,7 +19,7 @@ public class RoundTripTime implements Ranging {
         return Ranging.TYPE_SIGNAL_DELAY;
     }
 
-    @Override
+
     public double estimateDistance(Bundle args) {
         long aSent = args.getLong(ARG_A_SENT);
         long bReceived = args.getLong(ARG_B_RECEIVED);
@@ -31,7 +31,7 @@ public class RoundTripTime implements Ranging {
     /**
      * This function assumes the timestamps have nanosecond precision
      */
-    public double calcRttRange(long aSent, long bReceived, long bSent, long aReceived) {
+    public static double calcRttRange(long aSent, long bReceived, long bSent, long aReceived) {
         long roundTrip = (aReceived - aSent) - (bSent - bReceived);
         double distance = (SPEED_OF_LIGHT_VACUUM * (roundTrip * 1E-9)) / 2;
         return distance;

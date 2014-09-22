@@ -44,7 +44,7 @@ public class BluetoothBeacon extends AbstractSignal {
 
     /**
      * @param args args[0] is a Context used to get the BluetoothManager.
-     *             args[1] is an interval in seconds at which scans will repeat, defaulting to 30 (it takes a while).
+     *             args[1] is an interval in seconds at which scans will repeat, defaulting to 30 (it takes a while, Bluetooth Low Energy is an alternative).
      *                      If a zero is passed, only a single update will be requested.
      */
     @Override
