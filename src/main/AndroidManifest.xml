@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.essentiallocalization"
+    package="com.flat"
     android:versionCode="000400"
     android:versionName="0.4" >
 
@@ -25,7 +25,7 @@
         android:label="@string/app_name"
         android:theme="@style/AppTheme" >
         <activity
-            android:name=".nsd.NsdChatActivity"
+            android:name="com.flat.nsd.NsdChatActivity"
             android:label="@string/app_name">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -33,13 +33,13 @@
             </intent-filter>
         </activity>
         <activity
-            android:name=".app.DetailsActivity"
+            android:name="com.flat.app.DetailsActivity"
             android:uiOptions="splitActionBarWhenNarrow" />
-        <activity android:name=".sensors.RotationVectorDemo" />
+        <activity android:name="com.flat.sensors.RotationVectorDemo" />
         <!--<activity android:name=".nsd.NsdChatActivity" />-->
-        <service android:name=".app.BluetoothConnectionService"/>
-        <service android:name=".sensors.MovementSensorService"/>
-        <service android:name=".util.wifi.ScanResultsService"/>
+        <service android:name="com.flat.app.BluetoothConnectionService"/>
+        <service android:name="com.flat.sensors.MovementSensorService"/>
+        <service android:name="com.flat.util.wifi.ScanResultsService"/>
     </application>
 
 </manifest>
