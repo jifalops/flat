@@ -1,40 +1,24 @@
 package com.flat.logging;
 
-import android.util.Log;
-
 import com.android.volley.AuthFailureError;
 import com.android.volley.Response;
-import com.android.volley.VolleyError;
-import com.android.volley.VolleyLog;
 
-import java.util.HashMap;
 import java.util.Map;
 
 /**
  * Created by Jacob Phillips (10/2014)
  */
-public final class SchemeRequest extends AbstractRequest<SchemeRequest.SchemeData> {
-    public static final String TAG = SchemeRequest.class.getSimpleName();
+public final class SchemeRequest extends AbstractRequest {
+    private static final String TAG = SchemeRequest.class.getSimpleName();
 
-    private final SchemeData params;
+    private final SchemeParams params;
 
-    public SchemeRequest(SchemeData params) {
-        super(SchemeData.class, null, new Response.Listener<SchemeData>() {
-            @Override
-            public void onResponse(SchemeData response) {
-                Log.d(TAG, response.toString());
-            }
-        }, new Response.ErrorListener() {
-            @Override
-            public void onErrorResponse(VolleyError error) {
-                VolleyLog.d(TAG, "Error: " + error.getMessage());
-            }
-        });
-
+    public SchemeRequest(SchemeParams params,  Map headers, Response.Listener listener, Response.ErrorListener errorListener) {
+        super(SchemeParams.class, headers, listener, errorListener);
         this.params = params;
     }
 
-    public static final class SchemeData extends AbstractRequest.GsonData {
+    public static final class SchemeParams extends RequestParams {
         public final String request = "scheme";
 
         public String node_id = "";
@@ -45,7 +29,7 @@ public final class SchemeRequest extends AbstractRequest<SchemeRequest.SchemeDat
     }
 
     @Override
-    protected GsonData getRequest() {
+    RequestParams getRequestParams() {
         return params;
     }
 

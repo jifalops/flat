@@ -1,44 +1,29 @@
 package com.flat.logging;
 
-import android.util.Log;
-
 import com.android.volley.AuthFailureError;
 import com.android.volley.Response;
-import com.android.volley.VolleyError;
-import com.android.volley.VolleyLog;
-import com.flat.util.GsonRequest;
 
 import java.util.Map;
 
 /**
  * Created by Jacob Phillips (10/2014)
  */
-public final class RangingRequest extends AbstractRequest<RangingRequest.RangeData> {
-    public static final String TAG = RangingRequest.class.getSimpleName();
+public final class RangingRequest extends AbstractRequest{
+    private static final String TAG = RangingRequest.class.getSimpleName();
 
-    private final RangeData params;
+    private final RangeParams params;
 
-    public RangingRequest(RangeData params) {
-        super(RangeData.class, null, new Response.Listener<RangeData>() {
-            @Override
-            public void onResponse(RangeData response) {
-                Log.d(TAG, response.toString());
-            }
-        }, new Response.ErrorListener() {
-            @Override
-            public void onErrorResponse(VolleyError error) {
-                VolleyLog.d(TAG, "Error: " + error.getMessage());
-            }
-        });
+    public RangingRequest(RangeParams params, Map headers, Response.Listener listener, Response.ErrorListener errorListener) {
+        super(RangeParams.class, headers, listener, errorListener);
         this.params = params;
     }
 
     @Override
-    protected GsonData getRequest() {
+    RequestParams getRequestParams() {
         return params;
     }
 
-    public static final class RangeData extends AbstractRequest.GsonData {
+    public static final class RangeParams extends RequestParams {
         public final String request = "ranging";
 
         public String node_id;
