@@ -42,16 +42,17 @@ public class Node {
 
 
     private final List<State> history = new ArrayList<State>();
-    private final String name;
+    private final String id;
 
 
-    public Node(String name) {
-        this.name = name;
+    public Node(String id) {
+        this.id = id;
     }
     public Node() {
-        this.name = "";
+        this.id = null;
     }
 
+    public String getId() { return id; }
 
 
     /** Set current state */
