@@ -4,10 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 
-public class Node {
-    /**
-
-     */
+public final class Node {
     public static class State {
         /**
          * <pre>
@@ -33,6 +30,17 @@ public class Node {
             this.timestamp = timestamp;
         }
 
+        public State clone() {
+            return new State(pos, angle, timestamp);
+        }
+
+        /**
+         * @return pos[], angle[], timestamp
+         */
+        public double[] flatten() {
+            return new double[] { pos[0], pos[1], pos[2], angle[0], angle[1], angle[2], timestamp};
+        }
+
         @Override
         public String toString() {
             return String.format("P{%.3f,%.3f,%.3f} θ{%.1f,%.1f,%.1f} T{%d}",
@@ -48,44 +56,50 @@ public class Node {
     public Node(String id) {
         this.id = id;
     }
-    public Node() {
-        this.id = null;
-    }
 
     public String getId() { return id; }
 
 
     /** Set current state */
-    public void setState(State s) {
+    public synchronized void setState(State s) {
         history.add(s);
         notifyNodeChangedListeners();
     }
 
+    /** Get previous (or current) state */
+    public synchronized State getState(int index) {
+        return history.get(index).clone();
+    }
     /** Get current state */
-    public State getState() {
+    public synchronized State getState() {
         return getState(history.size() - 1);
     }
 
-    /** Get previous (or current) state */
-    public State getState(int index) {
-        return history.get(index);
-    }
-
-    public int getStateCount() {
+    public synchronized int getStateCount() {
         return history.size();
     }
 
+
     /**
-     * Helper function for flattening several nodes' positions into a double[][].
+     * Flatten this node's history to a double[][].
      */
-    public static double[][] toPositionList(Node[] nodes) {
-        double[][] positions = new double[nodes.length][3];
-        for (int i=0; i<nodes.length; ++i) {
-            for (int j=0; j<3; ++j) {
-                positions[i][j] = nodes[i].getState().pos[j];
-            }
+    public synchronized double[][] flatten() {
+        double[][] n = new double[history.size()][7];
+        for (int i=0; i<history.size(); ++i) {
+            n[i] = history.get(i).flatten();
         }
-        return positions;
+        return n;
+    }
+
+    /**
+     * Flatten several nodes' current state to a double[][].
+     */
+    public static double[][] flattenStates(Node... nodes) {
+        double[][] n = new double[nodes.length][3];
+        for (int i=0; i<nodes.length; ++i) {
+            n[i] = nodes[i].getState().flatten();
+        }
+        return n;
     }
 
     /**

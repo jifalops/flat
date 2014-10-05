@@ -1,33 +1,19 @@
-package com.flat.localization.scheme;
-
-import android.os.Bundle;
+package com.flat.localization.algorithm;
 
 import com.flat.localization.Node;
 
 /**
  * @author Jacob Phillips
  */
-public final class MinMax {
-
-    public static final String ARG_REFERENCE_NODES = "ref_nodes";
-    public static final String ARG_RANGES = "ranges";
-
-    public Node.State calcNewState(Node node, Bundle args) {
-        Node[] refnodes = (Node[]) args.get(ARG_REFERENCE_NODES);
-        double[] ranges = args.getDoubleArray(ARG_RANGES);
-
-        double[][] positions = Node.toPositionList(refnodes);
-
-        return new Node.State(calcMinMax(positions, ranges), null, System.nanoTime());
-    }
-
+public final class MinMax extends PositionAlgorithm {
     /**
      * Calculate a position based on the Min/Max algorithm (up to three dimensions).
      * @param positions list of reference nodes' coordinates
      * @param ranges linear distance to each reference node
      * @return the new position.
      */
-    public double[] calcMinMax(double[][] positions, double[] ranges) {
+    @Override
+    public double[] findCoords(double[][] positions, double[] ranges) {
         // initialize x, y, and z coordinates.
         double[] min = { Double.MIN_VALUE, Double.MIN_VALUE, Double.MIN_VALUE};
         double[] max = { Double.MAX_VALUE, Double.MAX_VALUE, Double.MAX_VALUE};

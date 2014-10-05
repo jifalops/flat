@@ -3,37 +3,32 @@ package com.flat.localization.ranging;
 import android.os.Bundle;
 
 /**
- * Created by Jake on 9/19/2014.
+ * Ranging algorithms based on propagation delay of the signal.
  */
-public class RoundTripTime implements Ranging {
-
-    public static final String ARG_A_SENT = "a_sent";
-    public static final String ARG_B_RECEIVED = "b_received";
-    public static final String ARG_B_SENT = "b_sent";
-    public static final String ARG_A_RECEIVED = "a_received";
-
-    public static final int SPEED_OF_LIGHT_VACUUM = 299792458; // m/s
-
-    @Override
-    public int getRangingType() {
-        return Ranging.TYPE_SIGNAL_DELAY;
-    }
-
-
-    public double estimateDistance(Bundle args) {
-        long aSent = args.getLong(ARG_A_SENT);
-        long bReceived = args.getLong(ARG_B_RECEIVED);
-        long bSent = args.getLong(ARG_B_SENT);
-        long aReceived = args.getLong(ARG_A_RECEIVED);
-        return calcRttRange(aSent, bReceived, bSent, aReceived);
-    }
+public final class RoundTripTime implements Ranging {
+    private static final int SPEED_OF_LIGHT_VACUUM = 299792458; // m/s
 
     /**
      * This function assumes the timestamps have nanosecond precision
      */
-    public static double calcRttRange(long aSent, long bReceived, long bSent, long aReceived) {
+    public double findDistance(long aSent, long bReceived, long bSent, long aReceived) {
         long roundTrip = (aReceived - aSent) - (bSent - bReceived);
         double distance = (SPEED_OF_LIGHT_VACUUM * (roundTrip * 1E-9)) / 2;
         return distance;
+    }
+
+    @Override
+    public int getType() {
+        return TYPE_SIGNAL_DELAY;
+    }
+
+    @Override
+    public String getNameShort() {
+        return "RTT";
+    }
+
+    @Override
+    public String getNameLong() {
+        return "Round Trip Time";
     }
 }

@@ -6,7 +6,6 @@ import java.util.Set;
 
 public abstract class AbstractSignal implements Signal {
     private Set<Listener> listeners = new HashSet<Listener>(1);
-    protected boolean enabled;
 
     @Override
     public void registerListener(Listener l) {
@@ -28,15 +27,4 @@ public abstract class AbstractSignal implements Signal {
             l.onChange(this, eventType);
         }
     }
-
-    @Override
-    public final boolean isEnabled() {
-        return enabled;
-    }
-
-    /** Remember to set {@code enabled = true} */
-    public abstract void enable(Object... args);
-
-    /** Remember to set {@code enabled = false} */
-    public abstract void disable(Object... args);
 }

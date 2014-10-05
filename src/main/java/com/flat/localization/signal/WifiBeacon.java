@@ -8,6 +8,8 @@ import android.content.IntentFilter;
 import android.net.wifi.ScanResult;
 import android.net.wifi.WifiManager;
 
+import com.flat.localization.ranging.Ranging;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Timer;
@@ -22,47 +24,37 @@ public final class WifiBeacon extends AbstractSignal {
 
     public static final int EVENT_SCAN_RESULTS = 1;
 
+    private boolean enabled;
+
     private Timer timer;
     private List<ScanResult> scanResults = new ArrayList<ScanResult>();
-    public List<ScanResult> getScanResults() {
+
+    private synchronized void setScanResults(List<ScanResult> results) {
+        scanResults = results;
+    }
+    public synchronized List<ScanResult> getScanResults() {
         return scanResults;
     }
 
     /*
-     * Singleton
+     * Simple Singleton
      */
     private WifiBeacon() {}
-    private static WifiBeacon instance;
-    public static WifiBeacon getInstance() {
-        if(instance == null) {
-            instance = new WifiBeacon();
-        }
-        return instance;
-    }
-
-    @Override
-    public int getSignalType() {
-        return Signal.TYPE_ELECTROMAGNETIC;
-    }
+    private static final WifiBeacon instance = new WifiBeacon();
+    public static WifiBeacon getInstance() { return instance; }
 
     /**
-     * @param args args[0] is a Context used to get the WifiManager and start a scan.
-     *             args[1] is an interval in seconds at which scans will repeat, defaulting to 1.
-     *                      If a zero is passed, only a single update will be requested.
+     * @param ctx used to get the WifiManager and start a scan.
+     * @param interval is an interval in seconds at which scans will repeat, defaulting to 1.
+     *                  If a zero is passed, only a single update will be requested.
      */
-    @Override
-    public void enable(Object... args) {
-        Context ctx = (Context) args[0];
+    public void enable(Context ctx, int interval) {
         final WifiManager manager = (WifiManager) ctx.getSystemService(Context.WIFI_SERVICE);
-
-        int scanInterval = 1;
-        if (args.length == 2) scanInterval = (Integer) args[1];
-        scanInterval *= 1000;
 
         ctx.registerReceiver(scanReceiver, scanFilter);
 
         cancelTimer();
-        if (scanInterval == 0) {
+        if (interval == 0) {
             manager.startScan();
         } else {
             timer = new Timer();
@@ -71,20 +63,24 @@ public final class WifiBeacon extends AbstractSignal {
                 public void run() {
                     manager.startScan();
                 }
-            }, 0, scanInterval);
+            }, 0, interval);
         }
         enabled = true;
     }
-
-    /**
-     * @param args args[0] is a Context used to unregister the BroadcastReceiver.
-     */
     @Override
-    public void disable(Object... args) {
+    public void enable(Context ctx) { enable(ctx, 1); }
+
+
+    @Override
+    public void disable(Context ctx) {
         cancelTimer();
-        Context ctx = (Context) args[0];
         ctx.unregisterReceiver(scanReceiver);
         enabled = false;
+    }
+
+    @Override
+    public boolean isEnabled() {
+        return enabled;
     }
 
     private void cancelTimer() {
@@ -97,13 +93,11 @@ public final class WifiBeacon extends AbstractSignal {
     private final BroadcastReceiver scanReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            scanResults = ((WifiManager) context.getSystemService(Context.WIFI_SERVICE)).getScanResults();
-
             // Disable if not recurring
             if (timer == null) {
                 disable(context);
             }
-
+            setScanResults(((WifiManager) context.getSystemService(Context.WIFI_SERVICE)).getScanResults());
             notifyListeners(EVENT_SCAN_RESULTS);
         }
     };

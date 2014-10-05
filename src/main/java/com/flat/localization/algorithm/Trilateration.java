@@ -1,4 +1,4 @@
-package com.flat.localization.scheme;
+package com.flat.localization.algorithm;
 
 import android.os.Bundle;
 
@@ -9,27 +9,9 @@ import com.flat.localization.Node;
  * This class assumes a specific set of coordinates for reference nodes.
  * @see <a href='http://en.wikipedia.org/wiki/Trilateration'>wikipedia.org/wiki/Trilateration</a>
  */
-public final class Trilateration {
-
-    public static final String ARG_REFERENCE_NODES = "ref_nodes";
-    public static final String ARG_RANGES = "ranges";
-
-    public Node.State calcNewState(Node node, Bundle args) {
-        Node[] refnodes = (Node[]) args.get(ARG_REFERENCE_NODES);
-        double[] ranges = args.getDoubleArray(ARG_RANGES);
-
-        // represent refnodes' coordinates in a primative array
-        double[][] positions = new double[refnodes.length][3];
-        for (int i=0; i<refnodes.length; ++i) {
-            for (int j=0; j<3; ++j) {
-                positions[i][j] = refnodes[i].getState().pos[j];
-            }
-        }
-
-        return new Node.State(doTrilateration(positions, ranges), null, System.nanoTime());
-    }
-
-    public static double[] doTrilateration(double[][] positions, double[] ranges) {
+public final class Trilateration extends PositionAlgorithm {
+    @Override
+    public double[] findCoords(double[][] positions, double[] ranges) {
         double[] pos = new double[3];
         pos[0] = calcX(ranges[0], ranges[1], positions[1][0]);
         pos[1] = calcY(ranges[0], ranges[2], positions[2][0], positions[2][1], pos[0]);

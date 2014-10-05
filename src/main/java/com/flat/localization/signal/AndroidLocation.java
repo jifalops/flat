@@ -7,6 +7,11 @@ import android.location.LocationManager;
 import android.os.Bundle;
 
 /**
+ * Can register for updates from one of the three built-in location providers:
+ * {@code LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER, or LocationManager.PASSIVE_PROVIDER}
+ *
+ * Note that the network provider uses both Cellular and WiFi.
+ *
  * Created by Jacob Phillips (09/2014)
  */
 public final class AndroidLocation extends AbstractSignal {
@@ -14,6 +19,8 @@ public final class AndroidLocation extends AbstractSignal {
     public static final int EVENT_STATUS_CHANGE = 2;
     public static final int EVENT_PROVIDER_ENABLED = 3;
     public static final int EVENT_PROVIDER_DISABLED = 4;
+
+    private boolean enabled;
 
     private final String provider;
 
@@ -25,36 +32,33 @@ public final class AndroidLocation extends AbstractSignal {
         this.provider = provider;
     }
 
-
-    @Override
-    public int getSignalType() {
-        return Signal.TYPE_ELECTROMAGNETIC;
-    }
-
     /**
-     * @param args args[0] is a Context used to get the LocationManager.
-     *             args[1] is a Long representing the minimum time between updates, in milliseconds.
-     *             args[2] is a Float representing the minimum distance between updates, in meters.
+     * @param ctx used to get the LocationManager.
+     * @param minTime the minimum time between updates, in milliseconds.
+     * @param minDist the minimum distance between updates, in meters.
      */
-    @Override
-    public void enable(Object... args) {
-        Context ctx = (Context) args[0];
-        long minTime = (Long) args[1];
-        float minDist = (Float) args[2];
+    public void enable(Context ctx, long minTime, float minDist) {
         LocationManager manager = (LocationManager) ctx.getSystemService(Context.LOCATION_SERVICE);
         manager.requestLocationUpdates(provider, minTime, minDist, locationListener);
         enabled = true;
     }
 
-    /**
-     * @param args args[0] is a Context used to get the LocationManager.
-     */
+    /** Get updates as fast as possible (battery drain) */
     @Override
-    public void disable(Object... args) {
-        Context ctx = (Context) args[0];
+    public void enable(Context ctx) {
+        enable(ctx, 0, 0);
+    }
+
+    @Override
+    public void disable(Context ctx) {
         LocationManager manager = (LocationManager) ctx.getSystemService(Context.LOCATION_SERVICE);
         manager.removeUpdates(locationListener);
         enabled = false;
+    }
+
+    @Override
+    public boolean isEnabled() {
+        return enabled;
     }
 
     private final LocationListener locationListener = new LocationListener() {

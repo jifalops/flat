@@ -23,38 +23,26 @@ import java.util.List;
  *
  * Created by Jacob Phillips (09/2014)
  */
-public class Cellular extends AbstractSignal {
+public final class Cellular extends AbstractSignal {
 
     public static final int EVENT_CELL_INFOS = 1;
     public static final int EVENT_CELL_LOCATION = 2;
     public static final int EVENT_CELL_STRENGTH = 3;
 
+    private boolean enabled;
+
     private int phoneType;
 
     /*
-     * Singleton
+     * Simple Singleton
      */
     private Cellular() {}
-    private static Cellular instance;
-    public static Cellular getInstance() {
-        if(instance == null) {
-            instance = new Cellular();
-        }
-        return instance;
-    }
+    private static final Cellular instance = new Cellular();
+    public static Cellular getInstance() { return instance; }
 
 
     @Override
-    public int getSignalType() {
-        return Signal.TYPE_ELECTROMAGNETIC;
-    }
-
-    /**
-     * @param args args[0] is a Context used to get the TelephonyManager.
-     */
-    @Override
-    public void enable(Object... args) {
-        Context ctx = (Context) args[0];
+    public void enable(Context ctx) {
         TelephonyManager manager = (TelephonyManager) ctx.getSystemService(Context.TELEPHONY_SERVICE);
         phoneType = manager.getPhoneType();
         manager.listen(cellListener,
@@ -64,15 +52,16 @@ public class Cellular extends AbstractSignal {
         enabled = true;
     }
 
-    /**
-     * @param args args[0] is a Context used to get the TelephonyManager.
-     */
     @Override
-    public void disable(Object... args) {
-        Context ctx = (Context) args[0];
+    public void disable(Context ctx) {
         TelephonyManager manager = (TelephonyManager) ctx.getSystemService(Context.TELEPHONY_SERVICE);
         manager.listen(cellListener, PhoneStateListener.LISTEN_NONE);
         enabled = false;
+    }
+
+    @Override
+    public boolean isEnabled() {
+        return enabled;
     }
 
     private final PhoneStateListener cellListener = new PhoneStateListener() {

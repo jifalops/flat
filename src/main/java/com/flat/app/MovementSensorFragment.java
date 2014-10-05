@@ -10,7 +10,7 @@ import android.view.ViewGroup;
 import android.widget.TextView;
 
 import com.flat.R;
-import com.flat.localization.scheme.InerntialMovement;
+import com.flat.localization.algorithm.InerntialMovement;
 import com.flat.sensors.MovementSensorService;
 import com.flat.util.app.PersistentIntentService;
 import com.flat.util.app.PersistentIntentServiceFragment;

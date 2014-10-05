@@ -16,7 +16,7 @@ import java.util.TimerTask;
 /**
  * Created by Jacob Phillips (09/2014)
  */
-public class BluetoothBeacon extends AbstractSignal {
+public final class BluetoothBeacon extends AbstractSignal {
     public static final int EVENT_DEVICE_DISCOVERED = 1;
 
     private Timer timer;
@@ -24,43 +24,28 @@ public class BluetoothBeacon extends AbstractSignal {
     public Map<BluetoothDevice, Short> getScanResults() {
         return scanResults;
     }
+    private boolean enabled;
 
     /*
-     * Singleton
+     * Simple Singleton
      */
     private BluetoothBeacon() {}
-    private static BluetoothBeacon instance;
-    public static BluetoothBeacon getInstance() {
-        if(instance == null) {
-            instance = new BluetoothBeacon();
-        }
-        return instance;
-    }
-
-    @Override
-    public int getSignalType() {
-        return Signal.TYPE_ELECTROMAGNETIC;
-    }
+    private static final BluetoothBeacon instance = new BluetoothBeacon();
+    public static BluetoothBeacon getInstance() { return instance; }
 
     /**
-     * @param args args[0] is a Context used to get the BluetoothManager.
-     *             args[1] is an interval in seconds at which scans will repeat, defaulting to 30 (it takes a while, Bluetooth Low Energy is an alternative).
+     * @param ctx used to get the BluetoothManager.
+     * @param interval an interval in seconds at which scans will repeat, defaulting to 30 (it takes a while, Bluetooth Low Energy is an alternative).
      *                      If a zero is passed, only a single update will be requested.
      */
-    @Override
-    public void enable(Object... args) {
-        Context ctx = (Context) args[0];
+    public void enable(Context ctx, int interval) {
         BluetoothManager manager = (BluetoothManager) ctx.getSystemService(Context.BLUETOOTH_SERVICE);
         final BluetoothAdapter me = manager.getAdapter();
 
         ctx.registerReceiver(scanReceiver, scanFilter);
 
-        int scanInterval = 30;
-        if (args.length == 2) scanInterval = (Integer) args[1];
-        scanInterval *= 1000;
-
         cancelTimer();
-        if (scanInterval == 0) {
+        if (interval == 0) {
             me.startDiscovery();
         } else {
             timer = new Timer();
@@ -69,19 +54,28 @@ public class BluetoothBeacon extends AbstractSignal {
                 public void run() {
                     me.startDiscovery();
                 }
-            }, 0, scanInterval);
+            }, 0, interval);
         }
         enabled = true;
     }
 
     @Override
-    public void disable(Object... args) {
-        Context ctx = (Context) args[0];
+    public void enable(Context ctx) {
+        enable(ctx, 30);
+    }
+
+    @Override
+    public void disable(Context ctx) {
         BluetoothManager manager = (BluetoothManager) ctx.getSystemService(Context.BLUETOOTH_SERVICE);
         BluetoothAdapter me = manager.getAdapter();
         me.cancelDiscovery();
         ctx.unregisterReceiver(scanReceiver);
         enabled = false;
+    }
+
+    @Override
+    public boolean isEnabled() {
+        return enabled;
     }
 
     private void cancelTimer() {
@@ -94,6 +88,10 @@ public class BluetoothBeacon extends AbstractSignal {
 
     private final BroadcastReceiver scanReceiver = new BroadcastReceiver() {
         public void onReceive(Context context, Intent intent) {
+            // Disable if not recurring
+            if (timer == null) {
+                disable(context);
+            }
             BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
             short rssi = intent.getShortExtra(BluetoothDevice.EXTRA_RSSI, Short.MIN_VALUE);
             scanResults.put(device, rssi);

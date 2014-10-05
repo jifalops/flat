@@ -15,19 +15,19 @@ import java.util.Map;
 /**
  * Created by Jacob Phillips (10/2014)
  */
-public final class SchemeRequestTest {
+final class SchemeRequestTest {
     static final String TAG = SchemeRequestTest.class.getSimpleName();
 
     Map<String, SchemeRequest> requests = new HashMap<String, SchemeRequest>();
     final RequestQueue queue;
 
-    public SchemeRequestTest(Context ctx) {
+    SchemeRequestTest(Context ctx) {
         Log.d(TAG, "Starting queue.");
         queue = Volley.newRequestQueue(ctx);
         queue.start();
     }
 
-    public void run(SchemeRequest.SchemeParams... params) {
+    void run(SchemeRequest.SchemeParams... params) {
         Log.d(TAG, "Running unit test.");
         for (SchemeRequest.SchemeParams p : params) {
             queue(p);
@@ -43,7 +43,6 @@ public final class SchemeRequestTest {
             }
         }
     }
-    public void run() { run(null); }
 
 
     void queue(SchemeRequest.SchemeParams p) {
@@ -89,12 +88,12 @@ public final class SchemeRequestTest {
         Log.d(TAG, "Queued " + req.getTag());
     }
 
-    public void cancel(String tag) {
+    void cancel(String tag) {
         Log.d(TAG, "Cancelling " + requests.get(tag));
         queue.cancelAll(requests.get(tag));
     }
 
-    public void cancelAll() {
+    void cancelAll() {
         Log.d(TAG, "Cancelling all.");
         queue.cancelAll(null);
     }

@@ -7,10 +7,14 @@ import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 
-public final class InternalSensor extends AbstractSignal {
+/**
+ * This can represent any of the Android sensors.
+ */
+public final class AndroidSensor extends AbstractSignal {
     public static final int EVENT_SENSOR_CHANGE = 1;
     public static final int EVENT_ACCURACY_CHANGE = 2;
 
+    private boolean enabled;
     private final int sensorType;
 
     // Event paramaters
@@ -22,7 +26,7 @@ public final class InternalSensor extends AbstractSignal {
     /**
      * @param sensorType one of the {@code Sensor.TYPE_} constants.
      */
-    public InternalSensor(int sensorType) {
+    public AndroidSensor(int sensorType) {
         this.sensorType = sensorType;
     }
 
@@ -34,38 +38,30 @@ public final class InternalSensor extends AbstractSignal {
     public long getTimestamp() { return timestamp; }
     public float[] getValues() { return values; }
 
-
-    @Override
-    public int getSignalType() {
-        return Signal.TYPE_INTERNAL;
-    }
-
     /**
-     * @param args args[0] is a Context used to get the SensorManager.
-     *             args[1] is the update rate in micro seconds, defaulting to 30 updates per second.
+     * @param ctx Used to get the SensorManager.
+     * @param rate The update rate in micro seconds, defaulting to 30 updates per second.
      */
-    @Override
-    public void enable(Object... args) {
-        Context ctx = (Context) args[0];
-        int rateUs = 1000000 / 30;
-        if (args.length == 2) {
-            rateUs = (Integer) args[1];
-        }
+    public void enable(Context ctx, int rate) {
         SensorManager manager = (SensorManager) ctx.getSystemService(Context.SENSOR_SERVICE);
-        manager.registerListener(sensorListener, manager.getDefaultSensor(sensorType), rateUs);
+        manager.registerListener(sensorListener, manager.getDefaultSensor(sensorType), rate);
         enabled = true;
     }
-
-
-    /**
-     * @param args args[0] is a Context used to get the SensorManager.
-     */
     @Override
-    public void disable(Object... args) {
-        Context ctx = (Context) args[0];
+    public void enable(Context ctx) {
+        enable(ctx, 1000000/30);
+    }
+
+    @Override
+    public void disable(Context ctx) {
         SensorManager manager = (SensorManager) ctx.getSystemService(Context.SENSOR_SERVICE);
         manager.unregisterListener(sensorListener);
         enabled = false;
+    }
+
+    @Override
+    public boolean isEnabled() {
+        return enabled;
     }
 
     private final SensorEventListener sensorListener = new SensorEventListener() {
@@ -81,8 +77,8 @@ public final class InternalSensor extends AbstractSignal {
 
         @Override
         public void onAccuracyChanged(Sensor sensor, int accuracy) {
-            InternalSensor.this.sensor = sensor;
-            InternalSensor.this.accuracy = accuracy;
+            AndroidSensor.this.sensor = sensor;
+            AndroidSensor.this.accuracy = accuracy;
             notifyListeners(EVENT_ACCURACY_CHANGE);
         }
     };

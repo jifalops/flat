@@ -1,14 +1,16 @@
 package com.flat.localization.signal;
 
-public interface Signal {
-    int TYPE_INTERNAL = 1;
-    int TYPE_ELECTROMAGNETIC = 2;
-    int TYPE_MECHANINCAL = 3;
-    int getSignalType();
+import android.content.Context;
 
-    /** Enable updates from signal */
-    void enable(Object... args);
-    void disable(Object... args);
+import com.flat.localization.ranging.Ranging;
+
+public interface Signal {
+    /**
+     * Enable updates from a Signal. Most will need to use a Context to access the signal source.
+     * Additional arguments can be handled with method overloading.
+     */
+    void enable(Context ctx);
+    void disable(Context ctx);
     boolean isEnabled();
 
     /*
