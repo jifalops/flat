@@ -2,7 +2,6 @@ package com.flat.localization.signal;
 
 import android.content.Context;
 
-import com.flat.localization.ranging.Ranging;
 
 public interface Signal {
     /**

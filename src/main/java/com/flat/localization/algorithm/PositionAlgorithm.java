@@ -9,7 +9,7 @@ public abstract class PositionAlgorithm implements LocationAlgorithm {
 
     @Override
     public final Node.State apply(Node me, Node[] nodes, double[] ranges) {
-        double[] coords = findCoords(Node.flattenStates(nodes), ranges);
+        double[] coords = findCoords(Node.toPositionArray(nodes), ranges);
         return new Node.State(coords, me.getState().angle, System.nanoTime());
     }
 

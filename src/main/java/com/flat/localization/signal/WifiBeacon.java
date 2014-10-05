@@ -8,7 +8,6 @@ import android.content.IntentFilter;
 import android.net.wifi.ScanResult;
 import android.net.wifi.WifiManager;
 
-import com.flat.localization.ranging.Ranging;
 
 import java.util.ArrayList;
 import java.util.List;

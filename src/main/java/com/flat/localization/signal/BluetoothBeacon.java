@@ -24,6 +24,10 @@ public final class BluetoothBeacon extends AbstractSignal {
     public Map<BluetoothDevice, Short> getScanResults() {
         return scanResults;
     }
+    private BluetoothDevice lastDevice;
+    public BluetoothDevice getMostRecentDevice() {
+        return lastDevice;
+    }
     private boolean enabled;
 
     /*
@@ -95,6 +99,7 @@ public final class BluetoothBeacon extends AbstractSignal {
             BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
             short rssi = intent.getShortExtra(BluetoothDevice.EXTRA_RSSI, Short.MIN_VALUE);
             scanResults.put(device, rssi);
+            lastDevice = device;
             notifyListeners(EVENT_DEVICE_DISCOVERED);
         }
     };

@@ -3,11 +3,16 @@ package com.flat.localization;
 import android.content.Context;
 import android.hardware.Sensor;
 import android.location.LocationManager;
+import android.net.wifi.ScanResult;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
+import android.os.Bundle;
 import android.util.Pair;
 
-import com.flat.localization.ranging.LinearAcceleration;
+import com.flat.internal.Internal;
+import com.flat.localization.algorithm.MinMax;
+import com.flat.localization.ranging.InternalSensor;
+import com.flat.localization.ranging.SignalStrength;
 import com.flat.localization.signal.AndroidLocation;
 import com.flat.localization.signal.AndroidSensor;
 import com.flat.localization.signal.BluetoothBeacon;
@@ -27,6 +32,7 @@ import java.util.Map;
 public final class Controller {
     final Node me;
     final Model model = Model.getInstance();
+    final Bundle extras = new Bundle();
 
     /*
      * Singleton
@@ -45,7 +51,6 @@ public final class Controller {
         }
         return instance;
     }
-
 
 
 
@@ -112,13 +117,23 @@ public final class Controller {
 
 
     void initialize() {
+
+
+
         final AndroidSensor accel = new AndroidSensor(Sensor.TYPE_LINEAR_ACCELERATION);
         accel.registerListener(new Signal.Listener() {
             @Override
             public void onChange(Signal signal, int eventType) {
+                Node.State state = new Node.State();
+                state.ranAlg = InternalSensor.LINEAR_ACCELERATION;
+                state.timestamp = accel.getTimestamp();
                 switch (eventType) {
                     case AndroidSensor.EVENT_SENSOR_CHANGE:
+                        long last = extras.getLong(state.ranAlg);
+                        extras.putLong(state.ranAlg, state.timestamp);
+                        state.pos = InternalSensor.linearAcceleration(accel.getValues(), state.timestamp - last);
 
+                        me.addPending(state);
                         break;
                     case AndroidSensor.EVENT_ACCURACY_CHANGE:
 
@@ -126,12 +141,107 @@ public final class Controller {
                 }
             }
         });
-        model.signals.put(new AndroidSensor(Sensor.TYPE_LINEAR_ACCELERATION), new Pair<String, Runnable>())
+        model.signals.put(accel, InternalSensor.LINEAR_ACCELERATION);
+
+
+
+
+
+        final AndroidSensor rotv = new AndroidSensor(Sensor.TYPE_ROTATION_VECTOR);
+        rotv.registerListener(new Signal.Listener() {
+            @Override
+            public void onChange(Signal signal, int eventType) {
+                Node.State state = new Node.State();
+                state.ranAlg = InternalSensor.ROTATION_VECTOR;
+                state.timestamp = rotv.getTimestamp();
+                switch (eventType) {
+                    case AndroidSensor.EVENT_SENSOR_CHANGE:
+                        // Try to get current rotation vector if it exists
+                        float[] rot = extras.getFloatArray(state.ranAlg);
+                        rot = InternalSensor.rotationVector(rot, rotv.getValues());
+                        extras.putFloatArray(state.ranAlg, rot);
+
+                        state.angle = new double[]{
+                                rot[0] * InternalSensor.RAD_TO_DEG, rot[1] * InternalSensor.RAD_TO_DEG, rot[2] * InternalSensor.RAD_TO_DEG
+                        };
+
+                        me.addPending(state);
+                        break;
+                    case AndroidSensor.EVENT_ACCURACY_CHANGE:
+
+                        break;
+                }
+            }
+        });
+        model.signals.put(rotv, InternalSensor.ROTATION_VECTOR);
+
+
+
+        final BluetoothBeacon bt = BluetoothBeacon.getInstance();
+        bt.registerListener(new Signal.Listener() {
+            @Override
+            public void onChange(Signal signal, int eventType) {
+                Node.State state = new Node.State();
+                state.ranAlg = SignalStrength.FREE_SPACE_PATH_LOSS;
+                state.timestamp = System.nanoTime();
+                switch (eventType) {
+                    case BluetoothBeacon.EVENT_DEVICE_DISCOVERED:
+                        short rssi = bt.getScanResults().get(bt.getMostRecentDevice());
+                        state.range = SignalStrength.freeSpacePathLoss((double) rssi, 2400.0);
+
+                        // TODO npe
+                        String mac = bt.getMostRecentDevice().getAddress();
+                        if (model.nodes.get(mac) == null) {
+                            model.nodes.put(mac, new Node(mac));
+                        }
+                        model.nodes.get(mac).addPending(state);
+                        break;
+                }
+            }
+        });
+        model.signals.put(bt, SignalStrength.FREE_SPACE_PATH_LOSS);
+
+
+
+
+        final WifiBeacon wifi = WifiBeacon.getInstance();
+        wifi.registerListener(new Signal.Listener() {
+            @Override
+            public void onChange(Signal signal, int eventType) {
+                Node.State state = new Node.State();
+                state.ranAlg = SignalStrength.FREE_SPACE_PATH_LOSS;
+                switch (eventType) {
+                    case WifiBeacon.EVENT_SCAN_RESULTS:
+                        for (ScanResult sr : wifi.getScanResults()) {
+                            Node.State s = new Node.State(state);
+                            s.timestamp = sr.timestamp;
+                            s.range = SignalStrength.freeSpacePathLoss(sr.level, sr.frequency);
+                            if (model.nodes.get(sr.BSSID) == null) {
+                                model.nodes.put(sr.BSSID, new Node(sr.BSSID));
+                            }
+                            model.nodes.get(sr.BSSID).addPending(s);
+                        }
+                        break;
+                }
+            }
+        });
+        model.signals.put(wifi, SignalStrength.FREE_SPACE_PATH_LOSS);
+
+
+
     }
 
     static String getWifiMac(Context ctx) {
         WifiManager manager = (WifiManager) ctx.getSystemService(Context.WIFI_SERVICE);
         WifiInfo info = manager.getConnectionInfo();
         return info.getMacAddress();
+    }
+
+    static double[] add (double[] a, double[] b) {
+        double[] sum = new double[a.length];
+        for (int i=0; i<a.length; ++i) {
+            sum[i] = a[i] + b[i];
+        }
+        return sum;
     }
 }

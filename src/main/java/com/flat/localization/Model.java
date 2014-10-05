@@ -6,11 +6,12 @@ import android.net.wifi.WifiManager;
 import android.util.Pair;
 
 import com.flat.localization.algorithm.LocationAlgorithm;
-import com.flat.localization.ranging.Ranging;
 import com.flat.localization.signal.Signal;
 import com.flat.util.CsvBuffer;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -24,14 +25,19 @@ public class Model {
     private static final Model instance = new Model();
     public static Model getInstance() { return instance; }
 
+
+     /** Signal chooser (string to describe ranging algorithm) */
+    final Map<Signal, String> signals = new HashMap<Signal, String>();
+
     /** Known nodes. */
     final Map<String, Node> nodes = new HashMap<String, Node>();
 
-    /** Signal chooser (string to describe runnable) */
-    final Map<Signal, Pair<String, Runnable>> signals = new HashMap<Signal, Pair<String, Runnable>>();
-
     /** Algorithm chooser */
     final Map<LocationAlgorithm, Boolean> algorithms = new HashMap<LocationAlgorithm, Boolean>();
+
+
+
+
 
     /** node_id	remote_node_id	algorithm	estimate	actual	node_time */
     final CsvBuffer rangeLog = new CsvBuffer();
