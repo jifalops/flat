@@ -52,74 +52,7 @@ public final class Controller {
         return instance;
     }
 
-
-
-
-    private final Signal.Listener signalListener = new Signal.Listener() {
-        @Override
-        public void onChange(Signal signal, int eventType) {
-            if (signal instanceof AndroidLocation) {
-                AndroidLocation loc = (AndroidLocation) signal;
-                switch (eventType) {
-                    case AndroidLocation.EVENT_LOCATION_CHANGE:
-                        //model.signals.get(signal).second.run();
-                        break;
-                    case AndroidLocation.EVENT_STATUS_CHANGE:
-
-                        break;
-                    case AndroidLocation.EVENT_PROVIDER_ENABLED:
-
-                        break;
-                    case AndroidLocation.EVENT_PROVIDER_DISABLED:
-
-                        break;
-                }
-            } else if (signal instanceof AndroidSensor) {
-                AndroidSensor sensor = (AndroidSensor) signal;
-                switch (eventType) {
-                    case AndroidSensor.EVENT_SENSOR_CHANGE:
-
-                        break;
-                    case AndroidSensor.EVENT_ACCURACY_CHANGE:
-
-                        break;
-                }
-            } else if (signal instanceof BluetoothBeacon) {
-                BluetoothBeacon bt = (BluetoothBeacon) signal;
-                switch (eventType) {
-                    case BluetoothBeacon.EVENT_DEVICE_DISCOVERED:
-
-                        break;
-                }
-            } else if (signal instanceof Cellular) {
-                Cellular cell = (Cellular) signal;
-                switch (eventType) {
-                    case Cellular.EVENT_CELL_STRENGTH:
-
-                        break;
-                    case Cellular.EVENT_CELL_LOCATION:
-
-                        break;
-                    case Cellular.EVENT_CELL_INFOS:
-
-                        break;
-                }
-            } else if (signal instanceof WifiBeacon) {
-                WifiBeacon wifi = (WifiBeacon) signal;
-                switch (eventType) {
-                    case WifiBeacon.EVENT_SCAN_RESULTS:
-
-                        break;
-                }
-            }
-        }
-    };
-
-
     void initialize() {
-
-
-
         final AndroidSensor accel = new AndroidSensor(Sensor.TYPE_LINEAR_ACCELERATION);
         accel.registerListener(new Signal.Listener() {
             @Override
@@ -142,8 +75,6 @@ public final class Controller {
             }
         });
         model.signals.put(accel, InternalSensor.LINEAR_ACCELERATION);
-
-
 
 
 
@@ -202,8 +133,6 @@ public final class Controller {
         model.signals.put(bt, SignalStrength.FREE_SPACE_PATH_LOSS);
 
 
-
-
         final WifiBeacon wifi = WifiBeacon.getInstance();
         wifi.registerListener(new Signal.Listener() {
             @Override
@@ -226,10 +155,9 @@ public final class Controller {
             }
         });
         model.signals.put(wifi, SignalStrength.FREE_SPACE_PATH_LOSS);
-
-
-
     }
+
+    // TODO periodic LA updates by checking pending states
 
     static String getWifiMac(Context ctx) {
         WifiManager manager = (WifiManager) ctx.getSystemService(Context.WIFI_SERVICE);
