@@ -1,8 +1,4 @@
-package com.flat.localization.algorithm;
-
-import android.os.Bundle;
-
-import com.flat.localization.Node;
+package com.flat.localization.scheme;
 
 /**
  * @author Jacob Phillips
@@ -10,6 +6,11 @@ import com.flat.localization.Node;
  * @see <a href='http://en.wikipedia.org/wiki/Trilateration'>wikipedia.org/wiki/Trilateration</a>
  */
 public final class Trilateration extends PositionAlgorithm {
+    @Override
+    public String getName() {
+        return "Trilat.";
+    }
+
     @Override
     public double[] findCoords(double[][] positions, double[] ranges) {
         double[] pos = new double[3];

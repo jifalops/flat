@@ -142,7 +142,7 @@ public class PacketConnection extends StreamConnection implements PacketList, St
 
 
     //
-    // StreamConnection.Listener methods
+    // StreamConnection.SignalListener methods
     //
 
     @Override

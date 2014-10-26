@@ -5,6 +5,11 @@ import android.content.Context;
 
 public interface Signal {
     /**
+     * Each signal must have it's own unique name.
+     */
+    String getName();
+
+    /**
      * Enable updates from a Signal. Most will need to use a Context to access the signal source.
      * Additional arguments can be handled with method overloading.
      */
@@ -15,10 +20,10 @@ public interface Signal {
     /*
      * Allow other objects to react to signal changes.
      */
-    interface Listener {
+    interface SignalListener {
         void onChange(Signal signal, int eventType);
     }
-    void registerListener(Listener l);
-    void unregisterListener(Listener l);
+    void registerListener(SignalListener l);
+    void unregisterListener(SignalListener l);
     void notifyListeners(int eventType);
 }

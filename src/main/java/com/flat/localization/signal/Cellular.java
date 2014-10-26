@@ -36,7 +36,7 @@ public final class Cellular extends AbstractSignal {
     /*
      * Simple Singleton
      */
-    private Cellular() {}
+    private Cellular() { super("Cellular"); }
     private static final Cellular instance = new Cellular();
     public static Cellular getInstance() { return instance; }
 

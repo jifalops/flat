@@ -28,7 +28,8 @@ public final class AndroidLocation extends AbstractSignal {
      * @param provider One of the {@code LocationManager._PROVIDER}.
      *                  (LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER, LocationManager.PASSIVE_PROVIDER)
      */
-    public AndroidLocation(String provider) {
+    public AndroidLocation(String name, String provider) {
+        super(name);
         this.provider = provider;
     }
 

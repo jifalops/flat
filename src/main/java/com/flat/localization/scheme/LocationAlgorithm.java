@@ -1,4 +1,4 @@
-package com.flat.localization.algorithm;
+package com.flat.localization.scheme;
 
 import com.flat.localization.Node;
 
@@ -6,5 +6,6 @@ import com.flat.localization.Node;
  * Created by Jacob Phillips (10/2014)
  */
 public interface LocationAlgorithm {
-    Node.State apply(Node me, Node[] nodes, double[] ranges);
+    Node.State apply(Node target, Node... references);
+    String getName();
 }

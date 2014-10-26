@@ -1,11 +1,14 @@
-package com.flat.localization.algorithm;
-
-import com.flat.localization.Node;
+package com.flat.localization.scheme;
 
 /**
  * @author Jacob Phillips
  */
 public final class MinMax extends PositionAlgorithm {
+    @Override
+    public String getName() {
+        return "MinMax";
+    }
+
     /**
      * Calculate a position based on the Min/Max algorithm (up to three dimensions).
      * @param positions list of reference nodes' coordinates

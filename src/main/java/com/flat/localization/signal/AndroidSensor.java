@@ -26,7 +26,8 @@ public final class AndroidSensor extends AbstractSignal {
     /**
      * @param sensorType one of the {@code Sensor.TYPE_} constants.
      */
-    public AndroidSensor(int sensorType) {
+    public AndroidSensor(String name, int sensorType) {
+        super(name);
         this.sensorType = sensorType;
     }
 

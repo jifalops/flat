@@ -38,7 +38,7 @@ public final class WifiBeacon extends AbstractSignal {
     /*
      * Simple Singleton
      */
-    private WifiBeacon() {}
+    private WifiBeacon() { super("WiFi-beacon"); }
     private static final WifiBeacon instance = new WifiBeacon();
     public static WifiBeacon getInstance() { return instance; }
 

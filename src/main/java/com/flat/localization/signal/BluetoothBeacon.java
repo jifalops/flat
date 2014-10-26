@@ -33,7 +33,7 @@ public final class BluetoothBeacon extends AbstractSignal {
     /*
      * Simple Singleton
      */
-    private BluetoothBeacon() {}
+    private BluetoothBeacon() { super("BT-beacon"); }
     private static final BluetoothBeacon instance = new BluetoothBeacon();
     public static BluetoothBeacon getInstance() { return instance; }
 

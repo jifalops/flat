@@ -1,4 +1,4 @@
-package com.flat.localization.algorithm;
+package com.flat.localization.scheme;
 
 import com.flat.localization.Node;
 
@@ -8,11 +8,12 @@ import com.flat.localization.Node;
 public abstract class PositionAlgorithm implements LocationAlgorithm {
 
     @Override
-    public final Node.State apply(Node me, Node[] nodes, double[] ranges) {
+    public final Node.State apply(Node target, Node... references) {
         Node.State s = new Node.State();
-        s.pos = findCoords(Node.toPositionArray(nodes), ranges);
-        s.angle = me.getState().angle;
-        s.timestamp = System.nanoTime();
+        s.algorithm = getName();
+        s.pos = findCoords(Node.toPositionArray(references), Node.toRangeArray(references));
+        s.angle = target.getState().angle;
+        s.time = System.nanoTime();
         return s;
     }
 

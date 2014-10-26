@@ -5,7 +5,7 @@ import android.content.Intent;
 import android.hardware.SensorManager;
 import android.util.Log;
 
-import com.flat.localization.algorithm.InerntialMovement;
+import com.flat.localization.scheme.InerntialMovement;
 import com.flat.util.CsvBuffer;
 import com.flat.util.app.PersistentIntentService;
 

@@ -1,47 +1,50 @@
 package com.flat.localization;
 
-import android.content.Context;
-import android.net.wifi.WifiInfo;
-import android.net.wifi.WifiManager;
-import android.util.Pair;
-
-import com.flat.localization.algorithm.LocationAlgorithm;
+import com.flat.localization.ranging.SignalProcessor;
+import com.flat.localization.scheme.LocationAlgorithm;
 import com.flat.localization.signal.Signal;
-import com.flat.util.CsvBuffer;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 /**
- * Created by Jacob Phillips (10/2014)
+ * The Model contains the known nodes, which signals to use, and which location algorithms to use.
  */
 public class Model {
     /*
      * Simple Singleton
      */
-    private Model() {}
+    private Model() { initialize(); }
     private static final Model instance = new Model();
     public static Model getInstance() { return instance; }
 
-
-     /** Signal chooser (string to describe ranging algorithm) */
-    final Map<Signal, String> signals = new HashMap<Signal, String>();
-
-    /** Known nodes. */
+    /**
+     * Known nodes. The string is the node.id(), it is kept in a map so we dont need to loop through
+     * all nodes every time we input is received from them.
+     */
     final Map<String, Node> nodes = new HashMap<String, Node>();
 
-    /** Algorithm chooser */
+    /** All Signals and which ranging algorithms they can use, and whether it is enabled by the user */
+    final Map<Signal, Map<SignalProcessor, Boolean>> signals = new HashMap<Signal, Map<SignalProcessor, Boolean>>();
+
+    /** All LocationAlgorithms and whether each is enabled by the user */
     final Map<LocationAlgorithm, Boolean> algorithms = new HashMap<LocationAlgorithm, Boolean>();
 
+    /** Location algorithms that can be applied to each node */
+    final Map<Node, List<LocationAlgorithm>> nodeAlgorithms = new HashMap<Node, List<LocationAlgorithm>>();
 
+    private void initialize() {
 
+    }
 
+    /*
+     * These correspond to the logging database.
+     */
 
-    /** node_id	remote_node_id	algorithm	estimate	actual	node_time */
-    final CsvBuffer rangeLog = new CsvBuffer();
-
-    /** node_id	algorithm	node_time	x	y	z	a	b	c */
-    final CsvBuffer algLog = new CsvBuffer();
+//    /** node_id	remote_node_id	algorithm	estimate	actual	node_time node_datetime */
+//    final CsvBuffer rangeLog = new CsvBuffer();
+//
+//    /** node_id	algorithm	node_time node_datetime	x	y	z	a	b	c */
+//    final CsvBuffer algLog = new CsvBuffer();
 }
