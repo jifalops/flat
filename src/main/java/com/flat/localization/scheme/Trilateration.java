@@ -2,7 +2,8 @@ package com.flat.localization.scheme;
 
 /**
  * @author Jacob Phillips
- * This class assumes a specific set of coordinates for reference nodes.
+ * This class assumes a specific set of coordinates for reference nodes:
+ * Anchor1=(0,0); Anchor2=(x,0); Anchor3=(x,y)
  * @see <a href='http://en.wikipedia.org/wiki/Trilateration'>wikipedia.org/wiki/Trilateration</a>
  */
 public final class Trilateration extends PositionAlgorithm {
@@ -47,7 +48,7 @@ public final class Trilateration extends PositionAlgorithm {
     }
 
     /**
-     * Calculate the Z coordinate for a node's position using information
+     * Calculate the (plus or minus) Z coordinate for a node's position using information
      * about anchor nodes.
      * @see <a href='http://en.wikipedia.org/wiki/Trilateration'>wikipedia.org/wiki/Trilateration</a>
      * @param r1 Anchor 1's range in meters

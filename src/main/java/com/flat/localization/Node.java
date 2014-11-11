@@ -5,11 +5,9 @@ import java.util.List;
 
 
 public final class Node {
-    public static final int RANGE = 1;
-    public static final int STATE = 2;
-
     public static final class Range {
         public double dist;
+        public double actual = -1; // when given
         public String signal;
         public String algorithm;
         public long time;
@@ -32,7 +30,7 @@ public final class Node {
      */
     public static final class State {
         public double pos[];
-        public double angle[];
+        public float angle[];
         public String algorithm;
         public long time;
     }
@@ -49,7 +47,11 @@ public final class Node {
     public Node(String id) {
         this.id = id;
     }
-    public String getId() { return id; }
+
+
+    public String getId() {
+        return id;
+    }
 
     public synchronized boolean isFixed() { return fixed; }
     public synchronized void setFixed(boolean fixed) { this.fixed = fixed; }
@@ -103,11 +105,11 @@ public final class Node {
         return getState(stateHistory.size() - 1);
     }
 
-    public synchronized int getRangeCount() {
+    public synchronized int getRangeHistorySize() {
         return rangeHistory.size();
     }
 
-    public synchronized int getStateCount() {
+    public synchronized int getStateHistorySize() {
         return stateHistory.size();
     }
 

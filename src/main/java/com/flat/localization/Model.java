@@ -1,17 +1,22 @@
 package com.flat.localization;
 
+import android.util.Log;
+
 import com.flat.localization.ranging.SignalProcessor;
 import com.flat.localization.scheme.LocationAlgorithm;
 import com.flat.localization.signal.Signal;
+import com.flat.localization.util.Calc;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 /**
  * The Model contains the known nodes, which signals to use, and which location algorithms to use.
  */
-public class Model {
+public final class Model {
     /*
      * Simple Singleton
      */
@@ -21,22 +26,190 @@ public class Model {
 
     /**
      * Known nodes. The string is the node.id(), it is kept in a map so we dont need to loop through
-     * all nodes every time we input is received from them.
+     * all nodes every time input is received.
      */
-    final Map<String, Node> nodes = new HashMap<String, Node>();
+     final Map<String, Node> nodes = new HashMap<String, Node>();
 
-    /** All Signals and which ranging algorithms they can use, and whether it is enabled by the user */
-    final Map<Signal, Map<SignalProcessor, Boolean>> signals = new HashMap<Signal, Map<SignalProcessor, Boolean>>();
+    /** All Signals and which ranging algorithms they can use */
+    private final Map<Signal, List<SignalProcessor>> signals = new HashMap<Signal, List<SignalProcessor>>();
 
-    /** All LocationAlgorithms and whether each is enabled by the user */
-    final Map<LocationAlgorithm, Boolean> algorithms = new HashMap<LocationAlgorithm, Boolean>();
+    /** All LocationAlgorithms */
+    //private final List<LocationAlgorithm> algorithms = new ArrayList<LocationAlgorithm>();
 
-    /** Location algorithms that can be applied to each node */
-    final Map<Node, List<LocationAlgorithm>> nodeAlgorithms = new HashMap<Node, List<LocationAlgorithm>>();
+    /**
+     * Location algorithms that can be applied to each node.
+     */
+     final Map<LocationAlgorithm, AlgorithmMatchCriteria> algorithms = new HashMap<LocationAlgorithm, AlgorithmMatchCriteria>();
+
+
+    public synchronized void add(Node n) {
+        nodes.put(n.getId(), n);
+        for (ModelListener l : listeners) {
+            l.onNodeAdded(n);
+        }
+    }
+
+    public synchronized Node get(String id) {
+        return nodes.get(id);
+    }
+
+    public synchronized List<SignalProcessor> get(Signal s) {
+        return signals.get(s);
+    }
+
+    public synchronized AlgorithmMatchCriteria get(LocationAlgorithm la) {
+        return algorithms.get(la);
+    }
+
+    public synchronized void put(Signal s, List<SignalProcessor> sp) {
+        signals.put(s, sp);
+    }
+
+    public synchronized void put(LocationAlgorithm la, AlgorithmMatchCriteria amc) {
+        algorithms.put(la, amc);
+    }
+
+    public synchronized void remove(Node n) {
+        nodes.remove(n.getId());
+        for (ModelListener l : listeners) {
+            l.onNodeRemoved(n);
+        }
+    }
+
+    public synchronized void remove(Signal s) {
+        signals.remove(s);
+    }
+
+    public synchronized void remove(LocationAlgorithm la) {
+        algorithms.remove(la);
+    }
+
+
+
+
+    public static interface ModelListener {
+        void onNodeAdded(Node n);
+        void onNodeRemoved(Node n);
+    }
+    private final List<ModelListener> listeners = new ArrayList<ModelListener>(1);
+    public void registerListener(ModelListener l) {
+        listeners.add(l);
+    }
+    public void unregisterListener(ModelListener l) {
+        if (l == null) {
+            listeners.clear();
+        } else {
+            listeners.remove(l);
+        }
+    }
+
+    public static final class AlgorithmMatchCriteria {
+        String TAG = AlgorithmMatchCriteria.class.getSimpleName();
+        // All must be matched by all nodes
+        List<NodeMatchCriteria> nodeRequirements = new ArrayList<NodeMatchCriteria>();
+        // All must be matched by at least one node
+        List<NodeMatchCriteria> nodeListRequirements = new ArrayList<NodeMatchCriteria>();
+
+        /**
+         * Note this moves on to the next node when a nodeListRequirement is met, so there will be
+         * at least as many nodes as there are requirements.
+         */
+        public List<Node> filter(List<Node> nodes) {
+            List<Node> matches = new ArrayList<Node>();
+
+            // Add all nodes that meet at least one list criterion.
+            int size = nodeListRequirements.size();
+            if (size > 0) {
+                boolean[] met = new boolean[size];
+                for (Node n : nodes) {
+                    for (int i = 0; i < size; ++i) {
+                        if (nodeListRequirements.get(i).matches(n)) {
+                            matches.add(n);
+                            met[i] = true;
+                            break;
+                        }
+                    }
+                }
+                for (boolean b : met) {
+                    if (!b) {
+                        Log.i(TAG, "Failed to meet list criteria.");
+                        matches.clear();
+                        return matches;
+                    }
+                }
+            }
+
+            // Remove nodes that do not meet all criteria.
+            size = nodeRequirements.size();
+            if (size > 0) {
+                for (Node n : matches) {
+                    for (NodeMatchCriteria nmc : nodeRequirements) {
+                        if (!nmc.matches(n)) {
+                            matches.remove(n);
+                            break;
+                        }
+                    }
+                }
+            }
+
+            return matches;
+        }
+    }
+
+    /**
+     * A single criterion to check if a node should be considered in a given localization algorithm.
+     */
+    public static final class NodeMatchCriteria {
+        boolean matchAll;
+        Pattern idMatches;
+
+        double[] posMin;
+        double[] posMax;
+        float[] angleMin;
+        float[] angleMax;
+        Pattern stateAlgMatches;
+        long stateAgeMin = Long.MAX_VALUE;
+        long stateAgeMax = Long.MIN_VALUE;
+        int statePendingCountMin = Integer.MAX_VALUE;
+        int statePendingCountMax = Integer.MIN_VALUE;
+
+        double rangeMin = Double.MAX_VALUE;
+        double rangeMax = Double.MIN_VALUE;
+        Pattern rangeSigMatches;
+        Pattern rangeAlgMatches;
+        long rangeAgeMin = Long.MAX_VALUE;
+        long rangeAgeMax = Long.MIN_VALUE;
+        int rangePendingCountMin = Integer.MAX_VALUE;
+        int rangePendingCountMax = Integer.MIN_VALUE;
+
+        /**
+         * True if any of the above match. For min/max values, a match is when the value is in [min, max].
+         */
+        boolean matches(Node n) {
+            return matchAll ||
+                (n.getPendingRanges().size() >= rangePendingCountMin && n.getPendingRanges().size() <= rangePendingCountMax) ||
+                (n.getPendingStates().size() >= statePendingCountMin && n.getPendingStates().size() <= statePendingCountMax) ||
+                (n.getRange().dist >= rangeMin && n.getRange().dist <= rangeMax) ||
+                (n.getRange().actual >= rangeMin && n.getRange().actual <= rangeMax) ||
+                (idMatches != null && idMatches.matcher(n.getId()).matches()) ||
+                (stateAlgMatches != null && stateAlgMatches.matcher(n.getState().algorithm).matches()) ||
+                (rangeSigMatches != null && rangeSigMatches.matcher(n.getRange().signal).matches()) ||
+                (rangeAlgMatches != null && rangeAlgMatches.matcher(n.getRange().algorithm).matches()) ||
+                    // TODO NPE fight
+                (Calc.isLessThanOrEqual(n.getState().pos, posMax) && Calc.isLessThanOrEqual(posMin, n.getState().pos)) ||
+                (Calc.isLessThanOrEqual(n.getState().angle, angleMax) && Calc.isLessThanOrEqual(angleMin, n.getState().angle)) ||
+                (System.nanoTime() - n.getState().time >= stateAgeMin && System.nanoTime() - n.getState().time <= stateAgeMax) ||
+                (System.nanoTime() - n.getRange().time >= rangeAgeMin && System.nanoTime() - n.getState().time <= rangeAgeMax);
+        }
+    }
+
+
 
     private void initialize() {
 
     }
+
+
 
     /*
      * These correspond to the logging database.

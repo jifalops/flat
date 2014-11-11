@@ -2,10 +2,13 @@ package com.flat.localization.signal;
 
 import android.content.Context;
 
-
+/**
+ * A signal is any measurable input from an internal or external source.
+ */
 public interface Signal {
     /**
      * Each signal must have it's own unique name.
+     * TODO physical, class, or instance unique?
      */
     String getName();
 

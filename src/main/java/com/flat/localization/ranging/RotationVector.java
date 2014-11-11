@@ -3,9 +3,9 @@ package com.flat.localization.ranging;
 import android.hardware.SensorManager;
 
 /**
-* Created by jacob on 10/25/14.
-*/
-public class RotationVector implements SignalProcessor {
+ * Created by jacob on 10/25/14.
+ */
+public final class RotationVector implements SignalProcessor {
     @Override
     public String getName() {
         return "Rot. Vector";
@@ -17,7 +17,7 @@ public class RotationVector implements SignalProcessor {
      * @param values the RotationVectorSensor event's values
      * @return rot, the rotation matrix.
      */
-    public static float[] apply(float[] rot, float values[]) {
+    public float[] rotateBy(float[] rot, float values[]) {
         if (rot == null) {
             rot = new float[16];
             // initialize the rotation matrix to identity

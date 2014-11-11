@@ -9,7 +9,8 @@ public final class FreeSpacePathLoss implements SignalProcessor {
         return "FSPL";
     }
 
-    public double applyDbMhz(double levelInDb, double freqInMHz)    {
+    /** @return The distance in meters. */
+    public double fromDbMhz(double levelInDb, double freqInMHz)    {
         double exp = (27.55 - (20 * Math.log10(freqInMHz)) + Math.abs(levelInDb)) / 20.0;
         return Math.pow(10.0, exp);
     }

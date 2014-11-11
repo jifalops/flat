@@ -1,11 +1,11 @@
 package com.flat.localization.ranging;
 
-import com.flat.localization.Const;
+import com.flat.localization.util.Const;
 
 /**
  * Created by Jacob Phillips (10/2014)
  */
-public class RoundTripTime implements SignalProcessor {
+public final class RoundTripTime implements SignalProcessor {
     @Override
     public String getName() {
         return "RTT";
@@ -14,7 +14,7 @@ public class RoundTripTime implements SignalProcessor {
     /**
      * This assumes the timestamps have nanosecond precision
      */
-    public double apply(long aSent, long bReceived, long bSent, long aReceived) {
+    public double fromNanoTime(long aSent, long bReceived, long bSent, long aReceived) {
         long roundTrip = (aReceived - aSent) - (bSent - bReceived);
         double d = (Const.SPEED_OF_LIGHT_VACUUM * (roundTrip * 1E-9)) / 2;
         return d;
