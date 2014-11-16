@@ -289,31 +289,6 @@ public final class Controller implements Model.ModelListener, Node.NodeListener 
         model.put(minmax, criteria);
     }
 
-    // TODO periodic LA updates by checking pending states
-
-
-
-
-
-    public void runAlgorithms() {
-
-
-        for (Node n : model.nodes.values()) {
-
-        }
-    }
-
-    private void processNode(Node n) {
-        for (Node.Range r : n.getPendingRanges()) {
-
-        }
-
-        for (Node.State s : n.getPendingStates()) {
-
-        }
-    }
-
-
     @Override
     public void onNodeAdded(Node n) {
         n.registerListener(this);
@@ -325,29 +300,44 @@ public final class Controller implements Model.ModelListener, Node.NodeListener 
     }
 
     @Override
-    public void onRangePending(Node n) {
+    public void onRangePending(Node n, Node.Range r) {
+        n.update(r);
+        applyLocationAlgorithms();
+    }
+
+    private void applyLocationAlgorithms() {
+        /*
+         * When a range has been obtained by processing a signal (except the internal sensors),
+         * notify the registered LocationAlgorithms, which will compare known information about external nodes with
+         * the LA's filter, to see if it is able to estimate a new state/position for this node.
+         */
         List<Node.State> states = new ArrayList<Node.State>();
+        List<Node> nodes = new ArrayList<Node>(model.nodes.values());
+        LocationAlgorithm la;
+        Model.AlgorithmMatchCriteria criteria;
+
         for (Map.Entry<LocationAlgorithm, Model.AlgorithmMatchCriteria> entry : model.algorithms.entrySet()) {
-            states.add(entry.getKey().applyTo(me, entry.getValue().filter(new ArrayList<Node>(model.nodes.values()))));
+            la = entry.getKey();
+            criteria = entry.getValue();
+            states.add(la.applyTo(me, criteria.filter(nodes)));
         }
         for (Node.State s : states) {
-            Log.e(TAG, s.toString());
+            me.addPending(s);
         }
-
     }
 
     @Override
-    public void onStatePending(Node n) {
-
+    public void onStatePending(Node n, Node.State s) {
+        n.update(s);
     }
 
     @Override
-    public void onRangeChanged(Node n) {
-
+    public void onRangeChanged(Node n, Node.Range r) {
+        Log.i(TAG, String.format("%s = %s", n.getId(), r.toString()));
     }
 
     @Override
-    public void onStateChanged(Node n) {
-
+    public void onStateChanged(Node n, Node.State s) {
+        Log.i(TAG, s.toString());
     }
 }

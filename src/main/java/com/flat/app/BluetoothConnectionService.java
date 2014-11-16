@@ -4,11 +4,11 @@ import android.bluetooth.BluetoothDevice;
 import android.content.Intent;
 import android.util.Log;
 
-import com.flat.bluetooth.TimingLog;
-import com.flat.bluetooth.connection.DataPacket;
 import com.flat.bluetooth.BluetoothConnection;
 import com.flat.bluetooth.BluetoothConnectionManager;
-import com.flat.util.Util;
+import com.flat.bluetooth.TimingLog;
+import com.flat.bluetooth.connection.DataPacket;
+import com.flat.localization.ranging.RoundTripTime;
 import com.flat.util.app.PersistentIntentService;
 import com.flat.util.io.Connection;
 
@@ -133,8 +133,8 @@ public final class BluetoothConnectionService extends PersistentIntentService {
         @Override
         public synchronized void onTimingComplete(DataPacket dp, BluetoothConnection conn) {
             if (mTimeLog != null) {
-                double javaDist = Util.Calc.timeOfFlightDistanceNano(dp.javaSrcSent, dp.javaDestReceived, dp.javaDestSent, dp.javaSrcReceived);
-                double hciDist = Util.Calc.timeOfFlightDistanceMicro(dp.hciSrcSent, dp.hciDestReceived, dp.hciDestSent, dp.hciSrcReceived);
+                double javaDist = new RoundTripTime().fromNanoTime(dp.javaSrcSent, dp.javaDestReceived, dp.javaDestSent, dp.javaSrcReceived);
+                double hciDist = new RoundTripTime().fromMicroTime(dp.hciSrcSent, dp.hciDestReceived, dp.hciDestSent, dp.hciSrcReceived);
                 try {
                     mTimeLog.add(dp, javaDist, hciDist);
                 } catch (IOException e) {

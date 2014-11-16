@@ -9,9 +9,12 @@ import com.flat.util.wifi.ScanResultsFragment;
 /**
  * Created by Jake on 5/19/2014.
  */
-public class MainItems {
+public class MainHelper {
 
-    // NOTE: This correspond to the items in the arrays resource.
+    // #############################################################
+    // ### These correspond to the items in the arrays resource. ###
+    // ### When changing one, you must change the other.         ###
+    // #############################################################
     public static final int ROTATION_VECTOR_DEMO = 0;
     public static final int BLUETOOTH = 1;
     public static final int WIFI = 2;
@@ -21,7 +24,7 @@ public class MainItems {
 
     public static final int DEFAULT = LOGGING;
 
-    public static final String KEY_ITEM = MainItems.class.getName() + ".ITEM";
+    public static final String KEY_ITEM = MainHelper.class.getName() + ".ITEM";
 
     public static int getItem(Bundle bundle) {
         return bundle.getInt(KEY_ITEM, DEFAULT);

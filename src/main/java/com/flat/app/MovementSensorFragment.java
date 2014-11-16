@@ -10,7 +10,7 @@ import android.view.ViewGroup;
 import android.widget.TextView;
 
 import com.flat.R;
-import com.flat.localization.scheme.InerntialMovement;
+import com.flat.sensors.InertialMovement;
 import com.flat.sensors.MovementSensorService;
 import com.flat.util.app.PersistentIntentService;
 import com.flat.util.app.PersistentIntentServiceFragment;
@@ -53,7 +53,7 @@ public class MovementSensorFragment extends PersistentIntentServiceFragment {
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         Log.v(TAG, "onCreateView()");
-        View root = inflater.inflate(R.layout.scan_results_view, container, false);
+        View root = inflater.inflate(R.layout.wifi_beacon_main, container, false);
         mTextView = (TextView) root.findViewById(R.id.text);
         return root;
     }
@@ -69,7 +69,7 @@ public class MovementSensorFragment extends PersistentIntentServiceFragment {
 //    @Override
 //    public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
 //        super.onCreateOptionsMenu(menu, inflater);
-//        inflater.inflate(R.menu.scan_results, menu);
+//        inflater.inflate(R.menu.wifi_beacon, menu);
 //    }
 //
 //    @Override
@@ -117,7 +117,7 @@ public class MovementSensorFragment extends PersistentIntentServiceFragment {
 //        return true;
 //    }
 
-    InerntialMovement.MovementListener mListener = new InerntialMovement.MovementListener() {
+    InertialMovement.MovementListener mListener = new InertialMovement.MovementListener() {
         @Override
         public void onMovement(double[] pos, float angle[], double time) {
             mTime += time;

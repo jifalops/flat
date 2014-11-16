@@ -43,7 +43,7 @@ public class NsdChatActivity extends Activity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.nsd_main);
+        setContentView(R.layout.nsd_activity);
         mStatusView = (TextView) findViewById(R.id.status);
 
         mUpdateHandler = new Handler() {

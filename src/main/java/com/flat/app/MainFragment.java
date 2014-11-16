@@ -37,7 +37,7 @@ public class MainFragment extends ListFragment {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         mAdapter = new ArrayAdapter<String>(getActivity(), 
-        		R.layout.main_item, getResources().getStringArray(R.array.mainItems));
+        		R.layout.textview_main, getResources().getStringArray(R.array.mainItems));
         setListAdapter(mAdapter);
         setHasOptionsMenu(true);
     }

@@ -10,7 +10,7 @@ import com.flat.util.wifi.ScanResultsFragment;
 public class DetailsActivity extends Activity implements BluetoothFragment.BluetoothFragmentListener, ScanResultsFragment.Callback, MovementSensorFragment.Callback {
 	private Fragment mDetailsFragment;
 
-    private int mCurrentItem = MainItems.DEFAULT;
+    private int mCurrentItem = MainHelper.DEFAULT;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -25,18 +25,18 @@ public class DetailsActivity extends Activity implements BluetoothFragment.Bluet
 		mDetailsFragment = null;
 
 		if (savedInstanceState != null) {
-            mCurrentItem = MainItems.getItem(savedInstanceState);
+            mCurrentItem = MainHelper.getItem(savedInstanceState);
 
             mDetailsFragment = getFragmentManager().getFragment(savedInstanceState,
-                    MainItems.getFragmentName(mCurrentItem)
+                    MainHelper.getFragmentName(mCurrentItem)
             );
 
 		} else {
-            mCurrentItem = MainItems.getItem(getIntent().getExtras());
+            mCurrentItem = MainHelper.getItem(getIntent().getExtras());
         }
 
         if (mDetailsFragment == null) {
-            mDetailsFragment = MainItems.getFragment(mCurrentItem);
+            mDetailsFragment = MainHelper.getFragment(mCurrentItem);
         }
 
 		if (mDetailsFragment != null) {

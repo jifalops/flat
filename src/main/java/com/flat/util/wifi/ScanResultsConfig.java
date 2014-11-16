@@ -54,7 +54,7 @@ public final class ScanResultsConfig {
                 String.format("%-4s", sr.SSID.substring(0, end)),
                 String.format("%4d", sr.level),
                 String.format("%4d", sr.frequency),
-                String.format("%6.2f", FreeSpacePathLoss.fspl(sr.level, sr.frequency))
+                String.format("%6.2f", (new FreeSpacePathLoss()).fromDbMhz(sr.level, sr.frequency))
         };
     }
 

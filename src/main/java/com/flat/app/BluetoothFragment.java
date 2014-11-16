@@ -197,7 +197,7 @@ public final class BluetoothFragment extends PersistentIntentServiceFragment {
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         Log.v(TAG, "onCreateView()");
-        View root = inflater.inflate(R.layout.bluetooth_view, container, false);
+        View root = inflater.inflate(R.layout.bluetooth_main, container, false);
 
         // Add all connection state views to the layout,
         // hiding views which are beyond the current max connections.
@@ -210,7 +210,7 @@ public final class BluetoothFragment extends PersistentIntentServiceFragment {
 //        }
 
         mListView = (ListView) root.findViewById(R.id.list);
-        mListAdapter = new ArrayAdapter<String>(getActivity(), R.layout.listitem_textview, R.id.text, readLog());
+        mListAdapter = new ArrayAdapter<String>(getActivity(), R.layout.textview_small, R.id.text, readLog());
         mListView.setAdapter(mListAdapter);
 
 //        mObserver = new FileObserver(mTimeLog.toString(), FileObserver.MODIFY) {
@@ -225,7 +225,7 @@ public final class BluetoothFragment extends PersistentIntentServiceFragment {
     }
 
     private void makeStateView(BluetoothDevice device) {
-        final TextView tv = (TextView) getActivity().getLayoutInflater().inflate(R.layout.state_textview, null);
+        final TextView tv = (TextView) getActivity().getLayoutInflater().inflate(R.layout.textview_bt_tof_state, null);
         byte dest = BluetoothConnection.idFromName(device.getName());
         mStateViewsContainer.removeView(mStateViews.get(dest));
         mStateViews.put(dest, tv);
@@ -255,7 +255,7 @@ public final class BluetoothFragment extends PersistentIntentServiceFragment {
     @Override
     public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
         super.onCreateOptionsMenu(menu, inflater);
-        inflater.inflate(R.menu.bt, menu);
+        inflater.inflate(R.menu.bt_tof, menu);
     }
 
     @Override
@@ -263,7 +263,7 @@ public final class BluetoothFragment extends PersistentIntentServiceFragment {
         switch (item.getItemId()) {
             case R.id.bt_set_max:
                 AlertDialog.Builder alert = new AlertDialog.Builder(getActivity());
-                final EditText input = (EditText) getActivity().getLayoutInflater().inflate(R.layout.edittext, null);
+                final EditText input = (EditText) getActivity().getLayoutInflater().inflate(R.layout.edittext_number, null);
                 input.setText(String.valueOf(mMaxConnections));
                 input.setSelection(0, 1);
                 alert.setView(input);

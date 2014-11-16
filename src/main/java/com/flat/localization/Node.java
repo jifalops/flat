@@ -11,6 +11,11 @@ public final class Node {
         public String signal;
         public String algorithm;
         public long time;
+
+        @Override
+        public String toString() {
+            return String.format("%0.2fm (%0.2fm)", dist, actual);
+        }
     }
 
     /**
@@ -33,6 +38,12 @@ public final class Node {
         public float angle[];
         public String algorithm;
         public long time;
+
+        @Override
+        public String toString() {
+            return String.format("(%0.2f, %0.2f, %0.2f), (%0.0f, %0.0f, %0.0f)",
+                    pos[0], pos[1], pos[2], angle[0], angle[1], angle[2]);
+        }
     }
 
     private final List<Range> rangePending = new ArrayList<Range>();
@@ -60,28 +71,28 @@ public final class Node {
     public synchronized void addPending(Range r) {
         rangePending.add(r);
         for (NodeListener l: listeners) {
-            l.onRangePending(this);
+            l.onRangePending(this, r);
         }
     }
 
     public synchronized void addPending(State s) {
         statePending.add(s);
         for (NodeListener l: listeners) {
-            l.onStatePending(this);
+            l.onStatePending(this, s);
         }
     }
 
     public synchronized void update(Range r) {
         rangeHistory.add(r);
         for (NodeListener l: listeners) {
-            l.onRangeChanged(this);
+            l.onRangeChanged(this, r);
         }
     }
 
     public synchronized void update(State s) {
         stateHistory.add(s);
         for (NodeListener l: listeners) {
-            l.onStateChanged(this);
+            l.onStateChanged(this, s);
         }
     }
 
@@ -105,19 +116,34 @@ public final class Node {
         return getState(stateHistory.size() - 1);
     }
 
+    /** Get previous (or current) pending range */
+    public synchronized Range getPendingRange(int index) {
+        return rangePending.get(index);
+    }
+
+    /** Get previous (or current) pending state */
+    public synchronized State getPendingState(int index) {
+        return statePending.get(index);
+    }
+
+    /** Get most recent pending range */
+    public synchronized Range getPendingRange() { return getPendingRange(rangePending.size() - 1); }
+
+    /** Get most recent pending state */
+    public synchronized State getPendingState() { return getPendingState(statePending.size() - 1); }
+
     public synchronized int getRangeHistorySize() {
         return rangeHistory.size();
     }
-
     public synchronized int getStateHistorySize() {
         return stateHistory.size();
     }
 
-    public synchronized List<Range> getPendingRanges() {
-        return rangePending;
+    public synchronized int getRangePendingSize() {
+        return rangeHistory.size();
     }
-    public synchronized List<State> getPendingStates() {
-        return statePending;
+    public synchronized int getStatePendingSize() {
+        return stateHistory.size();
     }
 
 
@@ -149,10 +175,10 @@ public final class Node {
      * Allow other objects to react to node events.
      */
     public static interface NodeListener {
-        void onRangePending(Node n);
-        void onStatePending(Node n);
-        void onRangeChanged(Node n);
-        void onStateChanged(Node n);
+        void onRangePending(Node n, Range r);
+        void onStatePending(Node n, State s);
+        void onRangeChanged(Node n, Range r);
+        void onStateChanged(Node n, State s);
     }
     private final List<NodeListener> listeners = new ArrayList<NodeListener>(1);
     public void registerListener(NodeListener l) {

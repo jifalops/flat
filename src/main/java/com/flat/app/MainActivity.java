@@ -8,6 +8,7 @@ import android.os.Bundle;
 import android.widget.Toast;
 
 import com.flat.R;
+import com.flat.nsd.NsdChatActivity;
 import com.flat.sensors.RotationVectorDemo;
 import com.flat.util.wifi.ScanResultsFragment;
 
@@ -16,24 +17,24 @@ public class MainActivity extends Activity implements MainFragment.Callbacks,
     private MainFragment mMainFragment;
     private Fragment mDetailsFragment;
 
-    private int mCurrentItem = MainItems.DEFAULT;
+    private int mCurrentItem = MainHelper.DEFAULT;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
+        setContentView(R.layout.main_activity);
 
         mDetailsFragment = null;
 
         if (savedInstanceState != null) {
-            mCurrentItem = MainItems.getItem(savedInstanceState);
+            mCurrentItem = MainHelper.getItem(savedInstanceState);
 
             mMainFragment = (MainFragment) getFragmentManager()
                     .getFragment(savedInstanceState, MainFragment.class.getName());
 
 
             mDetailsFragment = getFragmentManager().getFragment(savedInstanceState,
-                    MainItems.getFragmentName(mCurrentItem)
+                    MainHelper.getFragmentName(mCurrentItem)
             );
         }
 
@@ -43,7 +44,7 @@ public class MainActivity extends Activity implements MainFragment.Callbacks,
 
         if (isDualPane()) {
             if (mDetailsFragment == null) {
-                mDetailsFragment = MainItems.getFragment(mCurrentItem);
+                mDetailsFragment = MainHelper.getFragment(mCurrentItem);
             }
 
             getFragmentManager().beginTransaction()
@@ -82,7 +83,7 @@ public class MainActivity extends Activity implements MainFragment.Callbacks,
     @Override
     protected void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
-        outState.putInt(MainItems.KEY_ITEM, mCurrentItem);
+        outState.putInt(MainHelper.KEY_ITEM, mCurrentItem);
 //		if (mMainFragment != null) getSupportFragmentManager()
 //			.putFragment(outState, GroupListFragment.class.getName(), mMainFragment);
 //		if (mDetailsFragment != null) getSupportFragmentManager()
@@ -94,8 +95,13 @@ public class MainActivity extends Activity implements MainFragment.Callbacks,
         boolean changed = item != mCurrentItem;
         mCurrentItem = item;
 
-        if (item == MainItems.ROTATION_VECTOR_DEMO) {
+        if (item == MainHelper.ROTATION_VECTOR_DEMO) {
             startActivity(new Intent(this, RotationVectorDemo.class));
+            return;
+        }
+
+        if (item == MainHelper.NETWORK_SERVICE_DISCOVERY) {
+            startActivity(new Intent(this, NsdChatActivity.class));
             return;
         }
 
@@ -106,11 +112,11 @@ public class MainActivity extends Activity implements MainFragment.Callbacks,
 
             // Check what fragment is currently shown, replace if needed.
             if (mDetailsFragment == null) {
-                mDetailsFragment =  getFragmentManager().findFragmentById(MainItems.getFragmentId(item));
+                mDetailsFragment =  getFragmentManager().findFragmentById(MainHelper.getFragmentId(item));
             }
             if (mDetailsFragment == null || changed) {
                 // Make new fragment to show this selection.
-                mDetailsFragment = MainItems.getFragment(item);
+                mDetailsFragment = MainHelper.getFragment(item);
 
                 // Execute a transaction, replacing any existing fragment
                 // with this one inside the frame.
@@ -125,7 +131,7 @@ public class MainActivity extends Activity implements MainFragment.Callbacks,
             // the dialog fragment with selected text.
             Intent intent = new Intent();
             intent.setClass(this, DetailsActivity.class);
-            intent.putExtra(MainItems.KEY_ITEM, mCurrentItem);
+            intent.putExtra(MainHelper.KEY_ITEM, mCurrentItem);
             startActivity(intent);
         }
     }

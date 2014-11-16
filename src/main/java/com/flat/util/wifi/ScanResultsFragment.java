@@ -71,7 +71,7 @@ public class ScanResultsFragment extends PersistentIntentServiceFragment impleme
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         Log.v(TAG, "onCreateView()");
-        View root = inflater.inflate(R.layout.scan_results_view, container, false);
+        View root = inflater.inflate(R.layout.wifi_beacon_main, container, false);
         mTextView = (TextView) root.findViewById(R.id.text);
         return root;
     }
@@ -104,7 +104,7 @@ public class ScanResultsFragment extends PersistentIntentServiceFragment impleme
     @Override
     public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
         super.onCreateOptionsMenu(menu, inflater);
-        inflater.inflate(R.menu.scan_results, menu);
+        inflater.inflate(R.menu.wifi_beacon, menu);
         mLogToggle = menu.findItem(R.id.action_log_scans); // TODO not used
     }
 

@@ -5,7 +5,6 @@ import android.content.Intent;
 import android.hardware.SensorManager;
 import android.util.Log;
 
-import com.flat.localization.scheme.InerntialMovement;
 import com.flat.util.CsvBuffer;
 import com.flat.util.app.PersistentIntentService;
 
@@ -19,9 +18,9 @@ public final class MovementSensorService extends PersistentIntentService {
 
     private CsvBuffer mBuffer;
     private SensorManager mSensorManager;
-    private InerntialMovement mMovementSensor;
+    private InertialMovement mMovementSensor;
 
-    public InerntialMovement getMovementSensor() {
+    public InertialMovement getMovementSensor() {
         return mMovementSensor;
     }
 
@@ -34,7 +33,7 @@ public final class MovementSensorService extends PersistentIntentService {
     public void onCreate() {
         super.onCreate();
         mSensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
-        mMovementSensor = new InerntialMovement();
+        mMovementSensor = new InertialMovement();
         mBuffer = new CsvBuffer();
     }
 

@@ -115,15 +115,31 @@ public final class Model {
          * at least as many nodes as there are requirements.
          */
         public List<Node> filter(List<Node> nodes) {
+            nodes = new ArrayList<Node>(nodes);
             List<Node> matches = new ArrayList<Node>();
 
+            // Remove nodes that do not meet all criteria.
+            int size = nodeRequirements.size();
+            if (size > 0) {
+                for (Node n : nodes) {
+                    for (NodeMatchCriteria nmc : nodeRequirements) {
+                        if (!nmc.matches(n)) {
+                            Log.v(TAG, n.getId() + " did not meet requirements.");
+                            nodes.remove(n);
+                            break;
+                        }
+                    }
+                }
+            }
+
             // Add all nodes that meet at least one list criterion.
-            int size = nodeListRequirements.size();
+            size = nodeListRequirements.size();
             if (size > 0) {
                 boolean[] met = new boolean[size];
                 for (Node n : nodes) {
                     for (int i = 0; i < size; ++i) {
                         if (nodeListRequirements.get(i).matches(n)) {
+                            Log.v(TAG, String.format("list requirement %d matches %s.", i, n.getId()));
                             matches.add(n);
                             met[i] = true;
                             break;
@@ -132,26 +148,11 @@ public final class Model {
                 }
                 for (boolean b : met) {
                     if (!b) {
-                        Log.i(TAG, "Failed to meet list criteria.");
+                        Log.d(TAG, "Failed to meet all list criteria.");
                         matches.clear();
-                        return matches;
                     }
                 }
             }
-
-            // Remove nodes that do not meet all criteria.
-            size = nodeRequirements.size();
-            if (size > 0) {
-                for (Node n : matches) {
-                    for (NodeMatchCriteria nmc : nodeRequirements) {
-                        if (!nmc.matches(n)) {
-                            matches.remove(n);
-                            break;
-                        }
-                    }
-                }
-            }
-
             return matches;
         }
     }
@@ -186,16 +187,18 @@ public final class Model {
          * True if any of the above match. For min/max values, a match is when the value is in [min, max].
          */
         boolean matches(Node n) {
+            int pr = n.getRangePendingSize();
+            int ps = n.getStatePendingSize();
             return matchAll ||
-                (n.getPendingRanges().size() >= rangePendingCountMin && n.getPendingRanges().size() <= rangePendingCountMax) ||
-                (n.getPendingStates().size() >= statePendingCountMin && n.getPendingStates().size() <= statePendingCountMax) ||
+                (pr >= rangePendingCountMin && pr <= rangePendingCountMax) ||
+                (ps >= statePendingCountMin && ps <= statePendingCountMax) ||
                 (n.getRange().dist >= rangeMin && n.getRange().dist <= rangeMax) ||
                 (n.getRange().actual >= rangeMin && n.getRange().actual <= rangeMax) ||
                 (idMatches != null && idMatches.matcher(n.getId()).matches()) ||
                 (stateAlgMatches != null && stateAlgMatches.matcher(n.getState().algorithm).matches()) ||
                 (rangeSigMatches != null && rangeSigMatches.matcher(n.getRange().signal).matches()) ||
                 (rangeAlgMatches != null && rangeAlgMatches.matcher(n.getRange().algorithm).matches()) ||
-                    // TODO NPE fight
+                    // TODO NPE
                 (Calc.isLessThanOrEqual(n.getState().pos, posMax) && Calc.isLessThanOrEqual(posMin, n.getState().pos)) ||
                 (Calc.isLessThanOrEqual(n.getState().angle, angleMax) && Calc.isLessThanOrEqual(angleMin, n.getState().angle)) ||
                 (System.nanoTime() - n.getState().time >= stateAgeMin && System.nanoTime() - n.getState().time <= stateAgeMax) ||
