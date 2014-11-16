@@ -21,8 +21,10 @@ import android.net.nsd.NsdServiceInfo;
 import android.net.nsd.NsdManager;
 import android.util.Log;
 
-public class NsdHelper {
+import com.flat.localization.util.Util;
 
+public class NsdHelper {
+    public static final String MAC = "10:68:3f:38:8f:1d";
     Context mContext;
 
     NsdManager mNsdManager;
@@ -40,6 +42,7 @@ public class NsdHelper {
     public NsdHelper(Context context) {
         mContext = context;
         mNsdManager = (NsdManager) context.getSystemService(Context.NSD_SERVICE);
+        mServiceName += Util.getWifiMac(context);
     }
 
     public void initializeNsd() {
@@ -61,19 +64,23 @@ public class NsdHelper {
 
             @Override
             public void onServiceFound(NsdServiceInfo service) {
-                Log.d(TAG, "Service discovery success" + service);
+                Log.d(TAG, "Service discovery success " + service);
                 if (!service.getServiceType().equals(SERVICE_TYPE)) {
                     Log.d(TAG, "Unknown Service Type: " + service.getServiceType());
                 } else if (service.getServiceName().equals(mServiceName)) {
                     Log.d(TAG, "Same machine: " + mServiceName);
-                } else if (service.getServiceName().contains(mServiceName)){
+                } else if (service.getServiceName().contains("NsdChat"+MAC)){
+
+                    // TODO Hack for "listener already in use" error.
+                    initializeResolveListener();
+
                     mNsdManager.resolveService(service, mResolveListener);
                 }
             }
 
             @Override
             public void onServiceLost(NsdServiceInfo service) {
-                Log.e(TAG, "service lost" + service);
+                Log.e(TAG, "service lost " + service);
                 if (mService == service) {
                     mService = null;
                 }
@@ -86,13 +93,13 @@ public class NsdHelper {
 
             @Override
             public void onStartDiscoveryFailed(String serviceType, int errorCode) {
-                Log.e(TAG, "Discovery failed: Error code:" + errorCode);
+                Log.e(TAG, "Discovery failed: Error code: " + errorCode);
                 mNsdManager.stopServiceDiscovery(this);
             }
 
             @Override
             public void onStopDiscoveryFailed(String serviceType, int errorCode) {
-                Log.e(TAG, "Discovery failed: Error code:" + errorCode);
+                Log.e(TAG, "Discovery failed: Error code: " + errorCode);
                 mNsdManager.stopServiceDiscovery(this);
             }
         };
@@ -103,7 +110,7 @@ public class NsdHelper {
 
             @Override
             public void onResolveFailed(NsdServiceInfo serviceInfo, int errorCode) {
-                Log.e(TAG, "Resolve failed" + errorCode);
+                Log.e(TAG, "Resolve failed: " + errorCode);
             }
 
             @Override
@@ -123,20 +130,23 @@ public class NsdHelper {
         mRegistrationListener = new NsdManager.RegistrationListener() {
 
             @Override
-            public void onServiceRegistered(NsdServiceInfo NsdServiceInfo) {
-                mServiceName = NsdServiceInfo.getServiceName();
+            public void onServiceRegistered(NsdServiceInfo nsdServiceInfo) {
+                mServiceName = nsdServiceInfo.getServiceName();
             }
             
             @Override
-            public void onRegistrationFailed(NsdServiceInfo arg0, int arg1) {
+            public void onRegistrationFailed(NsdServiceInfo nsdServiceInfo, int errorCode) {
+                Log.e(TAG, "Registration failed: " + errorCode);
             }
 
             @Override
-            public void onServiceUnregistered(NsdServiceInfo arg0) {
+            public void onServiceUnregistered(NsdServiceInfo nsdServiceInfo) {
+                Log.e(TAG, "Service unregistered");
             }
             
             @Override
-            public void onUnregistrationFailed(NsdServiceInfo serviceInfo, int errorCode) {
+            public void onUnregistrationFailed(NsdServiceInfo nsdServiceInfo, int errorCode) {
+                Log.e(TAG, "Unregistration failed: " + errorCode);
             }
             
         };
@@ -147,13 +157,19 @@ public class NsdHelper {
         serviceInfo.setPort(port);
         serviceInfo.setServiceName(mServiceName);
         serviceInfo.setServiceType(SERVICE_TYPE);
-        
+
+        // TODO Hack for "listener already in use" error.
+        initializeRegistrationListener();
+
         mNsdManager.registerService(
                 serviceInfo, NsdManager.PROTOCOL_DNS_SD, mRegistrationListener);
         
     }
 
     public void discoverServices() {
+        // TODO Hack for "listener already in use" error.
+        initializeDiscoveryListener();
+
         mNsdManager.discoverServices(
                 SERVICE_TYPE, NsdManager.PROTOCOL_DNS_SD, mDiscoveryListener);
     }

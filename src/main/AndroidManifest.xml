@@ -6,7 +6,7 @@
 
     <uses-sdk
         android:minSdkVersion="18"
-        android:targetSdkVersion="19" />
+        android:targetSdkVersion="21" />
 
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
@@ -37,7 +37,9 @@
             android:name="com.flat.app.DetailsActivity"
             android:uiOptions="splitActionBarWhenNarrow" />
         <activity android:name="com.flat.sensors.RotationVectorDemo" />
-        <activity android:name=".nsd.NsdChatActivity" />
+        <activity android:name=".nsd.NsdChatActivity">
+
+        </activity>
         <service android:name="com.flat.app.BluetoothConnectionService"/>
         <service android:name="com.flat.sensors.MovementSensorService"/>
         <service android:name="com.flat.util.wifi.ScanResultsService"/>
