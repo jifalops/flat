@@ -25,7 +25,7 @@ public final class Model {
     public static Model getInstance() { return instance; }
 
     /**
-     * Known nodes. The string is the node.id(), it is kept in a map so we dont need to loop through
+     * Known nodes. The string is the node.id(), it is kept in a map so we don't need to loop through
      * all nodes every time input is received.
      */
      final Map<String, Node> nodes = new HashMap<String, Node>();

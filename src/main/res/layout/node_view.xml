@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<merge xmlns:android="http://schemas.android.com/apk/res/android">
+  <include
+    layout="@layout/textview_main"
+    android:id="@+id/node_id" />
+  <Switch
+    android:id="@+id/node_fixed"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content" />
+  <include
+    layout="@layout/edittext_number"
+    android:id="@+id/node_range" />
+  <include
+    layout="@layout/edittext_number"
+    android:id="@+id/node_pos" />
+  <include
+    layout="@layout/edittext_number"
+    android:id="@+id/node_angle" />
+  <include
+    layout="@layout/textview_small"
+    android:id="@+id/node_info" />
+</merge>
