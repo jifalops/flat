@@ -13,4 +13,16 @@ import java.util.List;
 public interface LocationAlgorithm {
     Node.State applyTo(Node target, List<Node> references);
     String getName();
+    boolean isEnabled();
+    void setEnabled(boolean enabled);
+
+    /*
+     * Allow other objects to react to algorithm changes.
+     */
+    interface AlgorithmListener {
+        void onApplied(LocationAlgorithm la, Node target, List<Node> references);
+    }
+    void registerListener(AlgorithmListener l);
+    void unregisterListener(AlgorithmListener l);
+//    void notifyListeners(Node target, List<Node> references);
 }

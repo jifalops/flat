@@ -67,7 +67,7 @@ public final class WifiBeacon extends AbstractSignal {
         enabled = true;
     }
     @Override
-    public void enable(Context ctx) { enable(ctx, 1); }
+    public void enable(Context ctx) { enable(ctx, 1000); }
 
 
     @Override

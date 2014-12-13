@@ -25,14 +25,14 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:textAppearance="?android:attr/textAppearanceMedium"
-            android:text="Signal Name"
-            android:id="@+id/name"/>
+            android:text="Algorithm Name"
+            android:id="@+id/name" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:textAppearance="?android:attr/textAppearanceSmall"
-            android:text="Processors"
+            android:text="Nodes: 0"
             android:id="@+id/line2" />
     </LinearLayout>
 
@@ -40,7 +40,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:id="@+id/enabled"
-        android:checked="false" />
+        android:checked="true" />
 
 
 </LinearLayout>

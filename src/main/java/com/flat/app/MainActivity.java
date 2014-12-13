@@ -105,6 +105,11 @@ public class MainActivity extends Activity implements MainFragment.Callbacks,
             return;
         }
 
+        if (item == MainHelper.LOGGING) {
+            startActivity(new Intent(this, LoggingActivity.class));
+            return;
+        }
+
         if (isDualPane()) {
             // We can display everything in-place with fragments, so update
             // the list to highlight the selected item and show the data.

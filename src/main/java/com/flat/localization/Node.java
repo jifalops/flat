@@ -6,15 +6,15 @@ import java.util.List;
 
 public final class Node {
     public static final class Range {
-        public double dist;
-        public double actual = -1; // when given
-        public String signal;
-        public String algorithm;
-        public long time;
+        public double dist = 0;
+        public double actual = 0; // when given
+        public String signal = "none";
+        public String algorithm = "none";
+        public long time = System.nanoTime();
 
         @Override
         public String toString() {
-            return String.format("%0.2fm (%0.2fm)", dist, actual);
+            return String.format("%.2fm (%.2fm)", dist, actual);
         }
     }
 
@@ -34,14 +34,14 @@ public final class Node {
      * <a href='http://developer.android.com/guide/topics/sensors/sensors_overview.html#sensors-coords'>http://developer.android.com/guide/topics/sensors/sensors_overview.html#sensors-coords</a>
      */
     public static final class State {
-        public double pos[];
-        public float angle[];
-        public String algorithm;
-        public long time;
+        public double pos[] = {0,0,0};
+        public float angle[] = {0,0,0};
+        public String algorithm = "none";
+        public long time = System.nanoTime();
 
         @Override
         public String toString() {
-            return String.format("(%0.2f, %0.2f, %0.2f), (%0.0f, %0.0f, %0.0f)",
+            return String.format("(%.2f, %.2f, %.2f), (%.0f, %.0f, %.0f)",
                     pos[0], pos[1], pos[2], angle[0], angle[1], angle[2]);
         }
     }
@@ -56,7 +56,11 @@ public final class Node {
 
 
     public Node(String id) {
+
         this.id = id;
+
+        rangeHistory.add(new Range());
+        stateHistory.add(new State());
     }
 
 

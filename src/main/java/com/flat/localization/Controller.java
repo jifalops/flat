@@ -10,7 +10,7 @@ import android.util.Log;
 import com.flat.localization.ranging.FreeSpacePathLoss;
 import com.flat.localization.ranging.LinearAcceleration;
 import com.flat.localization.ranging.RotationVector;
-import com.flat.localization.ranging.SignalProcessor;
+import com.flat.localization.ranging.RangingProcessor;
 import com.flat.localization.scheme.LocationAlgorithm;
 import com.flat.localization.scheme.MinMax;
 import com.flat.localization.scheme.Trilateration;
@@ -27,7 +27,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * TODO bad embedded references
+ * TODO bad embedded references in this comment
  * The Controller controls the progression of a {@code Node}'s {@code Node.State} by incorporating
  * various {@code Signal}s. A signal undergoes {@code Ranging} to be converted into a linear distance,
  * or in the case of the gyroscope, a new orientation. Then, a {@code LocationAlgorithm} uses one or more ranges
@@ -45,7 +45,8 @@ public final class Controller implements Model.ModelListener, Node.NodeListener 
      */
     private Controller(Context ctx) {
         me = new Node(Util.getWifiMac(ctx));
-        initialize();
+        populateModel();
+        me.registerListener(this);
     }
     private static Controller instance;
     private final static Object syncObj = new Object();
@@ -67,7 +68,7 @@ public final class Controller implements Model.ModelListener, Node.NodeListener 
     }
 
 
-    private void initialize() {
+    private void populateModel() {
         model.registerListener(this);
 
         /*
@@ -76,7 +77,7 @@ public final class Controller implements Model.ModelListener, Node.NodeListener 
          * ===========================
          */
 
-        List<SignalProcessor> signalProcessors;
+        List<RangingProcessor> signalProcessors;
 
 
         /*
@@ -86,9 +87,9 @@ public final class Controller implements Model.ModelListener, Node.NodeListener 
 
         // boilerplate
         final LinearAcceleration la = new LinearAcceleration();
-        signalProcessors = new ArrayList<SignalProcessor>(1);
+        signalProcessors = new ArrayList<RangingProcessor>(1);
         signalProcessors.add(la);
-        model.put(accelSignal, signalProcessors);
+        model.addSignal(accelSignal, signalProcessors);
 
         // signal change listener
         accelSignal.registerListener(new Signal.SignalListener() {
@@ -122,9 +123,9 @@ public final class Controller implements Model.ModelListener, Node.NodeListener 
 
         // boilerplate
         final RotationVector rv = new RotationVector();
-        signalProcessors = new ArrayList<SignalProcessor>(1);
+        signalProcessors = new ArrayList<RangingProcessor>(1);
         signalProcessors.add(rv);
-        model.put(rotSignal, signalProcessors);
+        model.addSignal(rotSignal, signalProcessors);
 
         // signal change listener
         rotSignal.registerListener(new Signal.SignalListener() {
@@ -169,9 +170,9 @@ public final class Controller implements Model.ModelListener, Node.NodeListener 
 
         // boilerplate
         final FreeSpacePathLoss fspl = new FreeSpacePathLoss();
-        signalProcessors = new ArrayList<SignalProcessor>(1);
+        signalProcessors = new ArrayList<RangingProcessor>(1);
         signalProcessors.add(fspl);
-        model.put(btSignal, signalProcessors);
+        model.addSignal(btSignal, signalProcessors);
 
         // signal change listener
         btSignal.registerListener(new Signal.SignalListener() {
@@ -190,10 +191,10 @@ public final class Controller implements Model.ModelListener, Node.NodeListener 
 
                         // TODO using BT mac instead of wifi
                         String mac = btdevice.getAddress();
-                        if (model.get(mac) == null) {
-                            model.add(new Node(mac));
+                        if (model.getNode(mac) == null) {
+                            model.addNode(new Node(mac));
                         }
-                        model.get(mac).addPending(range);
+                        model.getNode(mac).addPending(range);
                         break;
                 }
             }
@@ -209,9 +210,9 @@ public final class Controller implements Model.ModelListener, Node.NodeListener 
         // boilerplate
         // TODO no need for multiple fspl instances
         final FreeSpacePathLoss fspl2 = new FreeSpacePathLoss();
-        signalProcessors = new ArrayList<SignalProcessor>(1);
+        signalProcessors = new ArrayList<RangingProcessor>(1);
         signalProcessors.add(fspl2);
-        model.put(wifiSignal, signalProcessors);
+        model.addSignal(wifiSignal, signalProcessors);
 
         // signal change listener
         wifiSignal.registerListener(new Signal.SignalListener() {
@@ -225,10 +226,10 @@ public final class Controller implements Model.ModelListener, Node.NodeListener 
                             range.algorithm = fspl2.getName();
                             range.time = sr.timestamp;
                             range.dist = fspl2.fromDbMhz(sr.level, sr.frequency);
-                            if (model.get(sr.BSSID) == null) {
-                                model.add(new Node(sr.BSSID));
+                            if (model.getNode(sr.BSSID) == null) {
+                                model.addNode(new Node(sr.BSSID));
                             }
-                            model.get(sr.BSSID).addPending(range);
+                            model.getNode(sr.BSSID).addPending(range);
                         }
                         break;
                 }
@@ -245,20 +246,20 @@ public final class Controller implements Model.ModelListener, Node.NodeListener 
          * ===================
          */
 
-        Model.AlgorithmMatchCriteria criteria;
-        Model.NodeMatchCriteria nmc;
+        Criteria.AlgorithmMatchCriteria criteria;
+        Criteria.NodeMatchCriteria nmc;
 
 
         /*
          * MinMax
          */
         final MinMax minmax = new MinMax();
-        criteria = new Model.AlgorithmMatchCriteria();
-        nmc = new Model.NodeMatchCriteria();
+        criteria = new Criteria.AlgorithmMatchCriteria();
+        nmc = new Criteria.NodeMatchCriteria();
         nmc.rangePendingCountMin = 1;
         nmc.rangePendingCountMax = Integer.MAX_VALUE;
         criteria.nodeRequirements.add(nmc);
-        model.put(minmax, criteria);
+        model.addAlgorithm(minmax, criteria);
 
 
 
@@ -266,37 +267,33 @@ public final class Controller implements Model.ModelListener, Node.NodeListener 
          * Trilateration
          */
         final Trilateration trilat = new Trilateration();
-        criteria = new Model.AlgorithmMatchCriteria();
+        criteria = new Criteria.AlgorithmMatchCriteria();
 
         // Anchor 1 = (0, 0)
-        nmc = new Model.NodeMatchCriteria();
+        nmc = new Criteria.NodeMatchCriteria();
         nmc.posMin = new double[] {0, 0, Double.MIN_VALUE};
         nmc.posMax = new double[] {0, 0, Double.MAX_VALUE};
         criteria.nodeListRequirements.add(nmc);
 
         // Anchor 2 = (x, 0)
-        nmc = new Model.NodeMatchCriteria();
+        nmc = new Criteria.NodeMatchCriteria();
         nmc.posMin = new double[] {Double.MIN_VALUE, 0, Double.MIN_VALUE};
         nmc.posMax = new double[] {Double.MAX_VALUE, 0, Double.MAX_VALUE};
         criteria.nodeListRequirements.add(nmc);
 
         // Anchor 3 = (x, y)
-        nmc = new Model.NodeMatchCriteria();
+        nmc = new Criteria.NodeMatchCriteria();
         nmc.posMin = new double[] {Double.MIN_VALUE, Double.MIN_VALUE, Double.MIN_VALUE};
         nmc.posMax = new double[] {Double.MAX_VALUE, Double.MAX_VALUE, Double.MAX_VALUE};
         criteria.nodeListRequirements.add(nmc);
 
-        model.put(minmax, criteria);
+        model.addAlgorithm(trilat, criteria);
     }
 
     @Override
     public void onNodeAdded(Node n) {
         n.registerListener(this);
-    }
-
-    @Override
-    public void onNodeRemoved(Node n) {
-        n.unregisterListener(this);
+        Log.i(TAG, "Node count: " + model.getNodeCount());
     }
 
     @Override
@@ -312,14 +309,19 @@ public final class Controller implements Model.ModelListener, Node.NodeListener 
          * the LA's filter, to see if it is able to estimate a new state/position for this node.
          */
         List<Node.State> states = new ArrayList<Node.State>();
-        List<Node> nodes = new ArrayList<Node>(model.nodes.values());
+        List<Node> nodes = new ArrayList<Node>(model.getNodesCopy());
         LocationAlgorithm la;
-        Model.AlgorithmMatchCriteria criteria;
+        Criteria.AlgorithmMatchCriteria criteria;
 
-        for (Map.Entry<LocationAlgorithm, Model.AlgorithmMatchCriteria> entry : model.algorithms.entrySet()) {
+        for (Map.Entry<LocationAlgorithm, Criteria.AlgorithmMatchCriteria> entry : model.algorithms.entrySet()) {
             la = entry.getKey();
+            if (!la.isEnabled()) continue;
             criteria = entry.getValue();
-            states.add(la.applyTo(me, criteria.filter(nodes)));
+
+            List<Node> filteredNodes = criteria.filter(nodes);
+            if (filteredNodes.size() > 0) {
+                states.add(la.applyTo(me, filteredNodes));
+            }
         }
         for (Node.State s : states) {
             me.addPending(s);
@@ -328,16 +330,18 @@ public final class Controller implements Model.ModelListener, Node.NodeListener 
 
     @Override
     public void onStatePending(Node n, Node.State s) {
+//        Log.i(TAG, "Pending state for " + n.getId() + ": " + s.toString());
         n.update(s);
     }
 
     @Override
     public void onRangeChanged(Node n, Node.Range r) {
-        Log.i(TAG, String.format("%s = %s", n.getId(), r.toString()));
+        Log.i(TAG, String.format("Range for %s = %s", n.getId(), r.toString()));
     }
 
     @Override
     public void onStateChanged(Node n, Node.State s) {
-        Log.i(TAG, s.toString());
+        Log.i(TAG, "State " + n.getId() + ": " + s.toString());
+
     }
 }

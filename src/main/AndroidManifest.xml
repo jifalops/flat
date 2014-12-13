@@ -40,6 +40,9 @@
         <activity android:name=".nsd.NsdChatActivity">
 
         </activity>
+        <activity android:name=".app.LoggingActivity">
+
+        </activity>
         <service android:name="com.flat.app.BluetoothConnectionService"/>
         <service android:name="com.flat.sensors.MovementSensorService"/>
         <service android:name="com.flat.util.wifi.ScanResultsService"/>

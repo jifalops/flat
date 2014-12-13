@@ -3,7 +3,7 @@ package com.flat.localization.ranging;
 /**
  * Created by Jacob Phillips (10/2014)
  */
-public final class FreeSpacePathLoss implements SignalProcessor {
+public final class FreeSpacePathLoss implements RangingProcessor {
     @Override
     public String getName() {
         return "FSPL";

@@ -5,7 +5,7 @@ import com.flat.localization.util.Const;
 /**
  * Created by Jacob Phillips (10/2014)
  */
-public final class RoundTripTime implements SignalProcessor {
+public final class RoundTripTime implements RangingProcessor {
     @Override
     public String getName() {
         return "RTT";

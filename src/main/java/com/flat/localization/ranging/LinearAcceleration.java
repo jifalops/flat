@@ -3,7 +3,7 @@ package com.flat.localization.ranging;
 /**
 * Created by jacob on 10/25/14.
 */
-public final class LinearAcceleration implements SignalProcessor {
+public final class LinearAcceleration implements RangingProcessor {
     @Override
     public String getName() {
         return "Lin. Accel.";

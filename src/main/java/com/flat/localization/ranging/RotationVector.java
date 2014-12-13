@@ -5,7 +5,7 @@ import android.hardware.SensorManager;
 /**
  * Created by jacob on 10/25/14.
  */
-public final class RotationVector implements SignalProcessor {
+public final class RotationVector implements RangingProcessor {
     @Override
     public String getName() {
         return "Rot. Vector";

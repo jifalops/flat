@@ -1,22 +1,95 @@
 <?xml version="1.0" encoding="utf-8"?>
-<merge xmlns:android="http://schemas.android.com/apk/res/android">
-  <include
-    layout="@layout/textview_main"
-    android:id="@+id/node_id" />
-  <Switch
-    android:id="@+id/node_fixed"
-    android:layout_width="wrap_content"
-    android:layout_height="wrap_content" />
-  <include
-    layout="@layout/edittext_number"
-    android:id="@+id/node_range" />
-  <include
-    layout="@layout/edittext_number"
-    android:id="@+id/node_pos" />
-  <include
-    layout="@layout/edittext_number"
-    android:id="@+id/node_angle" />
-  <include
-    layout="@layout/textview_small"
-    android:id="@+id/node_info" />
-</merge>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    style="@style/Match"
+    android:fillViewport="true">
+    <LinearLayout
+        style="@style/Wide"
+        android:padding="4dp"
+        android:orientation="vertical">
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingBottom="8dp"
+            android:paddingTop="8dp">
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Node ID" />
+            <TextView
+                android:id="@+id/node_id"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="(id)" />
+        </LinearLayout>
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingBottom="8dp"
+            android:paddingTop="8dp">
+            <TextView
+                style="@style/Wrap"
+                android:layout_weight="1"
+                android:text="Anchor Mode"/>
+            <Switch
+                android:id="@+id/node_fixed"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content" />
+        </LinearLayout>
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingBottom="8dp"
+            android:paddingTop="8dp">
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Range (m)" />
+            <EditText
+                android:id="@+id/node_range"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0.0"/>
+        </LinearLayout>
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingBottom="8dp"
+            android:paddingTop="8dp">
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Position (x, y, z)" />
+            <EditText
+                android:id="@+id/node_pos"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0.0, 0.0, 0.0"/>
+        </LinearLayout>
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingBottom="8dp"
+            android:paddingTop="8dp">
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Orientation (deg)" />
+            <EditText
+                android:id="@+id/node_angle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0.0, 0.0, 0.0"/>
+        </LinearLayout>
+        <TextView
+            android:id="@+id/node_info"
+            android:paddingTop="8dp"
+            android:textAppearance="?android:textAppearanceSmall"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"/>
+    </LinearLayout>
+</ScrollView>

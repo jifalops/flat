@@ -6,5 +6,6 @@
         <item>Wifi</item>
         <item>Movement sensor</item>
         <item>Network Service Discovery</item>
+        <item>Logging</item>
     </string-array>
 </resources>
