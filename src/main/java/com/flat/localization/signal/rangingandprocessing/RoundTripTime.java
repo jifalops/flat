@@ -1,11 +1,11 @@
-package com.flat.localization.ranging;
+package com.flat.localization.signal.rangingandprocessing;
 
 import com.flat.localization.util.Const;
 
 /**
  * Created by Jacob Phillips (10/2014)
  */
-public final class RoundTripTime implements RangingProcessor {
+public final class RoundTripTime implements SignalInterpreter {
     @Override
     public String getName() {
         return "RTT";

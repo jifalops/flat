@@ -1,7 +1,7 @@
 package com.flat.localization;
 
-import com.flat.localization.ranging.RangingProcessor;
-import com.flat.localization.scheme.LocationAlgorithm;
+import com.flat.localization.signal.rangingandprocessing.SignalInterpreter;
+import com.flat.localization.coordinatesystem.LocationAlgorithm;
 import com.flat.localization.signal.Signal;
 
 import java.util.ArrayList;
@@ -81,7 +81,7 @@ public final class Model {
 
 
     /** All Signals and which ranging algorithms they can use */
-    private final Map<Signal, List<RangingProcessor>> signals = Collections.synchronizedMap(new LinkedHashMap<Signal, List<RangingProcessor>>());
+    private final Map<Signal, List<SignalInterpreter>> signals = Collections.synchronizedMap(new LinkedHashMap<Signal, List<SignalInterpreter>>());
 
     public int getSignalCount() {
         return signals.size();
@@ -91,11 +91,11 @@ public final class Model {
         return signals.keySet().toArray(new Signal[signals.size()]);
     }
 
-    public List<RangingProcessor> getRangingProcessors(Signal signal) {
+    public List<SignalInterpreter> getRangingProcessors(Signal signal) {
         return signals.get(signal);
     }
 
-    public void addSignal(Signal signal, List<RangingProcessor> processors) {
+    public void addSignal(Signal signal, List<SignalInterpreter> processors) {
         signals.put(signal, processors);
     }
 

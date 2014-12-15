@@ -1,4 +1,4 @@
-package com.flat.localization.scheme;
+package com.flat.localization.coordinatesystem;
 
 /**
  * @author Jacob Phillips
@@ -13,8 +13,8 @@ public final class Trilateration extends PositionAlgorithm {
     }
 
     @Override
-    public double[] findCoords(double[][] positions, double[] ranges) {
-        double[] pos = new double[3];
+    public float[] findCoords(float[][] positions, float[] ranges) {
+        float[] pos = new float[3];
         pos[0] = calcX(ranges[0], ranges[1], positions[1][0]);
         pos[1] = calcY(ranges[0], ranges[2], positions[2][0], positions[2][1], pos[0]);
         pos[2] = calcZ(ranges[0], pos[0], pos[1]);
@@ -29,7 +29,7 @@ public final class Trilateration extends PositionAlgorithm {
      * @param r2 Anchor 2's range in meters
      * @param d Anchor 2's X coordinate (distance between anchor 1 and 2).
      */
-    public static double calcX(double r1, double r2, double d) {
+    public static float calcX(float r1, float r2, float d) {
         return (r1*r1 - r2*r2 - d*d) / (2*d);
     }
 
@@ -43,7 +43,7 @@ public final class Trilateration extends PositionAlgorithm {
      * @param j Anchor 3's Y coordinate
      * @param x The nodes X coordinate. See calcX(double,double,double).
      */
-    public static double calcY(double r1, double r3, double i, double j, double x) {
+    public static float calcY(float r1, float r3, float i, float j, float x) {
         return ((r1*r1 - r3*r3 + i*i + j*j) / (2*j)) - x*i/j;
     }
 
@@ -55,7 +55,7 @@ public final class Trilateration extends PositionAlgorithm {
      * @param x The nodes X coordinate. See calcX(double,double,double).
      * @param y The nodes Y coordinate. See calcY(double,double,double).
      */
-    public static double calcZ(double r1, double x, double y) {
-        return Math.sqrt(r1 * r1 - x * x - y * y);
+    public static float calcZ(float r1, float x, float y) {
+        return (float)Math.sqrt(r1 * r1 - x * x - y * y);
     }
 }

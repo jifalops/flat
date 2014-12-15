@@ -11,6 +11,7 @@ public interface Signal {
      * TODO physical, class, or instance unique?
      */
     String getName();
+    int getChangeCount();
 
     /**
      * Enable updates from a Signal. Most will need to use a Context to access the signal source.

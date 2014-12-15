@@ -83,8 +83,8 @@ public class Criteria {
         boolean matchAll;
         Pattern idMatches;
 
-        double[] posMin = {Double.MAX_VALUE, Double.MAX_VALUE, Double.MAX_VALUE};
-        double[] posMax = {Double.MIN_VALUE, Double.MIN_VALUE, Double.MIN_VALUE};
+        float[] posMin = {Float.MAX_VALUE, Float.MAX_VALUE, Float.MAX_VALUE};
+        float[] posMax = {Float.MIN_VALUE, Float.MIN_VALUE, Float.MIN_VALUE};
         float[] angleMin = {Float.MAX_VALUE, Float.MAX_VALUE, Float.MAX_VALUE};
         float[] angleMax = {Float.MIN_VALUE, Float.MIN_VALUE, Float.MIN_VALUE};
         Pattern stateAlgMatches;
@@ -93,8 +93,8 @@ public class Criteria {
         int statePendingCountMin = Integer.MAX_VALUE;
         int statePendingCountMax = Integer.MIN_VALUE;
 
-        double rangeMin = Double.MAX_VALUE;
-        double rangeMax = Double.MIN_VALUE;
+        float rangeMin = Float.MAX_VALUE;
+        float rangeMax = Float.MIN_VALUE;
         Pattern rangeSigMatches;
         Pattern rangeAlgMatches;
         long rangeAgeMin = Long.MAX_VALUE;

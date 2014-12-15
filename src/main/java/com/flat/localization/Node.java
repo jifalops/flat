@@ -1,13 +1,15 @@
 package com.flat.localization;
 
+import com.flat.util.Util;
+
 import java.util.ArrayList;
 import java.util.List;
 
 
 public final class Node {
     public static final class Range {
-        public double dist = 0;
-        public double actual = 0; // when given
+        public float dist = 0;
+        public float actual = 0; // when given
         public String signal = "none";
         public String algorithm = "none";
         public long time = System.nanoTime();
@@ -34,15 +36,19 @@ public final class Node {
      * <a href='http://developer.android.com/guide/topics/sensors/sensors_overview.html#sensors-coords'>http://developer.android.com/guide/topics/sensors/sensors_overview.html#sensors-coords</a>
      */
     public static final class State {
-        public double pos[] = {0,0,0};
+        public float pos[] = {0,0,0};
         public float angle[] = {0,0,0};
         public String algorithm = "none";
         public long time = System.nanoTime();
 
         @Override
         public String toString() {
-            return String.format("(%.2f, %.2f, %.2f), (%.0f, %.0f, %.0f)",
-                    pos[0], pos[1], pos[2], angle[0], angle[1], angle[2]);
+            String x,y,z;
+            x = Util.Format.SCIENTIFIC_3SIG.format(pos[0]);
+            y = Util.Format.SCIENTIFIC_3SIG.format(pos[1]);
+            z = Util.Format.SCIENTIFIC_3SIG.format(pos[2]);
+            return String.format("(%s, %s, %s), (%.0f, %.0f, %.0f)",
+                    x,y,z, angle[0], angle[1], angle[2]);
         }
     }
 
@@ -152,10 +158,10 @@ public final class Node {
 
 
     /**
-     * Flatten several nodes' current state to a double[][].
+     * Flatten several nodes' current state to a float[][].
      */
-    public static double[][] toPositionArray(Node... nodes) {
-        double[][] n = new double[nodes.length][3];
+    public static float[][] toPositionArray(Node... nodes) {
+        float[][] n = new float[nodes.length][3];
         for (int i=0; i<nodes.length; ++i) {
             for (int j=0; j<3; ++j) {
                 n[i][j] = nodes[i].getState().pos[j];
@@ -165,10 +171,10 @@ public final class Node {
     }
 
     /**
-     * Flatten several nodes' current ranges to a double[].
+     * Flatten several nodes' current ranges to a float[].
      */
-    public static double[] toRangeArray(Node... nodes) {
-        double[] r = new double[nodes.length];
+    public static float[] toRangeArray(Node... nodes) {
+        float[] r = new float[nodes.length];
         for (int i=0; i<nodes.length; ++i) {
             r[i] = nodes[i].getRange().dist;
         }

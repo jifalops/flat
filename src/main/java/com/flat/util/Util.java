@@ -22,7 +22,7 @@ public final class Util {
         public static final DecimalFormat newBasic2dec() { return new DecimalFormat("##############0.00"); }
         public static final DecimalFormat SEPARATOR_0DEC = new DecimalFormat("###,###,###,###,##0");
         public static final DecimalFormat SEPARATOR_2DEC = new DecimalFormat("###,###,###,###,##0.00");
-        public static final DecimalFormat SCIENTIFIC_3SIG = new DecimalFormat("0.##E0");
+        public static final DecimalFormat SCIENTIFIC_3SIG = new DecimalFormat("+0.00E+0;-0");
         public static final DecimalFormat SCIENTIFIC_5SIG = new DecimalFormat("0.####E0");
 
         public static final DecimalFormat newBasic6dec() { return new DecimalFormat("#####0.000000"); }

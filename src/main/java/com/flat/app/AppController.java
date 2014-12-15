@@ -13,15 +13,15 @@ public class AppController extends Application {
 
 	private RequestQueue mRequestQueue;
 
-	private static AppController mInstance;
+	private static AppController sInstance;
     public static synchronized AppController getInstance() {
-        return mInstance;
+        return sInstance;
     }
 
 	@Override
 	public void onCreate() {
 		super.onCreate();
-		mInstance = this;
+		sInstance = this;
 	}
 
 	public RequestQueue getRequestQueue() {

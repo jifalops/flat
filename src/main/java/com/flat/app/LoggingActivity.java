@@ -18,8 +18,8 @@ import com.flat.R;
 import com.flat.localization.Controller;
 import com.flat.localization.Model;
 import com.flat.localization.Node;
-import com.flat.localization.ranging.RangingProcessor;
-import com.flat.localization.scheme.LocationAlgorithm;
+import com.flat.localization.signal.rangingandprocessing.SignalInterpreter;
+import com.flat.localization.coordinatesystem.LocationAlgorithm;
 import com.flat.localization.signal.Signal;
 
 import java.util.ArrayList;
@@ -54,39 +54,40 @@ public class LoggingActivity extends Activity {
 
     private class SignalAdapter extends ArrayAdapter<Signal> {
         public SignalAdapter() {
-            super(LoggingActivity.this, R.layout.signal_item, model.getSignals());
+            super(LoggingActivity.this, R.layout.active_item_toggle, model.getSignals());
         }
 
         @Override
         public View getView(int position, View convertView, ViewGroup parent) {
             View row = convertView;
-            SignalHolder holder = null;
+            ActiveToggleItemHolder holder = null;
 
             final Signal signal = model.getSignals()[position];
             signal.registerListener(signalListener);
 
             if (row == null) {
                 LayoutInflater inflater = (LoggingActivity.this).getLayoutInflater();
-                row = inflater.inflate(R.layout.signal_item, parent, false);
+                row = inflater.inflate(R.layout.active_item_toggle, parent, false);
 
-                holder = new SignalHolder();
-                holder.dot = (ImageView) row.findViewById(R.id.dotView);
+                holder = new ActiveToggleItemHolder();
+                holder.dot = (ImageView) row.findViewById(R.id.activityDot);
                 holder.name = (TextView) row.findViewById(R.id.name);
-                holder.processors = (TextView) row.findViewById(R.id.line2);
+                holder.desc = (TextView) row.findViewById(R.id.desc);
                 holder.enabled = (Switch) row.findViewById(R.id.enabled);
+                holder.count = (TextView) row.findViewById(R.id.count);
                 row.setTag(holder);
             } else {
-                holder = (SignalHolder) row.getTag();
+                holder = (ActiveToggleItemHolder) row.getTag();
             }
 
 
             holder.name.setText(signal.getName());
 
             List<String> processors = new ArrayList<String>();
-            for (RangingProcessor rp : model.getRangingProcessors(signal)) {
+            for (SignalInterpreter rp : model.getRangingProcessors(signal)) {
                 processors.add(rp.getName());
             }
-            holder.processors.setText(TextUtils.join(", ", processors));
+            holder.desc.setText(TextUtils.join(", ", processors));
             holder.enabled.setChecked(signal.isEnabled());
 
             holder.enabled.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
@@ -105,11 +106,12 @@ public class LoggingActivity extends Activity {
 
 
     }
-    private static class SignalHolder {
+    private static class ActiveToggleItemHolder {
         ImageView dot;
         TextView name;
-        TextView processors;
+        TextView desc;
         Switch enabled;
+        TextView count;
     }
 
 
@@ -117,29 +119,30 @@ public class LoggingActivity extends Activity {
 
     private class AlgorithmAdapter extends ArrayAdapter<LocationAlgorithm> {
         public AlgorithmAdapter() {
-            super(LoggingActivity.this, R.layout.algorithm_item, model.getAlgorithms());
+            super(LoggingActivity.this, R.layout.active_item_toggle, model.getAlgorithms());
         }
 
         @Override
         public View getView(int position, View convertView, ViewGroup parent) {
             View row = convertView;
-            AlgorithmHolder holder = null;
+            ActiveToggleItemHolder holder = null;
 
             final LocationAlgorithm alg = model.getAlgorithms()[position];
             alg.registerListener(algListener);
 
             if (row == null) {
                 LayoutInflater inflater = (LoggingActivity.this).getLayoutInflater();
-                row = inflater.inflate(R.layout.algorithm_item, parent, false);
+                row = inflater.inflate(R.layout.active_item_toggle, parent, false);
 
-                holder = new AlgorithmHolder();
-                holder.dot = (ImageView) row.findViewById(R.id.dotView);
+                holder = new ActiveToggleItemHolder();
+                holder.dot = (ImageView) row.findViewById(R.id.activityDot);
                 holder.name = (TextView) row.findViewById(R.id.name);
-                holder.line2 = (TextView) row.findViewById(R.id.line2);
+                holder.desc = (TextView) row.findViewById(R.id.desc);
                 holder.enabled = (Switch) row.findViewById(R.id.enabled);
+                holder.count = (TextView) row.findViewById(R.id.count);
                 row.setTag(holder);
             } else {
-                holder = (AlgorithmHolder) row.getTag();
+                holder = (ActiveToggleItemHolder) row.getTag();
             }
 
 
@@ -161,12 +164,7 @@ public class LoggingActivity extends Activity {
 
 
     }
-    private static class AlgorithmHolder {
-        ImageView dot;
-        TextView name;
-        TextView line2;
-        Switch enabled;
-    }
+
 
 
     private void blink(final ImageView dot) {
@@ -234,8 +232,9 @@ public class LoggingActivity extends Activity {
                 if (la == algs[i]) {
                     View container = getViewByPosition(i, algsView);
                     if (container != null) {
-                        blink((ImageView) container.findViewById(R.id.dotView));
-                        ((TextView) container.findViewById(R.id.line2)).setText("Nodes: " + references.size());
+                        blink((ImageView) container.findViewById(R.id.activityDot));
+                        ((TextView) container.findViewById(R.id.desc)).setText("Nodes: " + references.size());
+                        ((TextView) container.findViewById(R.id.count)).setText(la.getUseCount() + "");
                     }
                     break;
                 }
@@ -252,7 +251,8 @@ public class LoggingActivity extends Activity {
                 if (signal == signals[i]) {
                     View container = getViewByPosition(i, signalsView);
                     if (container != null) {
-                        blink((ImageView) container.findViewById(R.id.dotView));
+                        blink((ImageView) container.findViewById(R.id.activityDot));
+                        ((TextView) container.findViewById(R.id.count)).setText(signal.getChangeCount() + "");
                     }
                     break;
                 }

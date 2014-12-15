@@ -1,4 +1,4 @@
-package com.flat.localization.scheme;
+package com.flat.localization.coordinatesystem;
 
 import com.flat.localization.Node;
 
@@ -12,6 +12,7 @@ import java.util.Set;
 public abstract class PositionAlgorithm implements LocationAlgorithm {
 
     private boolean enabled = true;
+    private int count;
 
     private Set<AlgorithmListener> listeners = new HashSet<AlgorithmListener>(1);
     @Override
@@ -29,6 +30,11 @@ public abstract class PositionAlgorithm implements LocationAlgorithm {
     }
 
     @Override
+    public int getUseCount() {
+        return count;
+    }
+
+    @Override
     public boolean isEnabled() {
         return enabled;
     }
@@ -40,11 +46,11 @@ public abstract class PositionAlgorithm implements LocationAlgorithm {
 
     @Override
     public final Node.State applyTo(Node target, List<Node> references) {
-
+        ++count;
         Node.State s = new Node.State();
         s.algorithm = getName();
-        double[][] positions = Node.toPositionArray(references.toArray(new Node[references.size()]));
-        double[] ranges = Node.toRangeArray(references.toArray(new Node[references.size()]));
+        float[][] positions = Node.toPositionArray(references.toArray(new Node[references.size()]));
+        float[] ranges = Node.toRangeArray(references.toArray(new Node[references.size()]));
         s.pos = findCoords(positions, ranges);
         s.angle = target.getState().angle;
         s.time = System.nanoTime();
@@ -56,5 +62,5 @@ public abstract class PositionAlgorithm implements LocationAlgorithm {
         return s;
     }
 
-    public abstract double[] findCoords(double[][] positions, double[] ranges);
+    public abstract float[] findCoords(float[][] positions, float[] ranges);
 }

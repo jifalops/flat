@@ -12,7 +12,7 @@
         android:layout_gravity="center_vertical"
         android:layout_marginLeft="16dp"
         android:layout_marginRight="16dp"
-        android:id="@+id/dotView"
+        android:id="@+id/activityDot"
         android:src="@drawable/dot" />
 
     <LinearLayout
@@ -25,22 +25,33 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:textAppearance="?android:attr/textAppearanceMedium"
-            android:text="Signal Name"
+            android:text="Item Name"
             android:id="@+id/name"/>
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:textAppearance="?android:attr/textAppearanceSmall"
-            android:text="Processors"
-            android:id="@+id/line2" />
+            android:text="Item description"
+            android:id="@+id/desc" />
     </LinearLayout>
 
-    <Switch
+    <LinearLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:id="@+id/enabled"
-        android:checked="false" />
+        android:orientation="vertical">
+        <Switch
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:id="@+id/enabled"
+            android:checked="false" />
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="right"
+            android:id="@+id/count"
+            android:text="0"/>
+    </LinearLayout>
 
 
 </LinearLayout>

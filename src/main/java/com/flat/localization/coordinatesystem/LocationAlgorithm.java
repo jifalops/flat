@@ -1,4 +1,4 @@
-package com.flat.localization.scheme;
+package com.flat.localization.coordinatesystem;
 
 import com.flat.localization.Node;
 
@@ -15,6 +15,7 @@ public interface LocationAlgorithm {
     String getName();
     boolean isEnabled();
     void setEnabled(boolean enabled);
+    int getUseCount();
 
     /*
      * Allow other objects to react to algorithm changes.

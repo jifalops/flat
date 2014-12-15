@@ -7,20 +7,27 @@ import android.net.wifi.ScanResult;
 import android.os.Bundle;
 import android.util.Log;
 
-import com.flat.localization.ranging.FreeSpacePathLoss;
-import com.flat.localization.ranging.LinearAcceleration;
-import com.flat.localization.ranging.RotationVector;
-import com.flat.localization.ranging.RangingProcessor;
-import com.flat.localization.scheme.LocationAlgorithm;
-import com.flat.localization.scheme.MinMax;
-import com.flat.localization.scheme.Trilateration;
+import com.android.volley.Response;
+import com.android.volley.VolleyError;
+import com.flat.app.AppController;
+import com.flat.localization.coordinatesystem.LocationAlgorithm;
+import com.flat.localization.coordinatesystem.MinMax;
+import com.flat.localization.coordinatesystem.Trilateration;
 import com.flat.localization.signal.AndroidSensor;
 import com.flat.localization.signal.BluetoothBeacon;
 import com.flat.localization.signal.Signal;
 import com.flat.localization.signal.WifiBeacon;
+import com.flat.localization.signal.rangingandprocessing.FreeSpacePathLoss;
+import com.flat.localization.signal.rangingandprocessing.LinearAcceleration;
+import com.flat.localization.signal.rangingandprocessing.RotationVector;
+import com.flat.localization.signal.rangingandprocessing.SignalInterpreter;
 import com.flat.localization.util.Calc;
-import com.flat.localization.util.Const;
+import com.flat.localization.util.Conv;
 import com.flat.localization.util.Util;
+import com.flat.loggingrequests.CustomRequest;
+import com.flat.loggingrequests.RangingRequest;
+
+import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -77,7 +84,7 @@ public final class Controller implements Model.ModelListener, Node.NodeListener 
          * ===========================
          */
 
-        List<RangingProcessor> signalProcessors;
+        List<SignalInterpreter> signalProcessors;
 
 
         /*
@@ -87,7 +94,7 @@ public final class Controller implements Model.ModelListener, Node.NodeListener 
 
         // boilerplate
         final LinearAcceleration la = new LinearAcceleration();
-        signalProcessors = new ArrayList<RangingProcessor>(1);
+        signalProcessors = new ArrayList<SignalInterpreter>(1);
         signalProcessors.add(la);
         model.addSignal(accelSignal, signalProcessors);
 
@@ -102,8 +109,12 @@ public final class Controller implements Model.ModelListener, Node.NodeListener 
                 switch (eventType) {
                     case AndroidSensor.EVENT_SENSOR_CHANGE:
                         long last = extras.getLong(key);
+                        double diff = state.time - last;
+                        if (last == 0 || diff > 1E9) diff = 0;
+                        diff = diff / 1E9;
+
                         extras.putLong(key, state.time);
-                        state.pos = la.integrate(accelSignal.getValues(), state.time - last);
+                        state.pos = la.integrate(accelSignal.getValues(), diff);
                         // incorporate current position into new state
                         state.pos = Calc.vectorSum(me.getState().pos, state.pos);
                         me.addPending(state);
@@ -123,7 +134,7 @@ public final class Controller implements Model.ModelListener, Node.NodeListener 
 
         // boilerplate
         final RotationVector rv = new RotationVector();
-        signalProcessors = new ArrayList<RangingProcessor>(1);
+        signalProcessors = new ArrayList<SignalInterpreter>(1);
         signalProcessors.add(rv);
         model.addSignal(rotSignal, signalProcessors);
 
@@ -136,20 +147,10 @@ public final class Controller implements Model.ModelListener, Node.NodeListener 
                 state.time = rotSignal.getTimestamp();
                 switch (eventType) {
                     case AndroidSensor.EVENT_SENSOR_CHANGE:
-                        float[] rot = null;
-                        if (me.getStateHistorySize() > 0) {
-                            // null angle is okay
-                            rot = me.getState().angle;
-                        }
-
-                        // new angle incorporates previous angle
-                        rot = rv.rotateBy(rot, rotSignal.getValues());
-
-                        state.angle = new float[]{
-                                rot[0] * Const.RAD_TO_DEG,
-                                rot[1] * Const.RAD_TO_DEG,
-                                rot[2] * Const.RAD_TO_DEG
-                        };
+                        float[] angle = rotSignal.getValues();
+                        rv.toWorldOrientation(angle);
+                        Conv.rad2deg(angle);
+                        state.angle = angle;
 
                         me.addPending(state);
                         break;
@@ -170,7 +171,7 @@ public final class Controller implements Model.ModelListener, Node.NodeListener 
 
         // boilerplate
         final FreeSpacePathLoss fspl = new FreeSpacePathLoss();
-        signalProcessors = new ArrayList<RangingProcessor>(1);
+        signalProcessors = new ArrayList<SignalInterpreter>(1);
         signalProcessors.add(fspl);
         model.addSignal(btSignal, signalProcessors);
 
@@ -187,7 +188,7 @@ public final class Controller implements Model.ModelListener, Node.NodeListener 
                         BluetoothDevice btdevice = btSignal.getMostRecentDevice();
                         short rssi = btSignal.getScanResults().get(btdevice);
                         // TODO access true frequency
-                        range.dist = fspl.fromDbMhz((double) rssi, 2400.0);
+                        range.dist = fspl.fromDbMhz(rssi, 2400.0f);
 
                         // TODO using BT mac instead of wifi
                         String mac = btdevice.getAddress();
@@ -210,7 +211,7 @@ public final class Controller implements Model.ModelListener, Node.NodeListener 
         // boilerplate
         // TODO no need for multiple fspl instances
         final FreeSpacePathLoss fspl2 = new FreeSpacePathLoss();
-        signalProcessors = new ArrayList<RangingProcessor>(1);
+        signalProcessors = new ArrayList<SignalInterpreter>(1);
         signalProcessors.add(fspl2);
         model.addSignal(wifiSignal, signalProcessors);
 
@@ -271,20 +272,20 @@ public final class Controller implements Model.ModelListener, Node.NodeListener 
 
         // Anchor 1 = (0, 0)
         nmc = new Criteria.NodeMatchCriteria();
-        nmc.posMin = new double[] {0, 0, Double.MIN_VALUE};
-        nmc.posMax = new double[] {0, 0, Double.MAX_VALUE};
+        nmc.posMin = new float[] {0, 0, Float.MIN_VALUE};
+        nmc.posMax = new float[] {0, 0, Float.MAX_VALUE};
         criteria.nodeListRequirements.add(nmc);
 
         // Anchor 2 = (x, 0)
         nmc = new Criteria.NodeMatchCriteria();
-        nmc.posMin = new double[] {Double.MIN_VALUE, 0, Double.MIN_VALUE};
-        nmc.posMax = new double[] {Double.MAX_VALUE, 0, Double.MAX_VALUE};
+        nmc.posMin = new float[] {Float.MIN_VALUE, 0, Float.MIN_VALUE};
+        nmc.posMax = new float[] {Float.MAX_VALUE, 0, Float.MAX_VALUE};
         criteria.nodeListRequirements.add(nmc);
 
         // Anchor 3 = (x, y)
         nmc = new Criteria.NodeMatchCriteria();
-        nmc.posMin = new double[] {Double.MIN_VALUE, Double.MIN_VALUE, Double.MIN_VALUE};
-        nmc.posMax = new double[] {Double.MAX_VALUE, Double.MAX_VALUE, Double.MAX_VALUE};
+        nmc.posMin = new float[] {Float.MIN_VALUE, Float.MIN_VALUE, Float.MIN_VALUE};
+        nmc.posMax = new float[] {Float.MAX_VALUE, Float.MAX_VALUE, Float.MAX_VALUE};
         criteria.nodeListRequirements.add(nmc);
 
         model.addAlgorithm(trilat, criteria);
@@ -337,6 +338,48 @@ public final class Controller implements Model.ModelListener, Node.NodeListener 
     @Override
     public void onRangeChanged(Node n, Node.Range r) {
         Log.i(TAG, String.format("Range for %s = %s", n.getId(), r.toString()));
+
+//        JSONObject json = new JSONObject();
+//        try {
+//            json.put("a", "1");
+//            json.put("b", "x");
+//            json.put("c3","asdfoim");
+//        } catch (JSONException e) {
+//            Log.e(TAG, "Error forming json object");
+//        }
+//
+//
+//
+//        RangingRequest rr = new RangingRequest(r, me, n, new Response.Listener<JSONObject>() {
+//            @Override
+//            public void onResponse(JSONObject jsonObject) {
+//                Log.e(TAG, "Response: " + jsonObject.toString());
+//            }
+//        }, new Response.ErrorListener() {
+//            @Override
+//            public void onErrorResponse(VolleyError volleyError) {
+//                Log.d(TAG, "Response Error: " + volleyError.toString());
+//            }
+//        });
+//        rr.queue();
+
+        // Post params to be sent to the server
+
+        CustomRequest req = new RangingRequest(RangingRequest.makeRequest(r, me, n),
+                new Response.Listener<JSONObject>() {
+                    @Override
+                    public void onResponse(JSONObject response) {
+                        Log.v(TAG, "Response: " + response.toString());
+                    }
+                }, new Response.ErrorListener() {
+            @Override
+            public void onErrorResponse(VolleyError error) {
+                Log.e(TAG, "Response Error: " + error.getMessage());
+            }
+        });
+
+        // add the request object to the queue to be executed
+        AppController.getInstance().addToRequestQueue(req);
     }
 
     @Override

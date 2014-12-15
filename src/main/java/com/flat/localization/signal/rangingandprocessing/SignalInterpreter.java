@@ -1,4 +1,4 @@
-package com.flat.localization.ranging;
+package com.flat.localization.signal.rangingandprocessing;
 
 /**
  * These process signals into one-dimensional ranges (no direction).
@@ -6,6 +6,6 @@ package com.flat.localization.ranging;
  *
  * Created by jacob on 10/25/14.
  */
-public interface RangingProcessor {
+public interface SignalInterpreter {
     String getName();
 }
