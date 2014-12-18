@@ -58,13 +58,15 @@ public final class Node {
     private final List<State> stateHistory = new ArrayList<State>();
 
     private final String id;
+    private String name;
     private boolean fixed;
 
 
     public Node(String id) {
 
         this.id = id;
-
+        this.name = id;
+        fixed = true;
         rangeHistory.add(new Range());
         stateHistory.add(new State());
     }
@@ -73,6 +75,8 @@ public final class Node {
     public String getId() {
         return id;
     }
+    public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
 
     public synchronized boolean isFixed() { return fixed; }
     public synchronized void setFixed(boolean fixed) { this.fixed = fixed; }

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    android:key="main prefs">
+    <PreferenceScreen
+        android:key="node options"
+        android:title="Node options">
+    </PreferenceScreen>
+    <EditTextPreference
+        android:key="log host"
+        android:title="Logging Host"
+        android:summary="summary"/>
+</PreferenceScreen>
