@@ -16,6 +16,7 @@ import android.widget.Switch;
 import android.widget.TextView;
 
 import com.flat.R;
+import com.flat.localization.Model;
 
 /**
  * @author Jacob Phillips (12/2014, jphilli85 at gmail)
@@ -24,7 +25,6 @@ public class NodeOptionsPreference extends Preference {
 
     private TextView name;
     private Switch enabled;
-    private NodeOptions opts;
 
     public NodeOptionsPreference(Context context, AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
@@ -43,10 +43,10 @@ public class NodeOptionsPreference extends Preference {
         LayoutInflater li = (LayoutInflater)getContext().getSystemService( Context.LAYOUT_INFLATER_SERVICE );
         View layout = li.inflate(R.layout.node_options_item, parent, false);
 
-        opts = new NodeOptions(getPersistedString(""));
+        getPersistedValues();
 
 
-        ((TextView) layout.findViewById(R.id.nodeId)).setText(opts.id);
+        ((TextView) layout.findViewById(R.id.nodeId)).setText(getKey());
 
         layout.findViewById(R.id.nodeInfo).setOnClickListener(new View.OnClickListener() {
             @Override
@@ -58,8 +58,9 @@ public class NodeOptionsPreference extends Preference {
         name = (TextView) layout.findViewById(R.id.nodeName);
         enabled = (Switch) layout.findViewById(R.id.nodeIgnoreSwitch);
 
-        name.setText(opts.name);
-        enabled.setChecked(opts.enabled);
+        name.setText(Model.getInstance().getNode(getKey()).getName());
+
+        getPersistedValues();
 
         enabled.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
@@ -104,41 +105,19 @@ public class NodeOptionsPreference extends Preference {
 
 
     private void saveState() {
-        opts.name = name.getText().toString();
-        opts.enabled = enabled.isChecked();
-        persistString(opts.toString());
+        persistString(enabled.isChecked() + "," + name.getText());
     }
 
-
-
-
-    public static final class NodeOptions {
-        public final String id;
-        public String name, key;
-        public boolean enabled;
-        public NodeOptions(String info) {
-            if (!TextUtils.isEmpty(info)) {
-                String[] parts = info.split(",", 3);
-                id = parts[0];
-                if (parts.length > 1) {
-                    enabled = Boolean.valueOf(parts[2]);
-                }
-                if (parts.length > 2) {
-                    name = parts[3];
-                }
-            } else {
-                id = null;
+    private void getPersistedValues() {
+        String info = getPersistedString("");
+        if (!TextUtils.isEmpty(info)) {
+            String[] parts = info.split(",", 2);
+            if (!TextUtils.isEmpty(parts[0])) {
+                enabled.setChecked(Boolean.valueOf(parts[0]));
             }
-        }
-        public NodeOptions(String key, String id, String name, boolean enabled) {
-            this.key = key;
-            this.id = id;
-            this.name = name;
-            this.enabled = enabled;
-        }
-        @Override
-        public String toString() {
-            return id + "," + enabled + "," + name;
+            if (parts.length > 1) {
+                name.setText(parts[1]);
+            }
         }
     }
 }

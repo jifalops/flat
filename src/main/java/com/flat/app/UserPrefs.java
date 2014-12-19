@@ -13,8 +13,10 @@ import com.flat.localization.Model;
 import com.flat.localization.Node;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 /**
  * @author Jacob Phillips (12/2014, jphilli85 at gmail)
@@ -55,38 +57,28 @@ public class UserPrefs extends PreferenceActivity {
 
             NodeOptionsPreference nop;
 
-            List<NodeOptionsPreference.NodeOptions> info = new ArrayList<NodeOptionsPreference.NodeOptions>();
+            List<String> ids = new ArrayList<String>();
 
             SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getActivity());
-//            Pattern pat = Pattern.compile("([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})");
+            Pattern pat = Pattern.compile("([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})");
 
-            NodeOptionsPreference.NodeOptions no;
-            int count = 0;
+
             for (Map.Entry<String, ?> entry : prefs.getAll().entrySet()) {
-                if (entry.getKey().startsWith("nodeopts")) {
-                    ++count;
-                    no = new NodeOptionsPreference.NodeOptions((String) entry.getValue());
-                    info.add(no);
+                if (pat.matcher(entry.getKey()).matches()) {
+                    ids.add(entry.getKey());
                 }
             }
 
-            boolean found;
             for (Node n : Model.getInstance().getNodesCopy()) {
-                found = false;
-                for (NodeOptionsPreference.NodeOptions nops : info) {
-                    if (nops.id.equals(n.getId())) {
-                        found = true;
-                    }
-                }
-                if (!found) {
-                    info.add(new NodeOptionsPreference.NodeOptions("nodeopts" + count, n.getId(), n.getName(), true));
-                    ++count;
+                if (!ids.contains(n.getId())) {
+                    ids.add(n.getId());
                 }
             }
 
-            for (NodeOptionsPreference.NodeOptions nops : info) {
+            Collections.sort(ids);
+            for (String id : ids) {
                 nop = new NodeOptionsPreference(getActivity());
-                nop.setKey(nops.key);
+                nop.setKey(id);
                 opts.addPreference(nop);
             }
         }
