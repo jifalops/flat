@@ -2,15 +2,16 @@ package com.flat.app;
 
 import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.preference.EditTextPreference;
 import android.preference.PreferenceActivity;
 import android.preference.PreferenceFragment;
 import android.preference.PreferenceManager;
 import android.preference.PreferenceScreen;
-import android.widget.Button;
 
 import com.flat.R;
 import com.flat.localization.Model;
 import com.flat.localization.Node;
+import com.flat.loggingrequests.AbstractRequest;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -21,7 +22,7 @@ import java.util.regex.Pattern;
 /**
  * @author Jacob Phillips (12/2014, jphilli85 at gmail)
  */
-public class UserPrefs extends PreferenceActivity {
+public class PrefsActivity extends PreferenceActivity {
 
 
 
@@ -30,22 +31,13 @@ public class UserPrefs extends PreferenceActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-
-        //setContentView(R.layout.prefs_activity);
-
         getFragmentManager().beginTransaction().replace(android.R.id.content, new PrefsFragment()).commit();
-
-        // Add a button to the header list.
-        if (hasHeaders()) {
-            Button button = new Button(this);
-            button.setText("Some action");
-            setListFooter(button);
-        }
-
     }
 
 
     public static class PrefsFragment extends PreferenceFragment {
+
+
         @Override
         public void onCreate(Bundle savedInstanceState) {
             super.onCreate(savedInstanceState);
@@ -53,34 +45,49 @@ public class UserPrefs extends PreferenceActivity {
             // Load the preferences from an XML resource
             addPreferencesFromResource(R.xml.preferences);
 
-            PreferenceScreen opts = (PreferenceScreen) findPreference("node options");
+            getActivity().setTitle(R.string.action_settings);
+//            getActivity().getActionBar().setDisplayHomeAsUpEnabled(true);
 
-            NodeOptionsPreference nop;
-
-            List<String> ids = new ArrayList<String>();
-
-            SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getActivity());
-            Pattern pat = Pattern.compile("([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})");
+            SharedPreferences sharedPrefs = PreferenceManager.getDefaultSharedPreferences(getActivity());
 
 
-            for (Map.Entry<String, ?> entry : prefs.getAll().entrySet()) {
-                if (pat.matcher(entry.getKey()).matches()) {
+            EditTextPreference host = (EditTextPreference) findPreference("log host");
+            host.setSummary(sharedPrefs.getString(host.getKey(), AbstractRequest.URL));
+
+
+
+            PreferenceScreen nodesScreen = (PreferenceScreen) findPreference("node options");
+
+
+            NodeOptionsPreference nodePref;
+            final List<String> ids = new ArrayList<String>();
+
+            Pattern macAddr = Pattern.compile("([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})");
+
+
+            // Add all MACs to the list from SharedPrefs.
+            for (Map.Entry<String, ?> entry : sharedPrefs.getAll().entrySet()) {
+                if (macAddr.matcher(entry.getKey()).matches()) {
                     ids.add(entry.getKey());
                 }
             }
 
+            // Add any other MACs from the current data model.
             for (Node n : Model.getInstance().getNodesCopy()) {
                 if (!ids.contains(n.getId())) {
                     ids.add(n.getId());
                 }
             }
 
+            // Add each node-options-pref to the node screen
             Collections.sort(ids);
             for (String id : ids) {
-                nop = new NodeOptionsPreference(getActivity());
-                nop.setKey(id);
-                opts.addPreference(nop);
+                nodePref = new NodeOptionsPreference(getActivity());
+                nodePref.setKey(id);
+                nodesScreen.addPreference(nodePref);
             }
+
+            nodesScreen.setSummary(ids.size() + " known nodes");
         }
 
 

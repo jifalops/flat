@@ -16,7 +16,9 @@ import android.widget.Switch;
 import android.widget.TextView;
 
 import com.flat.R;
-import com.flat.localization.Model;
+
+import org.json.JSONException;
+import org.json.JSONObject;
 
 /**
  * @author Jacob Phillips (12/2014, jphilli85 at gmail)
@@ -42,11 +44,15 @@ public class NodeOptionsPreference extends Preference {
     protected View onCreateView(ViewGroup parent) {
         LayoutInflater li = (LayoutInflater)getContext().getSystemService( Context.LAYOUT_INFLATER_SERVICE );
         View layout = li.inflate(R.layout.node_options_item, parent, false);
-
-        getPersistedValues();
+        name = (TextView) layout.findViewById(R.id.nodeName);
+        enabled = (Switch) layout.findViewById(R.id.nodeIgnoreSwitch);
 
 
         ((TextView) layout.findViewById(R.id.nodeId)).setText(getKey());
+        name.setText(getKey());
+
+        readPersistedValues();
+
 
         layout.findViewById(R.id.nodeInfo).setOnClickListener(new View.OnClickListener() {
             @Override
@@ -55,13 +61,6 @@ public class NodeOptionsPreference extends Preference {
             }
         });
 
-        name = (TextView) layout.findViewById(R.id.nodeName);
-        enabled = (Switch) layout.findViewById(R.id.nodeIgnoreSwitch);
-
-        name.setText(Model.getInstance().getNode(getKey()).getName());
-
-        getPersistedValues();
-
         enabled.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
@@ -69,6 +68,8 @@ public class NodeOptionsPreference extends Preference {
             }
         });
 
+
+        saveState();
         return layout;
     }
 
@@ -105,19 +106,22 @@ public class NodeOptionsPreference extends Preference {
 
 
     private void saveState() {
-        persistString(enabled.isChecked() + "," + name.getText());
+        JSONObject json = new JSONObject();
+        try {
+            json.put("name", name.getText());
+            json.put("enabled", enabled.isChecked());
+        } catch (JSONException ignored) {}
+        persistString(json.toString());
     }
 
-    private void getPersistedValues() {
+    private void readPersistedValues() {
         String info = getPersistedString("");
-        if (!TextUtils.isEmpty(info)) {
-            String[] parts = info.split(",", 2);
-            if (!TextUtils.isEmpty(parts[0])) {
-                enabled.setChecked(Boolean.valueOf(parts[0]));
+        try {
+            JSONObject json = new JSONObject(info);
+            if (!TextUtils.isEmpty(json.getString("name"))) {
+                name.setText(json.getString("name"));
             }
-            if (parts.length > 1) {
-                name.setText(parts[1]);
-            }
-        }
+            enabled.setChecked(json.getBoolean("enabled"));
+        } catch (JSONException ignored) {}
     }
 }

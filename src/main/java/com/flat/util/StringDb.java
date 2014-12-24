@@ -21,18 +21,18 @@ public class StringDb {
     private final StringDelimiter tableDelim = new StringDelimiter("{}");
     private final List<DelimitedTable> db = Collections.synchronizedList(new ArrayList<DelimitedTable>(1));
 
-    private CharSequence dbName;
+    private String dbName;
 
     public StringDb() {
 
     }
 
-    public CharSequence getName() {
+    public String getName() {
         synchronized (dbName) {
             return dbName;
         }
     }
-    public void setName(CharSequence dbName) {
+    public void setName(String dbName) {
         synchronized (dbName) {
             this.dbName = dbName;
         }
@@ -58,7 +58,7 @@ public class StringDb {
         return db.get(tableIndex);
     }
 
-    public synchronized DelimitedTable getTable(CharSequence tableName) {
+    public synchronized DelimitedTable getTable(String tableName) {
         for (DelimitedTable dt : db) {
             if (dt.getName().equals(tableName)) {
                 return dt;
@@ -72,7 +72,7 @@ public class StringDb {
     }
 
     public synchronized String encode() {
-        CharSequence[] tables = new CharSequence[db.size()];
+        String[] tables = new String[db.size()];
         for (int i=0; i<db.size(); ++i) {
             tables[i] = db.get(i).encode();
         }
@@ -83,38 +83,19 @@ public class StringDb {
 
 
 
-
-
-
     public static class StringEncoder {
         private final String from, to;
-
         public StringEncoder(String from, String to) {
             this.from = from;
             this.to = to;
         }
-
         public String encode(String s) {
             return s.replace(from, to);
-        }
-        public String encode(CharSequence cs) {
-            return cs.toString().replace(from, to);
         }
         public String decode(String s) {
             return s.replace(to, from);
         }
-        public String decode(CharSequence cs) {
-            return cs.toString().replace(to, from);
-        }
-
         public String[] encodeAll(String[] strings) {
-            String[] s = new String[strings.length];
-            for (int i=0; i<strings.length; ++i) {
-                s[i] = encode(strings[i]);
-            }
-            return s;
-        }
-        public String[] encodeAll(CharSequence[] strings) {
             String[] s = new String[strings.length];
             for (int i=0; i<strings.length; ++i) {
                 s[i] = encode(strings[i]);
@@ -128,14 +109,11 @@ public class StringDb {
             }
             return s;
         }
-        public String[] decodeAll(CharSequence[] strings) {
-            String[] s = new String[strings.length];
-            for (int i=0; i<strings.length; ++i) {
-                s[i] = decode(strings[i]);
-            }
-            return s;
-        }
     }
+
+
+
+
 
     public static class StringDelimiter {
         private final String delim;
@@ -159,15 +137,22 @@ public class StringDb {
             encoder = new StringEncoder(from, to);
         }
 
-        public String encode(CharSequence... args) {
+        public String encode(String... args) {
             String[] encoded = encoder.encodeAll(args);
             return TextUtils.join(delim, encoded);
         }
 
-        public CharSequence[] decode(String s) {
+        public String[] decode(String s) {
             return encoder.decodeAll(TextUtils.split(s, Pattern.quote(delim)));
         }
     }
+
+
+
+
+
+
+
 
     public static class DelimitedTable extends Table {
         private final StringDelimiter colDelim = new StringDelimiter("<>");
@@ -176,14 +161,14 @@ public class StringDb {
         public DelimitedTable(int numFields) {
             super(numFields);
         }
-        public DelimitedTable(CharSequence... fields) {
+        public DelimitedTable(String... fields) {
             super(fields);
         }
         public DelimitedTable(String from, boolean headerRow) {
-            CharSequence[] rows = rowDelim.decode(from);
-            CharSequence[] cols;
+            String[] rows = rowDelim.decode(from);
+            String[] cols;
             boolean first = true;
-            for (CharSequence row : rows) {
+            for (String row : rows) {
                 cols = colDelim.decode(row.toString());
                 if (first) {
                     if (headerRow) {
@@ -207,7 +192,7 @@ public class StringDb {
         }
 
         public synchronized String encode() {
-            CharSequence[] rows = new CharSequence[getRowCount()];
+            String[] rows = new String[getRowCount()];
             for (int i=0; i<getRowCount(); ++i) {
                 rows[i] = getEncodedRow(i);
             }
@@ -215,10 +200,15 @@ public class StringDb {
         }
     }
 
+
+
+
+
+
     public static class Table {
-        private CharSequence tableName;
-        protected CharSequence[] fields;
-        private final List<CharSequence[]> data = Collections.synchronizedList(new ArrayList<CharSequence[]>());
+        private String tableName;
+        protected String[] fields;
+        private final List<String[]> data = Collections.synchronizedList(new ArrayList<String[]>());
 
         private boolean includeFieldNames = false; // first row would be field names in output.
         private boolean cloneRows = false;
@@ -226,39 +216,39 @@ public class StringDb {
 
         protected  Table() {}
         public Table(int numFields) {
-            fields = new CharSequence[numFields];
+            fields = new String[numFields];
         }
-        public Table(CharSequence... fields) {
+        public Table(String... fields) {
             this.fields = fields;
         }
 
 
-        public CharSequence getName() {
+        public String getName() {
             synchronized (tableName) {
                 return tableName;
             }
         }
-        public void setName(CharSequence name) {
+        public void setName(String name) {
             synchronized (name) {
                 this.tableName = name;
             }
         }
 
-        public CharSequence[] getFields() {
+        public String[] getFields() {
             synchronized (fields) {
                 return fields.clone();
             }
         }
-        public void setField(int index, CharSequence field) {
+        public void setField(int index, String field) {
             synchronized (fields) {
                 fields[index] = field;
             }
         }
 
-        protected void forceFields(CharSequence... fields) {
+        protected void forceFields(String... fields) {
             this.fields = fields;
         }
-        public void setFields(CharSequence... fields) {
+        public void setFields(String... fields) {
             if (fields.length != this.fields.length) {
                 throw new IllegalArgumentException("Cannot change the number of fields");
             }
@@ -270,7 +260,7 @@ public class StringDb {
             }
         }
 
-        public void addRow(CharSequence... row) {
+        public void addRow(String... row) {
             if (row.length != fields.length) {
                 throw new IllegalArgumentException("Row length does not match the number of fields.");
             }
@@ -282,7 +272,7 @@ public class StringDb {
             }
         }
 
-        public void setRow(int rowIndex, CharSequence... row) {
+        public void setRow(int rowIndex, String... row) {
             if (rowIndex < 0 || rowIndex > data.size() - 1) {
                 throw new IllegalArgumentException("Invalid rowIndex " + rowIndex + " for table of " + data.size() + " rows.");
             }
@@ -297,11 +287,11 @@ public class StringDb {
             }
         }
 
-        public CharSequence[] removeRow(int rowIndex) {
+        public String[] removeRow(int rowIndex) {
             return data.remove(rowIndex);
         }
 
-        public CharSequence[] getRow(int rowIndex) {
+        public String[] getRow(int rowIndex) {
             if (cloneRows) {
                 return data.get(rowIndex).clone();
             } else {
@@ -317,8 +307,8 @@ public class StringDb {
             return fields.length;
         }
 
-        public CharSequence[][] toArray() {
-            return data.toArray(new CharSequence[data.size()][fields.length]);
+        public String[][] toArray() {
+            return data.toArray(new String[data.size()][fields.length]);
         }
     }
 }

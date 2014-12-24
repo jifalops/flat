@@ -70,7 +70,7 @@ public class MainFragment extends ListFragment {
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
             case R.id.action_settings:
-                startActivity(new Intent(getActivity(), UserPrefs.class));
+                startActivity(new Intent(getActivity(), PrefsActivity.class));
                 break;
 
         }
