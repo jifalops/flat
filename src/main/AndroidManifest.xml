@@ -37,7 +37,7 @@
         <activity android:name=".nsd.NsdChatActivity">
 
         </activity>
-        <activity android:name=".app.LoggingActivity">
+        <activity android:name=".app.ActiveItemListActivity">
 
         </activity>
         <activity android:name=".app.PrefsActivity">

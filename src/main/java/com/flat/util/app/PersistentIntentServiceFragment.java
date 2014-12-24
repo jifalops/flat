@@ -133,9 +133,13 @@ public abstract class PersistentIntentServiceFragment extends Fragment {
 
     protected abstract void setServiceEnabled(boolean enabled);
 
-    public void showServiceControls(boolean show) {
+    public void showPersistControl(boolean show) {
         int v = show ? View.VISIBLE : View.GONE;
         mServicePersist.setVisibility(v);
+    }
+
+    public void showSwitchControl(boolean show) {
+        int v = show ? View.VISIBLE : View.GONE;
         mServiceSwitch.setVisibility(v);
     }
 }

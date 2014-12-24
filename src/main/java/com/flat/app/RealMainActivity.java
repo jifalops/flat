@@ -31,6 +31,8 @@ public class RealMainActivity extends Activity {
         public void onCreate(Bundle savedInstanceState) {
             super.onCreate(savedInstanceState);
             setHasOptionsMenu(true);
+            ActionBar ab = getActivity().getActionBar();
+            ab.setDisplayOptions(ab.getDisplayOptions() | ActionBar.DISPLAY_SHOW_CUSTOM);
             getActivity().getActionBar().setCustomView(new Switch(getActivity()), new ActionBar.LayoutParams(
                     ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT
             ));

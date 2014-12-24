@@ -107,7 +107,7 @@ public class MainActivity extends Activity implements MainFragment.Callbacks,
         }
 
         if (item == MainHelper.LOGGING) {
-            startActivity(new Intent(this, LoggingActivity.class));
+            startActivity(new Intent(this, ActiveItemListActivity.class));
             return;
         }
 
