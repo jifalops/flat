@@ -4,6 +4,7 @@ import com.flat.util.Util;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 
 public final class Node {
@@ -35,7 +36,7 @@ public final class Node {
      * For orientation of angle coordinates, see
      * <a href='http://developer.android.com/guide/topics/sensors/sensors_overview.html#sensors-coords'>http://developer.android.com/guide/topics/sensors/sensors_overview.html#sensors-coords</a>
      */
-    public static final class State {
+    public static final class State {  // TODO use states in the context of a coordinate system or reference frame
         public float pos[] = {0,0,0};
         public float angle[] = {0,0,0};
         public String algorithm = "none";
@@ -51,6 +52,16 @@ public final class Node {
                     x,y,z, angle[0], angle[1], angle[2]);
         }
     }
+
+    public static final class RangeTableEntry {
+        private String nodeId;
+        private float range;
+        private long time;
+    }
+
+    private final List<RangeTableEntry> rangeTable = new ArrayList<RangeTableEntry>();
+
+    // TODO nodes -> rangetable for sending, accept other range tables.
 
     private final List<Range> rangePending = new ArrayList<Range>();
     private final List<Range> rangeHistory = new ArrayList<Range>();

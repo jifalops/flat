@@ -82,28 +82,6 @@ public class ActiveItemListActivity extends Activity {
         }
     }
     
-//    private static ActiveToggleItemHolder getHolder(View v, ViewGroup parent, Activity a) {
-//        ActiveToggleItemHolder holder;
-//        if (v == null) {
-//            LayoutInflater inflater = a.getLayoutInflater();
-//            v = inflater.inflate(R.layout.active_item_toggle, parent, false);
-//
-//            holder = new ActiveToggleItemHolder();
-//            holder.dot = (ImageView) v.findViewById(R.id.activityDot);
-//            holder.name = (TextView) v.findViewById(R.id.name);
-//            holder.desc = (TextView) v.findViewById(R.id.desc);
-//            holder.enabled = (Switch) v.findViewById(R.id.enabled);
-//            holder.count = (TextView) v.findViewById(R.id.count);
-//            v.setTag(holder);
-//        } else {
-//            holder = (ActiveToggleItemHolder) v.getTag();
-//        }
-//        return holder;
-//    }
-
-
-
-
 
 
     public static class SignalFragment extends ListFragment {
@@ -166,15 +144,20 @@ public class ActiveItemListActivity extends Activity {
                     processors.add(rp.getName());
                 }
                 holder.desc.setText(TextUtils.join(", ", processors));
-                holder.enabled.setChecked(signal.isEnabled());
+
+                final SharedPreferences sharedPrefs = PreferenceManager.getDefaultSharedPreferences(getActivity());
+
+                holder.enabled.setChecked(sharedPrefs.getBoolean(signal.getName(), false));
 
                 holder.enabled.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
                     @Override
                     public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                        SharedPreferences sharedPrefs = PreferenceManager.getDefaultSharedPreferences(getActivity());
+
                         sharedPrefs.edit().putBoolean(signal.getName(), isChecked).commit();
                         if (isChecked) {
-                            signal.enable(getActivity());
+                            if (AppController.getInstance().isEnabled()) {
+                                signal.enable(getActivity());
+                            }
                         } else {
                             signal.disable(getActivity());
                         }
@@ -262,15 +245,23 @@ public class ActiveItemListActivity extends Activity {
                 //alg.registerListener(algListener);
 
                 holder.name.setText(alg.getName());
-                holder.enabled.setChecked(alg.isEnabled());
+
+                final SharedPreferences sharedPrefs = PreferenceManager.getDefaultSharedPreferences(getActivity());
+
+                holder.enabled.setChecked(sharedPrefs.getBoolean(alg.getName(), false));
 
                 holder.enabled.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
                     @Override
                     public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                        SharedPreferences sharedPrefs = PreferenceManager.getDefaultSharedPreferences(getActivity());
                         sharedPrefs.edit().putBoolean(alg.getName(), isChecked).commit();
 
-                        alg.setEnabled(isChecked);
+                        if (isChecked) {
+                            if (AppController.getInstance().isEnabled()) {
+                                alg.setEnabled(true);
+                            }
+                        } else {
+                            alg.setEnabled(false);
+                        }
                     }
                 });
 

@@ -12,7 +12,7 @@ import com.flat.util.app.PersistentIntentService;
 public class AppService extends PersistentIntentService {
     private static final String TAG = AppService.class.getSimpleName();
 
-    private SharedPreferences prefs;
+
 
     @Override
     protected void onHandleIntent(Intent intent) {
@@ -22,7 +22,7 @@ public class AppService extends PersistentIntentService {
     @Override
     public void onCreate() {
         super.onCreate();
-        prefs = PreferenceManager.getDefaultSharedPreferences(this);
+
     }
 
     private final SharedPreferences.OnSharedPreferenceChangeListener prefsListener = new SharedPreferences.OnSharedPreferenceChangeListener() {
