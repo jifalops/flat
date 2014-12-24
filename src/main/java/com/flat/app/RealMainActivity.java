@@ -1,17 +1,10 @@
 package com.flat.app;
 
-import android.app.ActionBar;
 import android.app.Activity;
-import android.app.Fragment;
 import android.content.Intent;
 import android.os.Bundle;
-import android.view.LayoutInflater;
 import android.view.Menu;
-import android.view.MenuInflater;
 import android.view.MenuItem;
-import android.view.View;
-import android.view.ViewGroup;
-import android.widget.Switch;
 
 import com.flat.R;
 
@@ -22,46 +15,25 @@ public class RealMainActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        getFragmentManager().beginTransaction().replace(android.R.id.content, new RealMainFragment()).commit();
+        getFragmentManager().beginTransaction().replace(android.R.id.content, new AppServiceFragment()).commit();
     }
 
-    public static class RealMainFragment extends Fragment {
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.main, menu);
+        return true;
+    }
 
-        @Override
-        public void onCreate(Bundle savedInstanceState) {
-            super.onCreate(savedInstanceState);
-            setHasOptionsMenu(true);
-            ActionBar ab = getActivity().getActionBar();
-            ab.setDisplayOptions(ab.getDisplayOptions() | ActionBar.DISPLAY_SHOW_CUSTOM);
-            getActivity().getActionBar().setCustomView(new Switch(getActivity()), new ActionBar.LayoutParams(
-                    ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT
-            ));
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch(item.getItemId()) {
+            case R.id.action_other_tests:
+                startActivity(new Intent(this, MainActivity.class));
+                break;
+            case R.id.action_settings:
+                startActivity(new Intent(this, PrefsActivity.class));
+                break;
         }
-
-        @Override
-        public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
-            View layout = inflater.inflate(R.layout.real_main, container, false);
-
-
-            return layout;
-        }
-
-        @Override
-        public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
-            inflater.inflate(R.menu.main, menu);
-        }
-
-        @Override
-        public boolean onOptionsItemSelected(MenuItem item) {
-            switch(item.getItemId()) {
-                case R.id.action_other_tests:
-                    startActivity(new Intent(getActivity(), MainActivity.class));
-                    break;
-                case R.id.action_settings:
-                    startActivity(new Intent(getActivity(), PrefsActivity.class));
-                    break;
-            }
-            return true;
-        }
+        return true;
     }
 }

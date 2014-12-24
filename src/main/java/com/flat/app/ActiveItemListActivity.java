@@ -17,6 +17,7 @@ import android.widget.Switch;
 import android.widget.TextView;
 
 import com.flat.R;
+import com.flat.localization.Controller;
 import com.flat.localization.Model;
 import com.flat.localization.Node;
 import com.flat.localization.coordinatesystem.LocationAlgorithm;
@@ -33,12 +34,13 @@ public class ActiveItemListActivity extends Activity {
     private static final String TAG = ActiveItemListActivity.class.getSimpleName();
     public static final int SIGNAL_FRAGMENT = 1;
     public static final int ALG_FRAGMENT = 2;
-    public static final String EXTRA_ITEM = "extra_item";
+    public static final String EXTRA_FRAGMENT = "extra_item";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        switch(getIntent().getIntExtra(EXTRA_ITEM, SIGNAL_FRAGMENT)) {
+        Controller.getInstance(this);
+        switch(getIntent().getIntExtra(EXTRA_FRAGMENT, SIGNAL_FRAGMENT)) {
             case SIGNAL_FRAGMENT:
                 getFragmentManager().beginTransaction().replace(android.R.id.content, new SignalFragment()).commit();
                 break;
@@ -68,6 +70,7 @@ public class ActiveItemListActivity extends Activity {
     }
 
     private static  View getViewByPosition(int pos, ListView listView) {
+        if (listView == null) return null;
         final int firstListItemPosition = listView.getFirstVisiblePosition();
         final int lastListItemPosition = firstListItemPosition + listView.getChildCount() - 1;
 
@@ -79,24 +82,24 @@ public class ActiveItemListActivity extends Activity {
         }
     }
     
-    private static ActiveToggleItemHolder getHolder(View v, ViewGroup parent, Activity a) {
-        ActiveToggleItemHolder holder;
-        if (v == null) {
-            LayoutInflater inflater = a.getLayoutInflater();
-            v = inflater.inflate(R.layout.active_item_toggle, parent, false);
-
-            holder = new ActiveToggleItemHolder();
-            holder.dot = (ImageView) v.findViewById(R.id.activityDot);
-            holder.name = (TextView) v.findViewById(R.id.name);
-            holder.desc = (TextView) v.findViewById(R.id.desc);
-            holder.enabled = (Switch) v.findViewById(R.id.enabled);
-            holder.count = (TextView) v.findViewById(R.id.count);
-            v.setTag(holder);
-        } else {
-            holder = (ActiveToggleItemHolder) v.getTag();
-        }
-        return holder;
-    }
+//    private static ActiveToggleItemHolder getHolder(View v, ViewGroup parent, Activity a) {
+//        ActiveToggleItemHolder holder;
+//        if (v == null) {
+//            LayoutInflater inflater = a.getLayoutInflater();
+//            v = inflater.inflate(R.layout.active_item_toggle, parent, false);
+//
+//            holder = new ActiveToggleItemHolder();
+//            holder.dot = (ImageView) v.findViewById(R.id.activityDot);
+//            holder.name = (TextView) v.findViewById(R.id.name);
+//            holder.desc = (TextView) v.findViewById(R.id.desc);
+//            holder.enabled = (Switch) v.findViewById(R.id.enabled);
+//            holder.count = (TextView) v.findViewById(R.id.count);
+//            v.setTag(holder);
+//        } else {
+//            holder = (ActiveToggleItemHolder) v.getTag();
+//        }
+//        return holder;
+//    }
 
 
 
@@ -137,10 +140,24 @@ public class ActiveItemListActivity extends Activity {
 
             @Override
             public View getView(int position, View convertView, ViewGroup parent) {
-                ActiveToggleItemHolder holder = getHolder(convertView, parent, getActivity());
+                ActiveToggleItemHolder holder;
+                if (convertView == null) {
+                    LayoutInflater inflater = getActivity().getLayoutInflater();
+                    convertView = inflater.inflate(R.layout.active_item_toggle, parent, false);
+
+                    holder = new ActiveToggleItemHolder();
+                    holder.dot = (ImageView) convertView.findViewById(R.id.activityDot);
+                    holder.name = (TextView) convertView.findViewById(R.id.name);
+                    holder.desc = (TextView) convertView.findViewById(R.id.desc);
+                    holder.enabled = (Switch) convertView.findViewById(R.id.enabled);
+                    holder.count = (TextView) convertView.findViewById(R.id.count);
+                    convertView.setTag(holder);
+                } else {
+                    holder = (ActiveToggleItemHolder) convertView.getTag();
+                }
 
                 final Signal signal = model.getSignals()[position];
-                signal.registerListener(signalListener);
+                //signal.registerListener(signalListener);
 
                 holder.name.setText(signal.getName());
 
@@ -165,6 +182,22 @@ public class ActiveItemListActivity extends Activity {
                 });
 
                 return convertView;
+            }
+        }
+
+        @Override
+        public void onPause() {
+            super.onPause();
+            for (Signal s : model.getSignals()) {
+                s.unregisterListener(signalListener);
+            }
+        }
+
+        @Override
+        public void onResume() {
+            super.onResume();
+            for (Signal s : model.getSignals()) {
+                s.registerListener(signalListener);
             }
         }
     }
@@ -209,10 +242,24 @@ public class ActiveItemListActivity extends Activity {
 
             @Override
             public View getView(int position, View convertView, ViewGroup parent) {
-                ActiveToggleItemHolder holder = getHolder(convertView, parent, getActivity());
+                ActiveToggleItemHolder holder;
+                if (convertView == null) {
+                    LayoutInflater inflater = getActivity().getLayoutInflater();
+                    convertView = inflater.inflate(R.layout.active_item_toggle, parent, false);
+
+                    holder = new ActiveToggleItemHolder();
+                    holder.dot = (ImageView) convertView.findViewById(R.id.activityDot);
+                    holder.name = (TextView) convertView.findViewById(R.id.name);
+                    holder.desc = (TextView) convertView.findViewById(R.id.desc);
+                    holder.enabled = (Switch) convertView.findViewById(R.id.enabled);
+                    holder.count = (TextView) convertView.findViewById(R.id.count);
+                    convertView.setTag(holder);
+                } else {
+                    holder = (ActiveToggleItemHolder) convertView.getTag();
+                }
 
                 final LocationAlgorithm alg = model.getAlgorithms()[position];
-                alg.registerListener(algListener);
+                //alg.registerListener(algListener);
 
                 holder.name.setText(alg.getName());
                 holder.enabled.setChecked(alg.isEnabled());
@@ -231,6 +278,21 @@ public class ActiveItemListActivity extends Activity {
             }
         }
 
+        @Override
+        public void onPause() {
+            super.onPause();
+            for (LocationAlgorithm la : model.getAlgorithms()) {
+                la.unregisterListener(algListener);
+            }
+        }
+
+        @Override
+        public void onResume() {
+            super.onResume();
+            for (LocationAlgorithm la : model.getAlgorithms()) {
+                la.registerListener(algListener);
+            }
+        }
     }
 
 

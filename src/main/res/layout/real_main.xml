@@ -7,6 +7,7 @@
         android:padding="4dp"
         android:orientation="vertical">
         <LinearLayout
+            android:id="@+id/signalsCont"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:paddingBottom="8dp"
@@ -38,6 +39,7 @@
             </LinearLayout>
         </LinearLayout>
         <LinearLayout
+            android:id="@+id/algsCont"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:paddingBottom="8dp"

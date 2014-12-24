@@ -6,6 +6,7 @@ import android.text.TextUtils;
 import com.android.volley.Request;
 import com.android.volley.RequestQueue;
 import com.android.volley.toolbox.Volley;
+import com.flat.localization.Controller;
 
 public class AppController extends Application {
 
@@ -18,11 +19,15 @@ public class AppController extends Application {
         return sInstance;
     }
 
+    // Main power switch in AppServiceFragment
+    private boolean enabled;
+
 	@Override
 	public void onCreate() {
 		super.onCreate();
 		sInstance = this;
-	}
+        Controller.getInstance(this); // will populate the model.
+    }
 
 	public RequestQueue getRequestQueue() {
 		if (mRequestQueue == null) {
@@ -48,4 +53,13 @@ public class AppController extends Application {
 			mRequestQueue.cancelAll(tag);
 		}
 	}
+
+    public boolean isEnabled() {
+        return enabled;
+    }
+
+    public void setEnabled(boolean enabled) {
+        this.enabled = enabled;
+        // TODO actually enable signals here
+    }
 }
