@@ -163,9 +163,7 @@ public class AppServiceFragment extends PersistentIntentServiceFragment {
         layout.findViewById(R.id.rangesCont).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-//                Intent i = new Intent(getActivity(), ActiveItemListActivity.class);
-//                i.putExtra(ActiveItemListActivity.EXTRA_FRAGMENT, ActiveItemListActivity.ALG_FRAGMENT);
-//                startActivity(i);
+                startActivity(new Intent(getActivity(), RangeTableActivity.class));
             }
         });
 

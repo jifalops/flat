@@ -39,7 +39,6 @@ public class ActiveItemListActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        Controller.getInstance(this);
         switch(getIntent().getIntExtra(EXTRA_FRAGMENT, SIGNAL_FRAGMENT)) {
             case SIGNAL_FRAGMENT:
                 getFragmentManager().beginTransaction().replace(android.R.id.content, new SignalFragment()).commit();
