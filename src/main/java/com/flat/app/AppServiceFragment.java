@@ -160,6 +160,24 @@ public class AppServiceFragment extends PersistentIntentServiceFragment {
             }
         });
 
+        layout.findViewById(R.id.rangesCont).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+//                Intent i = new Intent(getActivity(), ActiveItemListActivity.class);
+//                i.putExtra(ActiveItemListActivity.EXTRA_FRAGMENT, ActiveItemListActivity.ALG_FRAGMENT);
+//                startActivity(i);
+            }
+        });
+
+        layout.findViewById(R.id.coordsCont).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+//                Intent i = new Intent(getActivity(), ActiveItemListActivity.class);
+//                i.putExtra(ActiveItemListActivity.EXTRA_FRAGMENT, ActiveItemListActivity.ALG_FRAGMENT);
+//                startActivity(i);
+            }
+        });
+
         return layout;
     }
 }
