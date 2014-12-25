@@ -1,8 +1,11 @@
 package com.flat.localization;
 
+import android.util.Pair;
+
 import com.flat.util.Util;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -53,15 +56,26 @@ public final class Node {
         }
     }
 
-    public static final class RangeTableEntry {
-        private String nodeId;
-        private float range;
-        private long time;
+//    public static final class RangeTableEntry {
+//        public final String nodeId;
+//        public final float range;
+//        public final long time;
+//        public RangeTableEntry(String nodeId, float range, long time) {
+//            this.nodeId = nodeId;
+//            this.range = range;
+//            this.time = time;
+//        }
+//    }
+
+
+    private Map<String, Pair<Float, Long>> rangeTable;
+    public void setRangeTable(Map<String, Pair<Float, Long>> table) {
+        rangeTable = table;
+    }
+    public Map<String, Pair<Float, Long>> getRangeTable() {
+        return rangeTable;
     }
 
-    private final List<RangeTableEntry> rangeTable = new ArrayList<RangeTableEntry>();
-
-    // TODO nodes -> rangetable for sending, accept other range tables.
 
     private final List<Range> rangePending = new ArrayList<Range>();
     private final List<Range> rangeHistory = new ArrayList<Range>();
@@ -74,7 +88,6 @@ public final class Node {
 
 
     public Node(String id) {
-
         this.id = id;
         this.name = id;
         fixed = true;

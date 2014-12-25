@@ -1,11 +1,14 @@
 package com.flat.localization;
 
+import android.util.Pair;
+
 import com.flat.localization.signal.rangingandprocessing.SignalInterpreter;
 import com.flat.localization.coordinatesystem.LocationAlgorithm;
 import com.flat.localization.signal.Signal;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -127,6 +130,16 @@ public final class Model {
 
 
 
+
+    // TODO nodes -> rangetable for sending, accept other range tables.
+    public Map<String, Pair<Float, Long>> getRangeTable() {
+        Map<String, Pair<Float, Long>> rangeTable = new HashMap<String, Pair<Float, Long>>();
+        for (Node n : nodes) {
+            // TODO have estimated copy to actual, unless it has been overridden
+            rangeTable.put(n.getId(), new Pair<Float, Long>(n.getRange().actual, n.getRange().time));
+        }
+        return rangeTable;
+    }
 
     /*
      * These correspond to the logging database.
