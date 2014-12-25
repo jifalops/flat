@@ -2,7 +2,7 @@
 <merge xmlns:tools="http://schemas.android.com/tools"
     xmlns:android="http://schemas.android.com/apk/res/android">
     <fragment
-        android:name="com.flat.app.MainFragment"
+        android:name="com.flat.app.OtherTestsFragment"
         android:id="@+id/mainFragment"
         style="@style/Match"
         tools:layout="@layout/textview_main" />

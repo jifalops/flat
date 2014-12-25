@@ -1,7 +1,9 @@
 package com.flat.app;
 
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -41,21 +43,10 @@ public class AppServiceFragment extends PersistentIntentServiceFragment {
     }
 
     @Override
-    protected void setServiceEnabled(boolean enabled) {
+    protected void onServiceEnabled(boolean enabled) {
         if (!isBound()) return;
         setPersistent(enabled);
-        Model model = Model.getInstance();
-        if (enabled) {
-            // TODO enable signals that have their switches on.
-        } else {
-            for (Signal s : model.getSignals()) {
-                s.disable(getActivity());
-            }
-
-            for (LocationAlgorithm la: model.getAlgorithms()) {
-                la.setEnabled(false);
-            }
-        }
+        AppController.getInstance().setEnabled(enabled);
     }
 
     private void registerListeners() {
@@ -82,6 +73,23 @@ public class AppServiceFragment extends PersistentIntentServiceFragment {
     public void onResume() {
         super.onResume();
         registerListeners();
+        updateSummaries();
+    }
+
+    private void updateSummaries() {
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getActivity());
+
+        int count = 0;
+        for (Signal s : Model.getInstance().getSignals()) {
+            if (prefs.getBoolean(s.getName(), false)) ++count;
+        }
+        signalSummary.setText(count + " enabled");
+
+        count = 0;
+        for (LocationAlgorithm la : Model.getInstance().getAlgorithms()) {
+            if (prefs.getBoolean(la.getName(), false)) ++count;
+        }
+        algSummary.setText(count + " enabled");
     }
 
     @Override
@@ -132,17 +140,7 @@ public class AppServiceFragment extends PersistentIntentServiceFragment {
         signalSummary = (TextView) layout.findViewById(R.id.signalSummary);
         algSummary = (TextView) layout.findViewById(R.id.algSummary);
 
-        int count = 0;
-        for (Signal s : Model.getInstance().getSignals()) {
-            if (s.isEnabled()) ++count;
-        }
-        signalSummary.setText(count + " enabled");
 
-        count = 0;
-        for (LocationAlgorithm la : Model.getInstance().getAlgorithms()) {
-            if (la.isEnabled()) ++count;
-        }
-        algSummary.setText(count + " enabled");
 
         layout.findViewById(R.id.signalsCont).setOnClickListener(new View.OnClickListener() {
             @Override

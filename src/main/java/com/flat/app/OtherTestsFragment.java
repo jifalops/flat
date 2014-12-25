@@ -15,7 +15,7 @@ import android.widget.ListView;
 
 import com.flat.R;
 
-public class MainFragment extends ListFragment {
+public class OtherTestsFragment extends ListFragment {
 
 	/** Interface for communication with container Activity. */
 	public interface Callbacks {

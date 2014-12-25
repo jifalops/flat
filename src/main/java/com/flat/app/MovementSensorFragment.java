@@ -139,7 +139,7 @@ public class MovementSensorFragment extends PersistentIntentServiceFragment {
     }
 
     @Override
-    protected void setServiceEnabled(boolean enabled) {
+    protected void onServiceEnabled(boolean enabled) {
         if (!isBound()) return;
         if (enabled) {
             mService.startSensing();

@@ -22,6 +22,8 @@ import com.flat.R;
 public abstract class PersistentIntentServiceFragment extends Fragment {
     private static final String TAG = PersistentIntentServiceFragment.class.getSimpleName();
 
+    private PersistentIntentService mService;
+
     /** Whether a service is bound to the Fragment */
     private volatile boolean mBound;
 
@@ -45,6 +47,14 @@ public abstract class PersistentIntentServiceFragment extends Fragment {
     public void onStop() {
         super.onStop();
         doUnbindService();
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        if (isBound()) {
+            bindServiceControls(mService);
+        }
     }
 
     private void doBindService() {
@@ -82,9 +92,9 @@ public abstract class PersistentIntentServiceFragment extends Fragment {
         @Override
         public final void onServiceConnected(ComponentName name, IBinder service) {
             mBound = true;
-            PersistentIntentService s = ((PersistentIntentService.LocalBinder) service).getService();
-            PersistentIntentServiceFragment.this.onServiceConnected(s);
-            bindServiceControls(s);
+            mService = ((PersistentIntentService.LocalBinder) service).getService();
+            PersistentIntentServiceFragment.this.onServiceConnected(mService);
+            bindServiceControls(mService);
         }
 
         @Override
@@ -102,14 +112,14 @@ public abstract class PersistentIntentServiceFragment extends Fragment {
 
     private void setupServiceControls() {
         ActionBar ab = getActivity().getActionBar();
-        ab.setDisplayOptions(ab.getDisplayOptions() | ActionBar.DISPLAY_SHOW_CUSTOM);
+        ab.setDisplayOptions(ActionBar.DISPLAY_SHOW_HOME | ActionBar.DISPLAY_SHOW_TITLE | ActionBar.DISPLAY_SHOW_CUSTOM);
         ab.setCustomView(R.layout.persistent_intent_service_controls);
         View controls = ab.getCustomView();
         mServiceSwitch = (Switch) controls.findViewById(R.id.service_power);
         mServicePersist = (CheckBox) controls.findViewById(R.id.service_persist);
     }
 
-    private void bindServiceControls(PersistentIntentService service) {
+    private void bindServiceControls(final PersistentIntentService service) {
         if (isBound()) {
             mServiceSwitch.setOnCheckedChangeListener(null);
             mServiceSwitch.setChecked(service.isEnabled());
@@ -120,7 +130,8 @@ public abstract class PersistentIntentServiceFragment extends Fragment {
         mServiceSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                setServiceEnabled(isChecked);
+                service.setEnabled(isChecked);
+                onServiceEnabled(isChecked);
             }
         });
         mServicePersist.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
@@ -131,7 +142,7 @@ public abstract class PersistentIntentServiceFragment extends Fragment {
         });
     }
 
-    protected abstract void setServiceEnabled(boolean enabled);
+    protected abstract void onServiceEnabled(boolean enabled);
 
     public void showPersistControl(boolean show) {
         int v = show ? View.VISIBLE : View.GONE;

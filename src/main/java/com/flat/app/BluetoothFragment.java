@@ -148,7 +148,7 @@ public final class BluetoothFragment extends PersistentIntentServiceFragment {
         mServiceSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                setServiceEnabled(isChecked);
+                onServiceEnabled(isChecked);
             }
         });
         mServicePersist.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
@@ -159,7 +159,7 @@ public final class BluetoothFragment extends PersistentIntentServiceFragment {
         });
     }
 
-    protected void setServiceEnabled(boolean enabled) {
+    protected void onServiceEnabled(boolean enabled) {
         if (!isBound()) return;
         if (enabled) {
             mService.setConnectionListener(mConnectionListener);

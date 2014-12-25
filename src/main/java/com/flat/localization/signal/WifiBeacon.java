@@ -48,9 +48,10 @@ public final class WifiBeacon extends AbstractSignal {
      *                  If a zero is passed, only a single update will be requested.
      */
     public void enable(Context ctx, int interval) {
+        if (isEnabled()) return;
         final WifiManager manager = (WifiManager) ctx.getSystemService(Context.WIFI_SERVICE);
 
-        ctx.registerReceiver(scanReceiver, scanFilter);
+        ctx.getApplicationContext().registerReceiver(scanReceiver, scanFilter);
 
         cancelTimer();
         if (interval == 0) {
@@ -72,8 +73,9 @@ public final class WifiBeacon extends AbstractSignal {
 
     @Override
     public void disable(Context ctx) {
+        if (!isEnabled()) return;
         cancelTimer();
-        ctx.unregisterReceiver(scanReceiver);
+        ctx.getApplicationContext().unregisterReceiver(scanReceiver);
         enabled = false;
     }
 

@@ -70,6 +70,7 @@ public final class BluetoothBeacon extends AbstractSignal {
 
     @Override
     public void disable(Context ctx) {
+        if (!isEnabled()) return;
         BluetoothManager manager = (BluetoothManager) ctx.getSystemService(Context.BLUETOOTH_SERVICE);
         BluetoothAdapter me = manager.getAdapter();
         me.cancelDiscovery();

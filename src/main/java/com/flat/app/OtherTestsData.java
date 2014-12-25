@@ -9,7 +9,7 @@ import com.flat.util.wifi.ScanResultsFragment;
 /**
  * Created by Jake on 5/19/2014.
  */
-public class MainHelper {
+public class OtherTestsData {
 
     // #############################################################
     // ### These correspond to the items in the arrays resource. ###
@@ -24,7 +24,7 @@ public class MainHelper {
 
     public static final int DEFAULT = LOGGING;
 
-    public static final String KEY_ITEM = MainHelper.class.getName() + ".ITEM";
+    public static final String KEY_ITEM = OtherTestsData.class.getName() + ".ITEM";
 
     public static int getItem(Bundle bundle) {
         return bundle.getInt(KEY_ITEM, DEFAULT);

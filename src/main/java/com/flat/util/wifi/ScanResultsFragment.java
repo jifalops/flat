@@ -195,7 +195,7 @@ public class ScanResultsFragment extends PersistentIntentServiceFragment impleme
     }
 
     @Override
-    protected void setServiceEnabled(boolean enabled) {
+    protected void onServiceEnabled(boolean enabled) {
         if (!isBound()) return;
         if (enabled) {
             mService.registerReceiver(new IntentFilter(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION));

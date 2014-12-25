@@ -11,7 +11,7 @@ import java.util.Set;
  */
 public abstract class PositionAlgorithm implements LocationAlgorithm {
 
-    private boolean enabled = true;
+    private boolean enabled;
     private int count;
 
     private Set<AlgorithmListener> listeners = new HashSet<AlgorithmListener>(1);

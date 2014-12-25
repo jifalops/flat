@@ -3,6 +3,7 @@ package com.flat.app;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.preference.EditTextPreference;
+import android.preference.Preference;
 import android.preference.PreferenceActivity;
 import android.preference.PreferenceFragment;
 import android.preference.PreferenceManager;
@@ -58,6 +59,10 @@ public class PrefsActivity extends PreferenceActivity {
 
             PreferenceScreen nodesScreen = (PreferenceScreen) findPreference("node options");
 
+            Preference description = new Preference(getActivity());
+            //description.setTitle("Set a node's name or turn it off to ignore in all calculations");
+            description.setSummary("Set a node's name or turn it off to ignore in all calculations");
+            nodesScreen.addPreference(description);
 
             NodeOptionsPreference nodePref;
             final List<String> ids = new ArrayList<String>();

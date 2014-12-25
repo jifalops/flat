@@ -17,6 +17,7 @@ public abstract class PersistentIntentService extends Service {
     private final LocalBinder mBinder = new LocalBinder();
     private volatile boolean mIsPersistent;
     private volatile boolean mIsRegistered;
+    private volatile boolean mIsEnabled;
 
     private final BroadcastReceiver mReceiver = new BroadcastReceiver() {
         @Override
@@ -67,7 +68,11 @@ public abstract class PersistentIntentService extends Service {
         return mIsRegistered;
     }
 
-    public boolean isEnabled() { return mIsRegistered; }
+    public boolean isEnabled() { return mIsEnabled; }
+
+    public void setEnabled(boolean enabled) {
+        mIsEnabled = enabled;
+    }
 
     @Override
     public boolean stopService(Intent name) {
