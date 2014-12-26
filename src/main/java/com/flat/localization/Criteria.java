@@ -119,8 +119,8 @@ public class Criteria {
                     (rangeAlgMatches != null && rangeAlgMatches.matcher(n.getRange().algorithm).matches()) ||
                     (Calc.isLessThanOrEqual(n.getState().pos, posMax) && Calc.isLessThanOrEqual(posMin, n.getState().pos)) ||
                     (Calc.isLessThanOrEqual(n.getState().angle, angleMax) && Calc.isLessThanOrEqual(angleMin, n.getState().angle)) ||
-                    (System.nanoTime() - n.getState().time >= stateAgeMin && System.nanoTime() - n.getState().time <= stateAgeMax) ||
-                    (System.nanoTime() - n.getRange().time >= rangeAgeMin && System.nanoTime() - n.getState().time <= rangeAgeMax);
+                    (System.currentTimeMillis() - n.getState().time >= stateAgeMin && System.currentTimeMillis() - n.getState().time <= stateAgeMax) ||
+                    (System.currentTimeMillis() - n.getRange().time >= rangeAgeMin && System.currentTimeMillis() - n.getRange().time <= rangeAgeMax);
         }
     }
 }

@@ -135,7 +135,6 @@ public final class Model {
     public Map<String, Pair<Float, Long>> getRangeTable() {
         Map<String, Pair<Float, Long>> rangeTable = new HashMap<String, Pair<Float, Long>>();
         for (Node n : nodes) {
-            // TODO have estimated copy to actual, unless it has been overridden
             rangeTable.put(n.getId(), new Pair<Float, Long>(n.getRange().actual, n.getRange().time));
         }
         return rangeTable;

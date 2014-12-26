@@ -53,7 +53,7 @@ public abstract class PositionAlgorithm implements LocationAlgorithm {
         float[] ranges = Node.toRangeArray(references.toArray(new Node[references.size()]));
         s.pos = findCoords(positions, ranges);
         s.angle = target.getState().angle;
-        s.time = System.nanoTime();
+        s.time = System.currentTimeMillis(); //System.nanoTime();
 
         for (AlgorithmListener l : listeners) {
             l.onApplied(this, target, references);

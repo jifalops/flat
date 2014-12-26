@@ -84,6 +84,14 @@ public class RangeTableActivity extends Activity {
             setListAdapter(new RangeTableAdapter());
         }
 
+        @Override
+        public void onActivityCreated(Bundle savedInstanceState) {
+            super.onActivityCreated(savedInstanceState);
+//            setListAdapter(null);
+//            getListView().addHeaderView(getActivity().getLayoutInflater().inflate(R.layout.range_table_header, null));
+
+        }
+
         private final Model.ModelListener modelListener = new Model.ModelListener() {
             @Override
             public void onNodeAdded(Node n) {
@@ -125,6 +133,7 @@ public class RangeTableActivity extends Activity {
         };
 
         private void showRange(TextView tv, Node n) {
+            if (tv == null || n == null) return;
             float f;
             if (n.getRange().actual > 0) {
                 f = n.getRange().actual;
@@ -133,8 +142,11 @@ public class RangeTableActivity extends Activity {
                 f = n.getRange().dist;
                 if (colors != null) tv.setTextColor(colors);
             }
-            f = ((int)(f*100))/100f;
-            tv.setText(f + "m");
+            tv.setText(round(f) + "m");
+        }
+
+        private float round(float f) {
+            return ((int)(f*100))/100f;
         }
 
         private class RangeTableAdapter extends ArrayAdapter<Node> {
@@ -216,7 +228,8 @@ public class RangeTableActivity extends Activity {
                                 LinearLayout.LayoutParams.WRAP_CONTENT);
                         input.setLayoutParams(lp);
 
-                        input.setText("" + (node.getActualRangeOverride() > 0 ? node.getActualRangeOverride() : node.getRange().dist));
+                        float f = node.getActualRangeOverride() > 0 ? node.getActualRangeOverride() : node.getRange().dist;
+                        input.setText(round(f) + "");
 
                         b.setView(input);
 

@@ -22,7 +22,7 @@ public final class Node {
         public float actual = 0; // when given
         public String signal = "none";
         public String algorithm = "none";
-        public long time = System.nanoTime();
+        public long time = System.currentTimeMillis();
 
         @Override
         public String toString() {
@@ -49,7 +49,7 @@ public final class Node {
         public float pos[] = {0,0,0};
         public float angle[] = {0,0,0};
         public String algorithm = "none";
-        public long time = System.nanoTime();
+        public long time = System.currentTimeMillis();
 
         @Override
         public String toString() {

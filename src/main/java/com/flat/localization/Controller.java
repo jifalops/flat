@@ -104,7 +104,7 @@ public final class Controller implements Model.ModelListener, Node.NodeListener 
             public void onChange(Signal signal, int eventType) {
                 Node.State state = new Node.State();
                 state.algorithm = la.getName();
-                state.time = accelSignal.getTimestamp();
+                state.time = System.currentTimeMillis(); //accelSignal.getTimestamp();
                 String key = getKey(accelSignal, state);
                 switch (eventType) {
                     case AndroidSensor.EVENT_SENSOR_CHANGE:
@@ -144,7 +144,7 @@ public final class Controller implements Model.ModelListener, Node.NodeListener 
             public void onChange(Signal signal, int eventType) {
                 Node.State state = new Node.State();
                 state.algorithm = rv.getName();
-                state.time = rotSignal.getTimestamp();
+                state.time = System.currentTimeMillis(); //rotSignal.getTimestamp();
                 switch (eventType) {
                     case AndroidSensor.EVENT_SENSOR_CHANGE:
                         float[] angle = rotSignal.getValues();
@@ -182,7 +182,7 @@ public final class Controller implements Model.ModelListener, Node.NodeListener 
                 Node.Range range = new Node.Range();
                 range.signal = btSignal.getName();
                 range.algorithm = fspl.getName();
-                range.time = System.nanoTime();
+                range.time = System.currentTimeMillis();
                 switch (eventType) {
                     case BluetoothBeacon.EVENT_DEVICE_DISCOVERED:
                         BluetoothDevice btdevice = btSignal.getMostRecentDevice();
@@ -225,7 +225,7 @@ public final class Controller implements Model.ModelListener, Node.NodeListener 
                             Node.Range range = new Node.Range();
                             range.signal = wifiSignal.getName();
                             range.algorithm = fspl2.getName();
-                            range.time = sr.timestamp;
+                            range.time = System.currentTimeMillis(); //sr.timestamp;
                             range.dist = fspl2.fromDbMhz(sr.level, sr.frequency);
                             if (model.getNode(sr.BSSID) == null) {
                                 model.addNode(new Node(sr.BSSID));
