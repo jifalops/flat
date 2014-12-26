@@ -39,6 +39,38 @@
             </LinearLayout>
         </LinearLayout>
         <LinearLayout
+            android:id="@+id/rangesCont"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingBottom="8dp"
+            android:paddingTop="8dp">
+            <ImageView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_vertical"
+                android:layout_marginLeft="16dp"
+                android:layout_marginRight="16dp"
+                android:id="@+id/rangetableDot"
+                android:src="@drawable/dot" />
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textAppearance="?android:attr/textAppearanceMedium"
+                    android:text="Node Ranges . . ." />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textAppearance="?android:attr/textAppearanceSmall"
+                    android:text="0 known"
+                    android:id="@+id/rangetableSummary" />
+            </LinearLayout>
+        </LinearLayout>
+        <LinearLayout
             android:id="@+id/algsCont"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -70,38 +102,7 @@
                     android:id="@+id/algSummary" />
             </LinearLayout>
         </LinearLayout>
-        <LinearLayout
-            android:id="@+id/rangesCont"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:paddingBottom="8dp"
-            android:paddingTop="8dp">
-            <ImageView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="center_vertical"
-                android:layout_marginLeft="16dp"
-                android:layout_marginRight="16dp"
-                android:id="@+id/rangetableDot"
-                android:src="@drawable/dot" />
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:orientation="vertical">
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:textAppearance="?android:attr/textAppearanceMedium"
-                    android:text="Node Range Tables . . ." />
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:textAppearance="?android:attr/textAppearanceSmall"
-                    android:text="0 in use"
-                    android:id="@+id/rangetableSummary" />
-            </LinearLayout>
-        </LinearLayout>
+
         <LinearLayout
             android:id="@+id/coordsCont"
             android:layout_width="match_parent"

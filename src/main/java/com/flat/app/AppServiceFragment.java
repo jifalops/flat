@@ -26,8 +26,8 @@ import java.util.List;
 public class AppServiceFragment extends PersistentIntentServiceFragment {
     private AppService mService;
 
-    private ImageView signalDot, algDot;
-    private TextView signalSummary, algSummary;
+    private ImageView signalDot, algDot, rangeDot;
+    private TextView signalSummary, algSummary, rangeSummary;
 
     Model model;
 
@@ -49,6 +49,21 @@ public class AppServiceFragment extends PersistentIntentServiceFragment {
         AppController.getInstance().setEnabled(enabled);
     }
 
+
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        registerListeners();
+        updateSummaries();
+    }
+
+    @Override
+    public void onPause() {
+        super.onPause();
+        unregisterListeners();
+    }
+
     private void registerListeners() {
         for (Signal s : model.getSignals()) {
             s.registerListener(signalListener);
@@ -57,6 +72,13 @@ public class AppServiceFragment extends PersistentIntentServiceFragment {
         for (LocationAlgorithm la: model.getAlgorithms()) {
             la.registerListener(algListener);
         }
+
+        for (Node n : model.getNodesCopy()) {
+            n.registerListener(nodeListener);
+        }
+
+        model.registerListener(modelListener);
+
     }
 
     private void unregisterListeners() {
@@ -67,13 +89,12 @@ public class AppServiceFragment extends PersistentIntentServiceFragment {
         for (LocationAlgorithm la: model.getAlgorithms()) {
             la.unregisterListener(algListener);
         }
-    }
 
-    @Override
-    public void onResume() {
-        super.onResume();
-        registerListeners();
-        updateSummaries();
+        for (Node n : model.getNodesCopy()) {
+            n.unregisterListener(nodeListener);
+        }
+
+        model.unregisterListener(modelListener);
     }
 
     private void updateSummaries() {
@@ -90,13 +111,11 @@ public class AppServiceFragment extends PersistentIntentServiceFragment {
             if (prefs.getBoolean(la.getName(), false)) ++count;
         }
         algSummary.setText(count + " enabled");
+
+        rangeSummary.setText(model.getNodeCount() + " nodes in range (this app instance)");
     }
 
-    @Override
-    public void onPause() {
-        super.onPause();
-        unregisterListeners();
-    }
+
 
     private final Signal.SignalListener signalListener = new Signal.SignalListener() {
         @Override
@@ -109,6 +128,36 @@ public class AppServiceFragment extends PersistentIntentServiceFragment {
         @Override
         public void onApplied(LocationAlgorithm la, Node target, List<Node> references) {
             blink(algDot);
+        }
+    };
+
+    private final Model.ModelListener modelListener = new Model.ModelListener() {
+        @Override
+        public void onNodeAdded(Node n) {
+            n.registerListener(nodeListener);
+            rangeSummary.setText(model.getNodeCount() + " nodes in range (this app instance)");
+        }
+    };
+
+    private final Node.NodeListener nodeListener = new Node.NodeListener() {
+        @Override
+        public void onRangePending(Node n, Node.Range r) {
+
+        }
+
+        @Override
+        public void onStatePending(Node n, Node.State s) {
+
+        }
+
+        @Override
+        public void onRangeChanged(Node n, Node.Range r) {
+            blink(rangeDot);
+        }
+
+        @Override
+        public void onStateChanged(Node n, Node.State s) {
+
         }
     };
 
@@ -137,9 +186,11 @@ public class AppServiceFragment extends PersistentIntentServiceFragment {
 
         signalDot = (ImageView) layout.findViewById(R.id.signalDot);
         algDot = (ImageView) layout.findViewById(R.id.algDot);
+        rangeDot = (ImageView) layout.findViewById(R.id.rangetableDot);
+
         signalSummary = (TextView) layout.findViewById(R.id.signalSummary);
         algSummary = (TextView) layout.findViewById(R.id.algSummary);
-
+        rangeSummary = (TextView) layout.findViewById(R.id.rangetableSummary);
 
 
         layout.findViewById(R.id.signalsCont).setOnClickListener(new View.OnClickListener() {

@@ -26,7 +26,7 @@ import org.json.JSONObject;
 public class NodeOptionsPreference extends Preference {
 
     private TextView name;
-    private Switch enabled;
+    private Switch ignore;
 
     public NodeOptionsPreference(Context context, AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
@@ -45,7 +45,7 @@ public class NodeOptionsPreference extends Preference {
         LayoutInflater li = (LayoutInflater)getContext().getSystemService( Context.LAYOUT_INFLATER_SERVICE );
         View layout = li.inflate(R.layout.node_options_item, parent, false);
         name = (TextView) layout.findViewById(R.id.nodeName);
-        enabled = (Switch) layout.findViewById(R.id.nodeIgnoreSwitch);
+        ignore = (Switch) layout.findViewById(R.id.nodeIgnoreSwitch);
 
 
         ((TextView) layout.findViewById(R.id.nodeId)).setText(getKey());
@@ -61,7 +61,7 @@ public class NodeOptionsPreference extends Preference {
             }
         });
 
-        enabled.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+        ignore.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
                 saveState();
@@ -109,7 +109,7 @@ public class NodeOptionsPreference extends Preference {
         JSONObject json = new JSONObject();
         try {
             json.put("name", name.getText());
-            json.put("enabled", enabled.isChecked());
+            json.put("ignore", ignore.isChecked());
         } catch (JSONException ignored) {}
         persistString(json.toString());
     }
@@ -121,7 +121,7 @@ public class NodeOptionsPreference extends Preference {
             if (!TextUtils.isEmpty(json.getString("name"))) {
                 name.setText(json.getString("name"));
             }
-            enabled.setChecked(json.getBoolean("enabled"));
+            ignore.setChecked(json.getBoolean("ignore"));
         } catch (JSONException ignored) {}
     }
 }

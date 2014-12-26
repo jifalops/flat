@@ -1,13 +1,19 @@
 package com.flat.localization;
 
+import android.content.SharedPreferences;
+import android.text.TextUtils;
 import android.util.Pair;
 
 import com.flat.util.Util;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 
 public final class Node {
@@ -85,11 +91,19 @@ public final class Node {
     private final String id;
     private String name;
     private boolean fixed;
+    private boolean ignore;
+    private float actualRangeOverride;
 
+    public synchronized void setActualRangeOverride(float range) {
+        actualRangeOverride = range;
+    }
+    public synchronized float getActualRangeOverride() {
+        return actualRangeOverride;
+    }
 
     public Node(String id) {
         this.id = id;
-        this.name = id;
+        this.name = "Unknown Node";
         fixed = true;
         rangeHistory.add(new Range());
         stateHistory.add(new State());
@@ -100,10 +114,17 @@ public final class Node {
         return id;
     }
     public String getName() { return name; }
-    public void setName(String name) { this.name = name; }
+    public void setName(String name) {
+        if (!TextUtils.isEmpty(name)) {
+            this.name = name;
+        }
+    }
 
     public synchronized boolean isFixed() { return fixed; }
     public synchronized void setFixed(boolean fixed) { this.fixed = fixed; }
+
+    public synchronized boolean shouldIgnore() { return ignore; }
+    public synchronized void setIgnore(boolean ignore) { this.ignore = ignore; }
 
 
     public synchronized void addPending(Range r) {
@@ -121,6 +142,7 @@ public final class Node {
     }
 
     public synchronized void update(Range r) {
+        r.actual = getActualRangeOverride();
         rangeHistory.add(r);
         for (NodeListener l: listeners) {
             l.onRangeChanged(this, r);
@@ -184,6 +206,26 @@ public final class Node {
         return stateHistory.size();
     }
 
+    public synchronized void savePrefs(SharedPreferences prefs) {
+        JSONObject json = new JSONObject();
+        try {
+            json.put("name", getName());
+            json.put("ignore", shouldIgnore());
+        } catch (JSONException ignored) {}
+        prefs.edit().putString(json.toString(), "").commit();
+    }
+
+    public synchronized void readPrefs(SharedPreferences prefs) {
+        String info = prefs.getString(getId(), "");
+        try {
+            JSONObject json = new JSONObject(info);
+            if (!TextUtils.isEmpty(json.getString("name"))) {
+                setName(json.getString("name"));
+            }
+            setIgnore(json.getBoolean("ignore"));
+        } catch (JSONException ignored) {}
+    }
+
 
     /**
      * Flatten several nodes' current state to a float[][].
@@ -218,7 +260,7 @@ public final class Node {
         void onRangeChanged(Node n, Range r);
         void onStateChanged(Node n, State s);
     }
-    private final List<NodeListener> listeners = new ArrayList<NodeListener>(1);
+    private final Set<NodeListener> listeners = new LinkedHashSet<NodeListener>(1);
     public void registerListener(NodeListener l) {
         listeners.add(l);
     }

@@ -10,6 +10,7 @@ import com.android.volley.RequestQueue;
 import com.android.volley.toolbox.Volley;
 import com.flat.localization.Controller;
 import com.flat.localization.Model;
+import com.flat.localization.Node;
 import com.flat.localization.coordinatesystem.LocationAlgorithm;
 import com.flat.localization.signal.Signal;
 
@@ -39,6 +40,7 @@ public class AppController extends Application {
         prefs = PreferenceManager.getDefaultSharedPreferences(this);
         controller = Controller.getInstance(this); // will populate the model.
         model = Model.getInstance();
+        model.registerListener(modelListener); // TODO need to unregister?
     }
 
 	public RequestQueue getRequestQueue() {
@@ -92,4 +94,11 @@ public class AppController extends Application {
             }
         }
     }
+
+    private final Model.ModelListener modelListener = new Model.ModelListener() {
+        @Override
+        public void onNodeAdded(Node n) {
+            n.readPrefs(prefs);
+        }
+    };
 }
