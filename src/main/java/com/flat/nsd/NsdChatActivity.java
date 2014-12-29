@@ -38,7 +38,7 @@ public class NsdChatActivity extends Activity {
     public static final String TAG = "NsdChat";
 
     ChatConnection mConnection;
-    ChatConnection mConnection2;
+//    ChatConnection mConnection2;
 
     /** Called when the activity is first created. */
     @Override
@@ -56,26 +56,28 @@ public class NsdChatActivity extends Activity {
         };
 
         mConnection = new ChatConnection(mUpdateHandler);
-        mConnection2 = new ChatConnection(mUpdateHandler);
+        //mConnection2 = new ChatConnection(mUpdateHandler);
 
         mNsdHelper = new NsdHelper(this);
         mNsdHelper.initializeNsd();
-
+        clickAdvertise(null);
     }
 
     public void clickAdvertise(View v) {
+        Log.i(TAG, "Advertising service");
         // Register service
         if(mConnection.getLocalPort() > -1) {
+            Log.d(TAG, "Registering on port " + mConnection.getLocalPort());
             mNsdHelper.registerService(mConnection.getLocalPort());
         } else {
-            Log.d(TAG, "ServerSocket isn't bound.");
+            Log.d(TAG, "clickAdvertise(): no port to connect to (ServerSocket isn't bound).");
         }
         // Register service
-        if(mConnection2.getLocalPort() > -1) {
-            mNsdHelper.registerService(mConnection2.getLocalPort());
-        } else {
-            Log.d(TAG, "ServerSocket2 isn't bound.");
-        }
+//        if(mConnection2.getLocalPort() > -1) {
+//            mNsdHelper.registerService(mConnection2.getLocalPort());
+//        } else {
+//            Log.d(TAG, "ServerSocket2 isn't bound.");
+//        }
     }
 
     public void clickDiscover(View v) {

@@ -17,14 +17,14 @@
 package com.flat.nsd;
 
 import android.content.Context;
-import android.net.nsd.NsdServiceInfo;
 import android.net.nsd.NsdManager;
+import android.net.nsd.NsdServiceInfo;
 import android.util.Log;
 
 import com.flat.localization.util.Util;
 
 public class NsdHelper {
-    public static final String MAC = "10:68:3f:38:8f:1d";
+//    public static final String MAC = "10:68:3f:38:8f:1d";
     Context mContext;
 
     NsdManager mNsdManager;
@@ -35,14 +35,16 @@ public class NsdHelper {
     public static final String SERVICE_TYPE = "_http._tcp.";
 
     public static final String TAG = "NsdHelper";
-    public String mServiceName = "NsdChat";
+    public String mServiceName = "flatloco-";
 
     NsdServiceInfo mService;
 
     public NsdHelper(Context context) {
         mContext = context;
         mNsdManager = (NsdManager) context.getSystemService(Context.NSD_SERVICE);
-        mServiceName += Util.getWifiMac(context);
+        String ip = Util.getWifiIp(context);
+        if (ip == null) ip = "0.0.0.0";
+        mServiceName += ip;
     }
 
     public void initializeNsd() {
@@ -55,6 +57,11 @@ public class NsdHelper {
     }
 
     public void initializeDiscoveryListener() {
+        if (mDiscoveryListener == null) {
+            Log.v(TAG, "initializing discovery listener (null)");
+        } else {
+            Log.v(TAG, "initializing discovery listener (not null)");
+        }
         mDiscoveryListener = new NsdManager.DiscoveryListener() {
 
             @Override
@@ -69,12 +76,15 @@ public class NsdHelper {
                     Log.d(TAG, "Unknown Service Type: " + service.getServiceType());
                 } else if (service.getServiceName().equals(mServiceName)) {
                     Log.d(TAG, "Same machine: " + mServiceName);
-                } else if (service.getServiceName().contains("NsdChat"+MAC)){
+                } else if (service.getServiceName().startsWith(mServiceName)){
 
-                    // TODO Hack for "listener already in use" error.
-                    initializeResolveListener();
-
-                    mNsdManager.resolveService(service, mResolveListener);
+                    Log.d(TAG, "Resolving service...");
+                    try {
+                        mNsdManager.resolveService(service, mResolveListener);
+                    } catch (IllegalArgumentException e) {
+                        Log.e(TAG, "Failed to resolve service ("+ e.getMessage()+"):\n" + service);
+                        initializeResolveListener();
+                    }
                 }
             }
 
@@ -106,6 +116,11 @@ public class NsdHelper {
     }
 
     public void initializeResolveListener() {
+        if (mResolveListener == null) {
+            Log.v(TAG, "initializing resolve listener (null)");
+        } else {
+            Log.v(TAG, "initializing resolve listener (not null)");
+        }
         mResolveListener = new NsdManager.ResolveListener() {
 
             @Override
@@ -115,7 +130,7 @@ public class NsdHelper {
 
             @Override
             public void onServiceResolved(NsdServiceInfo serviceInfo) {
-                Log.e(TAG, "Resolve Succeeded. " + serviceInfo);
+                Log.i(TAG, "Resolve Succeeded. " + serviceInfo);
 
                 if (serviceInfo.getServiceName().equals(mServiceName)) {
                     Log.d(TAG, "Same IP.");
@@ -127,6 +142,11 @@ public class NsdHelper {
     }
 
     public void initializeRegistrationListener() {
+        if (mRegistrationListener == null) {
+            Log.v(TAG, "initializing registration listener (null)");
+        } else {
+            Log.v(TAG, "initializing registration listener (not null)");
+        }
         mRegistrationListener = new NsdManager.RegistrationListener() {
 
             @Override
@@ -141,7 +161,7 @@ public class NsdHelper {
 
             @Override
             public void onServiceUnregistered(NsdServiceInfo nsdServiceInfo) {
-                Log.e(TAG, "Service unregistered");
+                Log.i(TAG, "Service unregistered");
             }
             
             @Override
@@ -153,25 +173,42 @@ public class NsdHelper {
     }
 
     public void registerService(int port) {
+        Log.i(TAG, "Registering service on port " + port);
         NsdServiceInfo serviceInfo  = new NsdServiceInfo();
         serviceInfo.setPort(port);
         serviceInfo.setServiceName(mServiceName);
         serviceInfo.setServiceType(SERVICE_TYPE);
 
-        // TODO Hack for "listener already in use" error.
-        initializeRegistrationListener();
-
-        mNsdManager.registerService(
-                serviceInfo, NsdManager.PROTOCOL_DNS_SD, mRegistrationListener);
-        
+        try {
+            mNsdManager.registerService(
+                    serviceInfo, NsdManager.PROTOCOL_DNS_SD, mRegistrationListener);
+        } catch (IllegalArgumentException e) {
+            Log.e(TAG, "Failed to register service, " + e.getMessage());
+            Log.i(TAG, "Reinitializing registration listener...");
+            initializeRegistrationListener();
+        }
     }
 
     public void discoverServices() {
-        // TODO Hack for "listener already in use" error.
-        initializeDiscoveryListener();
+        // This is a work-around for the "listener already in use" error.
+        // It seems discoverServices() needs a new DiscoveryListener each call.
+        try {
+            mNsdManager.stopServiceDiscovery(mDiscoveryListener);
+            mNsdManager.discoverServices(
+                    SERVICE_TYPE, NsdManager.PROTOCOL_DNS_SD, mDiscoveryListener);
+        } catch (IllegalArgumentException e) {
+            Log.e(TAG, "Failed to discover services, " + e.getMessage());
+            //Log.d(TAG, "Reinitializing discovery listener...");
+            initializeDiscoveryListener();
+            try {
+                Log.d(TAG, "retrying discovery...");
+                mNsdManager.discoverServices(
+                        SERVICE_TYPE, NsdManager.PROTOCOL_DNS_SD, mDiscoveryListener);
+            } catch (IllegalArgumentException e2) {
+                Log.e(TAG, "Failed to discover services, " + e2.getMessage());
+            }
+        }
 
-        mNsdManager.discoverServices(
-                SERVICE_TYPE, NsdManager.PROTOCOL_DNS_SD, mDiscoveryListener);
     }
     
     public void stopDiscovery() {

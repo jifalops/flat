@@ -32,10 +32,17 @@
         </activity>
         <activity
             android:name="com.flat.app.DetailsActivity"
-            android:uiOptions="splitActionBarWhenNarrow" />
-        <activity android:name="com.flat.sensors.RotationVectorDemo" />
-        <activity android:name=".nsd.NsdChatActivity">
+            android:uiOptions="splitActionBarWhenNarrow">
 
+        </activity>
+        <activity android:name="com.flat.sensors.RotationVectorDemo">
+
+        </activity>
+        <activity android:name=".nsd.NsdChatActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
         </activity>
         <activity android:name=".app.ActiveItemListActivity">
 

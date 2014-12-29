@@ -85,7 +85,7 @@ public class  ChatConnection {
         if (local) {
             msg = "me: " + msg;
         } else {
-            msg = "them: " + msg;
+            msg = toString() + ": " + msg;
         }
 
         Bundle messageBundle = new Bundle();
