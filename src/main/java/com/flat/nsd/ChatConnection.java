@@ -34,7 +34,7 @@ import java.net.UnknownHostException;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 
-public class ChatConnection {
+public class  ChatConnection {
 
     private Handler mUpdateHandler;
     private ChatServer mChatServer;
@@ -56,12 +56,17 @@ public class ChatConnection {
     }
 
     public void connectToServer(InetAddress address, int port) {
+        if (mChatClient != null) {
+            Log.d(TAG, "mChatClient is not null.");
+        }
         mChatClient = new ChatClient(address, port);
     }
 
     public void sendMessage(String msg) {
         if (mChatClient != null) {
             mChatClient.sendMessage(msg);
+        } else {
+            Log.d(TAG, "Cannot send message to null client");
         }
     }
     
@@ -75,7 +80,7 @@ public class ChatConnection {
     
 
     public synchronized void updateMessages(String msg, boolean local) {
-        Log.e(TAG, "Updating message: " + msg);
+        Log.v(TAG, "Updating message: " + msg);
 
         if (local) {
             msg = "me: " + msg;
@@ -98,12 +103,13 @@ public class ChatConnection {
             Log.d(TAG, "Setting a null socket.");
         }
         if (mSocket != null) {
+            Log.d(TAG, "setSocket(): mSocket is not null");
             if (mSocket.isConnected()) {
+                Log.d(TAG, "setSocket(): mSocket is connected, closing...");
                 try {
                     mSocket.close();
                 } catch (IOException e) {
-                    // TODO(alexlucas): Auto-generated catch block
-                    e.printStackTrace();
+                    Log.e(TAG, "Error closing chat connection.");
                 }
             }
         }
@@ -125,7 +131,10 @@ public class ChatConnection {
 
         public void tearDown() {
             if (mThread != null) mThread.interrupt();
-            if (mChatServer == null) return;
+            if (mChatServer == null) {
+                Log.d(TAG, "Attempted to tearDown null chat server");
+                return;
+            }
             try {
                 mServerSocket.close();
             } catch (IOException ioe) {
@@ -145,9 +154,9 @@ public class ChatConnection {
                     setLocalPort(mServerSocket.getLocalPort());
                     
                     while (!Thread.currentThread().isInterrupted()) {
-                        Log.d(TAG, "ServerSocket Created, awaiting connection");
+                        Log.i(TAG, "ServerSocket Created, awaiting connection");
                         setSocket(mServerSocket.accept());
-                        Log.d(TAG, "Connected.");
+                        Log.i(TAG, "Connected.");
                         if (mChatClient == null) {
                             int port = mSocket.getPort();
                             InetAddress address = mSocket.getInetAddress();
@@ -155,8 +164,8 @@ public class ChatConnection {
                         }
                     }
                 } catch (IOException e) {
-                    Log.e(TAG, "Error creating ServerSocket: ", e);
-                    e.printStackTrace();
+                    Log.e(TAG, "Error creating ServerSocket");
+                    //e.printStackTrace();
                 }
             }
         }
@@ -246,7 +255,7 @@ public class ChatConnection {
                     input.close();
 
                 } catch (IOException e) {
-                    Log.e(CLIENT_TAG, "Server loop error: ", e);
+                    Log.e(CLIENT_TAG, "Server loop error: ");
                 }
             }
         }
@@ -276,13 +285,13 @@ public class ChatConnection {
                 out.flush();
                 updateMessages(msg, true);
             } catch (UnknownHostException e) {
-                Log.d(CLIENT_TAG, "Unknown Host", e);
+                Log.d(CLIENT_TAG, "Unknown Host");
             } catch (IOException e) {
-                Log.d(CLIENT_TAG, "I/O Exception", e);
+                Log.d(CLIENT_TAG, "I/O Exception");
             } catch (Exception e) {
-                Log.d(CLIENT_TAG, "Error3", e);
+                Log.d(CLIENT_TAG, "Exception during sendMessage()");
             }
-            Log.d(CLIENT_TAG, "Client sent message: " + msg);
+            Log.v(CLIENT_TAG, "Client sent message: " + msg);
         }
     }
 }
