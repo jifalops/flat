@@ -46,15 +46,15 @@ public class NsdHelper {
     private String mIp;
 
     static class Connection {
-        NsdServiceInfo clientInfo, serverInfo;
+        NsdServiceInfo clientInfo;
         ChatConnection client, server;
         boolean clientMatches(NsdServiceInfo info) {
             if (info == null || clientInfo == null) return false;
             return info.getServiceName().contains(clientInfo.getHost().getHostAddress());
         }
         boolean serverMatches(NsdServiceInfo info) {
-            if (info == null || serverInfo == null) return false;
-            return info.getServiceName().contains(serverInfo.getHost().getHostAddress());
+            if (info == null || server == null) return false;
+            return info.getServiceName().contains(server..getHost().getHostAddress());
         }
         void tearDown() {
             if (client != null) client.tearDown();
@@ -96,6 +96,7 @@ public class NsdHelper {
                 }
             }
             if (isAlreadyWaiting) {
+                Log.d(TAG, "Already waiting, aborting new connection");
                 return;
             }
 
@@ -172,7 +173,8 @@ public class NsdHelper {
             
             @Override
             public void onDiscoveryStopped(String serviceType) {
-                Log.i(TAG, "Discovery stopped: " + serviceType);        
+                Log.i(TAG, "Discovery stopped: " + serviceType);
+                // TODO restart discovery if necessary
             }
 
             @Override
