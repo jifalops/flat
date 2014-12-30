@@ -81,7 +81,7 @@ public class NsdHelper {
         } else {
             Log.d(TAG, "no port to connect to (ServerSocket isn't bound). Retrying...");
             try {
-                Thread.sleep(17); // 1000/60 frames
+                Thread.sleep(100);
             } catch (InterruptedException e) {
 
             }
@@ -110,7 +110,20 @@ public class NsdHelper {
                 } else if (service.getServiceName().equals(mServiceName)) {
                     Log.d(TAG, "Same machine: " + mServiceName);
                 } else if (service.getServiceName().startsWith(SERVICE_PREFIX)){
-                    resolveService(service);
+                    boolean found = false;
+                    for (NsdServiceInfo info : mConnections.keySet()) {
+                        try {
+                            if (service.getServiceName().contains(info.getHost().getHostAddress())) {
+                                found = true;
+                                break;
+                            }
+                        } catch (NullPointerException e) {
+                            continue;
+                        }
+                    }
+                    if (!found) {
+                        resolveService(service);
+                    }
                 }
             }
 
@@ -202,7 +215,9 @@ public class NsdHelper {
         }
         ChatConnection conn;
         if (service.getPort() == mAdvertisingConnection.getLocalPort()) {
+            Log.e(TAG, "Connecting to advertising connection.");
             conn = mAdvertisingConnection;
+            //initializeAdvertisingConnection();
         } else {
             conn = new ChatConnection(this, mUpdateHandler);
         }
