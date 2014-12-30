@@ -33,6 +33,7 @@ import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class  ChatConnection {
 
@@ -40,10 +41,13 @@ public class  ChatConnection {
     private ChatServer mChatServer;
     private ChatClient mChatClient;
 
+    private InetAddress address;
+    private int serverPort;
+
     private static final String TAG = ChatConnection.class.getSimpleName();
 
-    private Socket mServerSocket, mClientSocket;
-    private int mPort = -1;
+    private Socket mConnectionSocket;
+    private AtomicInteger mPort = new AtomicInteger(-1);
 
     public ChatConnection(Handler handler) {
         mUpdateHandler = handler;
@@ -59,6 +63,8 @@ public class  ChatConnection {
         if (mChatClient != null) {
             Log.v(TAG, "mChatClient is not null.");
         }
+        this.address = address;
+        this.serverPort = port;
         mChatClient = new ChatClient(address, port);
     }
 
@@ -66,16 +72,16 @@ public class  ChatConnection {
         if (mChatClient != null) {
             mChatClient.sendMessage(msg);
         } else {
-            Log.d(TAG, "Cannot send message to null client");
+            Log.d(TAG, "Cannot send message to null client, server has not accepted connection.");
         }
     }
     
     public int getLocalPort() {
-        return mPort;
+        return mPort.get();
     }
     
     public void setLocalPort(int port) {
-        mPort = port;
+        mPort.set(port);
     }
     
 
@@ -102,18 +108,18 @@ public class  ChatConnection {
             Log.v(TAG, "setServerSocket() being called on null socket.");
         } else {
             Log.d(TAG, "setServerSocket() being called on " + socket.getInetAddress() + ":" + socket.getPort());
-            if (mServerSocket == null) {
+            if (mConnectionSocket == null) {
                 Log.v(TAG, "mServerSocket is null");
-            } else if (mServerSocket.isConnected()) {
+            } else if (mConnectionSocket.isConnected()) {
                 Log.d(TAG, "server socket is connected, closing...");
                 try {
-                    mServerSocket.close();
+                    mConnectionSocket.close();
                 } catch (IOException e) {
                     Log.e(TAG, "Error closing chat connection (server socket).");
                 }
             }
         }
-        mServerSocket = socket;
+        mConnectionSocket = socket;
     }
 
     private synchronized void setClientSocket(Socket socket) {
@@ -121,26 +127,26 @@ public class  ChatConnection {
             Log.v(TAG, "setClientSocket() being called on null socket.");
         } else {
             Log.d(TAG, "setClientSocket() being called on " + socket.getInetAddress() + ":" + socket.getPort());
-            if (mClientSocket == null) {
-                Log.v(TAG, "mClientSocket is null");
-            } else if (mClientSocket.isConnected()) {
+            if (mConnectionSocket == null) {
+                Log.v(TAG, "mConnectionSocket is null");
+            } else if (mConnectionSocket.isConnected()) {
                 Log.d(TAG, "client socket is connected, closing...");
                 try {
-                    mClientSocket.close();
+                    mConnectionSocket.close();
                 } catch (IOException e) {
                     Log.e(TAG, "Error closing chat connection (client socket).");
                 }
             }
         }
-        mClientSocket = socket;
+        mConnectionSocket = socket;
     }
 
 
     private Socket getServerSocket() {
-        return mServerSocket;
+        return mConnectionSocket;
     }
     private Socket getClientSocket() {
-        return mClientSocket;
+        return mConnectionSocket;
     }
 
     private class ChatServer {
@@ -181,8 +187,8 @@ public class  ChatConnection {
                         setServerSocket(socket.accept());
                         Log.i(TAG, "Connected.");
                         if (mChatClient == null) {
-                            int port = mServerSocket.getPort();
-                            InetAddress address = mServerSocket.getInetAddress();
+                            int port = mConnectionSocket.getPort();
+                            InetAddress address = mConnectionSocket.getInetAddress();
                             connectToServer(address, port);
                         }
                     }
@@ -231,16 +237,17 @@ public class  ChatConnection {
                         Log.d(CLIENT_TAG, "Client-side socket initialized.");
 
                     } else {
-                        Log.d(CLIENT_TAG, "Socket already initialized. skipping!");
+                        Log.d(CLIENT_TAG, "Socket already initialized, skipping.");
                     }
+
 
                     mRecThread = new Thread(new ReceivingThread());
                     mRecThread.start();
 
                 } catch (UnknownHostException e) {
-                    Log.d(CLIENT_TAG, "Initializing socket failed, UHE", e);
+                    Log.e(CLIENT_TAG, "Initializing socket failed, UHE"+ e.getMessage());
                 } catch (IOException e) {
-                    Log.d(CLIENT_TAG, "Initializing socket failed, IOE.", e);
+                    Log.e(CLIENT_TAG, "Initializing socket failed, IOE."+ e.getMessage());
                 }
 
                 while (true) {
@@ -262,7 +269,7 @@ public class  ChatConnection {
                 BufferedReader input;
                 try {
                     input = new BufferedReader(new InputStreamReader(
-                            mClientSocket.getInputStream())); // TODO use mServerSocket?
+                            mConnectionSocket.getInputStream())); // TODO use mServerSocket?
                     while (!Thread.currentThread().isInterrupted()) {
 
                         String messageStr = null;
@@ -271,7 +278,7 @@ public class  ChatConnection {
                             Log.d(CLIENT_TAG, "Read from the stream: " + messageStr);
                             updateMessages(messageStr, false);
                         } else {
-                            Log.d(CLIENT_TAG, "The nulls! The nulls!");
+                            Log.d(CLIENT_TAG, "The nulls! The nulls! (receiving thread for " + mAddress.getHostAddress() + ")");
                             break;
                         }
                     }

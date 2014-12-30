@@ -31,7 +31,7 @@ import java.util.Map;
 public class NsdHelper {
     private static final String TAG = NsdHelper.class.getSimpleName();
     private static final String SERVICE_TYPE = "_http._tcp.";
-    private static final String SERVICE_PREFIX = "flatloco-";
+    private static final String SERVICE_PREFIX = "flatloco_";
 
     Context mContext;
 
@@ -55,7 +55,7 @@ public class NsdHelper {
         String ip = Util.getWifiIp(context);
         if (ip == null) ip = "0.0.0.0";
         mServiceName = SERVICE_PREFIX + ip;
-        mAdvertisingConnection = new ChatConnection(handler);
+
     }
 
     public void initializeNsd() {
@@ -64,10 +64,24 @@ public class NsdHelper {
         initializeRegistrationListener();
 
         //mNsdManager.init(mContext.getMainLooper(), this);
+        initializeAdvertisingConnection();
+    }
+
+    private void initializeAdvertisingConnection() {
+        if (mAdvertisingConnection == null) {
+            Log.d(TAG, "initializing null advertising service");
+            mAdvertisingConnection = new ChatConnection(mUpdateHandler);
+        }
         if(mAdvertisingConnection.getLocalPort() > -1) {
             registerService(mAdvertisingConnection.getLocalPort());
         } else {
-            Log.d(TAG, "no port to connect to (ServerSocket isn't bound).");
+            Log.d(TAG, "no port to connect to (ServerSocket isn't bound). Retrying...");
+            try {
+                Thread.sleep(17); // 1000/60 frames
+            } catch (InterruptedException e) {
+
+            }
+            initializeAdvertisingConnection();
         }
     }
 
@@ -81,7 +95,7 @@ public class NsdHelper {
 
             @Override
             public void onDiscoveryStarted(String regType) {
-                Log.d(TAG, "Service discovery started");
+                Log.e(TAG, "Service discovery started, I am " + mServiceName); // Log.e is red
             }
 
             @Override
@@ -102,6 +116,9 @@ public class NsdHelper {
                 ChatConnection conn = mConnections.remove(service);
                 if (conn != null) {
                     conn.tearDown();
+                    if (conn == mAdvertisingConnection) {
+                        initializeAdvertisingConnection();
+                    }
                 }
             }
             
@@ -167,11 +184,19 @@ public class NsdHelper {
         };
     }
 
+    public void retryConnections() {
+        for (NsdServiceInfo service : mConnections.keySet()) {
+            Log.d(TAG, "Retrying connection to " + service.getHost().getHostAddress() + ":" + service.getPort());
+            mConnections.get(service).connectToServer(service.getHost(), service.getPort());
+        }
+    }
+
     private void connect(NsdServiceInfo service) {
         if (service == null) {
             Log.w(TAG, "Resolved null serviceInfo.");
             return;
         }
+
         ChatConnection conn;
         if (service.getPort() == mAdvertisingConnection.getLocalPort()) {
             conn = mAdvertisingConnection;
@@ -182,8 +207,9 @@ public class NsdHelper {
         if (mConnections.containsValue(conn)) {
             Log.d(TAG, "Connection already in list, port " + conn.getLocalPort());
         } else {
-            conn.connectToServer(service.getHost(),
-                    service.getPort());
+            Log.i(TAG, "Connecting to " + service.getServiceName() + " port " + service.getPort());
+            // TODO causing failed connections?
+            conn.connectToServer(service.getHost(), service.getPort());
             mConnections.put(service, conn);
         }
     }
@@ -257,13 +283,19 @@ public class NsdHelper {
     }
     
     public void stopDiscovery() {
-        mNsdManager.stopServiceDiscovery(mDiscoveryListener);
+
+        try {
+            mNsdManager.stopServiceDiscovery(mDiscoveryListener);
+        } catch (IllegalArgumentException e) {
+            Log.e(TAG, "Exception while stopping discovery, " + e.getMessage());
+        }
     }
     
     public void tearDown() {
         for (ChatConnection conn : mConnections.values()) {
             conn.tearDown();
         }
+        mAdvertisingConnection.tearDown();
         mNsdManager.unregisterService(mRegistrationListener);
     }
 }

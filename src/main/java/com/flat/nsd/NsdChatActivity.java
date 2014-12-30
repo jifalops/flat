@@ -35,7 +35,7 @@ public class NsdChatActivity extends Activity {
 
     public static final String TAG = "NsdChat";
 
-    ChatConnection mRegistrationConnection;
+    //ChatConnection mRegistrationConnection;
 
     /** Called when the activity is first created. */
     @Override
@@ -52,7 +52,7 @@ public class NsdChatActivity extends Activity {
             }
         };
 
-        mRegistrationConnection = new ChatConnection(mUpdateHandler);
+        //mRegistrationConnection = new ChatConnection(mUpdateHandler);
 
         mNsdHelper = new NsdHelper(this, mUpdateHandler);
         mNsdHelper.initializeNsd();
@@ -77,6 +77,7 @@ public class NsdChatActivity extends Activity {
 //        } else {
 //            Log.d(TAG, "No service to connect to!");
 //        }
+        mNsdHelper.retryConnections();
     }
 
     public void clickSend(View v) {
@@ -84,7 +85,9 @@ public class NsdChatActivity extends Activity {
         if (messageView != null) {
             String messageString = messageView.getText().toString();
             if (!messageString.isEmpty()) {
-                mRegistrationConnection.sendMessage(messageString);
+                for (ChatConnection conn : mNsdHelper.mConnections.values()) {
+                    conn.sendMessage(messageString);
+                }
             }
             messageView.setText("");
         }
@@ -113,7 +116,6 @@ public class NsdChatActivity extends Activity {
     @Override
     protected void onDestroy() {
         mNsdHelper.tearDown();
-        mRegistrationConnection.tearDown();
         super.onDestroy();
     }
 }
