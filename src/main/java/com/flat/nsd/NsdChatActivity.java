@@ -85,8 +85,10 @@ public class NsdChatActivity extends Activity {
         if (messageView != null) {
             String messageString = messageView.getText().toString();
             if (!messageString.isEmpty()) {
-                for (ChatConnection conn : mNsdHelper.mConnections.values()) {
-                    conn.sendMessage(messageString);
+                for (NsdHelper.Connection conn : mNsdHelper.mConnections) {
+                    if (conn.server != null) {
+                        conn.server.sendMessage(messageString); // TODO why client and not server?
+                    }
                 }
             }
             messageView.setText("");

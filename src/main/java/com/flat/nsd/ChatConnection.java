@@ -197,8 +197,8 @@ public class  ChatConnection {
                             connectToServer(address, port);
                         }
                         //mHelper.mAdvertisingConnection.tearDown(); // TODO might close working connection
-                        mHelper.mAdvertisingConnection = null;
-                        mHelper.initializeAdvertisingConnection();
+                        //mHelper.mAdvertisingConnection = null;
+                        mHelper.createServerConnection();
                         break; // TODO since the example used only one ChatConnection instance, this loop may not be needed (each instance gets one ChatServer and one ChatClient
                     }
                 } catch (IOException e) {

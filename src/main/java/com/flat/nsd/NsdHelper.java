@@ -26,9 +26,7 @@ import com.flat.localization.util.Util;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 
 public class NsdHelper {
     private static final String TAG = NsdHelper.class.getSimpleName();
@@ -47,8 +45,23 @@ public class NsdHelper {
     private Handler mUpdateHandler;
     private String mIp;
 
-    Map<NsdServiceInfo, ChatConnection> mConnections = Collections.synchronizedMap(new LinkedHashMap<NsdServiceInfo, ChatConnection>());
-    ChatConnection mAdvertisingConnection;
+    static class Connection {
+        NsdServiceInfo clientInfo, serverInfo;
+        ChatConnection client, server;
+        boolean clientMatches(NsdServiceInfo info) {
+            if (info == null || clientInfo == null) return false;
+            return info.getServiceName().contains(clientInfo.getHost().getHostAddress());
+        }
+        boolean serverMatches(NsdServiceInfo info) {
+            if (info == null || serverInfo == null) return false;
+            return info.getServiceName().contains(serverInfo.getHost().getHostAddress());
+        }
+        void tearDown() {
+            if (client != null) client.tearDown();
+            if (server != null) server.tearDown();
+        }
+    }
+    final List<Connection> mConnections = Collections.synchronizedList(new ArrayList<Connection>());
 
 
 
@@ -59,7 +72,6 @@ public class NsdHelper {
         mIp = Util.getWifiIp(context);
         if (mIp == null) mIp = "0.0.0.0";
         mServiceName = SERVICE_PREFIX + mIp;
-
     }
 
     public void initializeNsd() {
@@ -68,16 +80,32 @@ public class NsdHelper {
         //createRegistrationListener();
 
         //mNsdManager.init(mContext.getMainLooper(), this);
-        initializeAdvertisingConnection();
+        createServerConnection();
     }
 
-    void initializeAdvertisingConnection() {
-        if (mAdvertisingConnection == null) {
-            mAdvertisingConnection = new ChatConnection(this, mUpdateHandler);
-            Log.i(TAG, "Created advertising connection " + mAdvertisingConnection.toString());
+    void createServerConnection() { createServerConnection(null); }
+    void createServerConnection(Connection conn) {
+        boolean isAlreadyWaiting = false;
+        if (conn == null) {
+            synchronized (mConnections) {
+                for (Connection c : mConnections) {
+                    if (c.server != null && c.client == null) {
+                        isAlreadyWaiting = true;
+                        break;
+                    }
+                }
+            }
+            if (isAlreadyWaiting) {
+                return;
+            }
+
+            conn = new Connection();
+            mConnections.add(conn);
+            conn.server = new ChatConnection(this, mUpdateHandler);
+            Log.i(TAG, "Created advertising connection " + conn.toString());
         }
-        if(mAdvertisingConnection.getLocalPort() > -1) {
-            registerService(mAdvertisingConnection.getLocalPort());
+        if(conn.server.getLocalPort() > -1) {
+            registerService(conn.server.getLocalPort());
         } else {
             Log.d(TAG, "no port to connect to (ServerSocket isn't bound). Retrying...");
             try {
@@ -85,7 +113,7 @@ public class NsdHelper {
             } catch (InterruptedException e) {
 
             }
-            initializeAdvertisingConnection();
+            createServerConnection(conn);
         }
     }
 
@@ -111,14 +139,10 @@ public class NsdHelper {
                     Log.d(TAG, "Same machine: " + mServiceName);
                 } else if (service.getServiceName().startsWith(SERVICE_PREFIX)){
                     boolean found = false;
-                    for (NsdServiceInfo info : mConnections.keySet()) {
-                        try {
-                            if (service.getServiceName().contains(info.getHost().getHostAddress())) {
-                                found = true;
-                                break;
-                            }
-                        } catch (NullPointerException e) {
-                            continue;
+                    for (Connection conn : mConnections) {
+                        if (conn.clientMatches(service)) {
+                            found = true;
+                            break;
                         }
                     }
                     if (!found) {
@@ -130,13 +154,20 @@ public class NsdHelper {
             @Override
             public void onServiceLost(NsdServiceInfo service) {
                 Log.e(TAG, "service lost " + service);
-                ChatConnection conn = mConnections.remove(service);
-                if (conn != null) {
-                    conn.tearDown();
-                    if (conn == mAdvertisingConnection) {
-                        initializeAdvertisingConnection();
+                for (Connection conn : mConnections) {
+                    if (conn.clientMatches(service)|| conn.serverMatches(service)) {
+                        mConnections.remove(conn);
+                        if (conn.client != null) {
+                            conn.client.tearDown();
+                        }
+                        if (conn.server != null) {
+                            conn.server.tearDown();
+                            createServerConnection();
+                        }
+                        break;
                     }
                 }
+
             }
             
             @Override
@@ -202,9 +233,9 @@ public class NsdHelper {
     }
 
     public void retryConnections() {
-        for (NsdServiceInfo service : mConnections.keySet()) {
-            Log.d(TAG, "Retrying connection to " + getServiceString(service));
-            mConnections.get(service).connectToServer(service.getHost(), service.getPort());
+        for (Connection conn : mConnections) {
+            Log.d(TAG, "Retrying connection to " + getServiceString(conn.clientInfo));
+            conn.client.connectToServer(conn.clientInfo.getHost(), conn.clientInfo.getPort());
         }
     }
 
@@ -213,23 +244,22 @@ public class NsdHelper {
             Log.w(TAG, "Resolved null serviceInfo.");
             return;
         }
-        ChatConnection conn;
-        if (service.getPort() == mAdvertisingConnection.getLocalPort()) {
-            Log.e(TAG, "Connecting to advertising connection.");
-            conn = mAdvertisingConnection;
-            //initializeAdvertisingConnection();
-        } else {
-            conn = new ChatConnection(this, mUpdateHandler);
+
+        for (Connection conn : mConnections) {
+            if (conn.clientMatches(service)) {
+                Log.d(TAG, "Connection already in list, " + getServiceString(service));
+                return;
+            }
         }
 
-        if (mConnections.containsValue(conn)) {
-            Log.d(TAG, "Connection already in list, " + getServiceString(service));
-        } else {
-            Log.i(TAG, "Connecting to " + getServiceString(service));
-            // TODO causing failed connections?
-            conn.connectToServer(service.getHost(), service.getPort());
-            mConnections.put(service, conn);
-        }
+        Connection conn = new Connection();
+        conn.clientInfo = service;
+        conn.client = new ChatConnection(this, mUpdateHandler);
+
+        Log.i(TAG, "Connecting to " + getServiceString(service));
+        conn.client.connectToServer(service.getHost(), service.getPort());
+        mConnections.add(conn);
+
     }
 
     public NsdManager.RegistrationListener createRegistrationListener() {
@@ -316,10 +346,9 @@ public class NsdHelper {
     }
     
     public void tearDown() {
-        for (ChatConnection conn : mConnections.values()) {
+        for (Connection conn : mConnections) {
             conn.tearDown();
         }
-        mAdvertisingConnection.tearDown();
         for (NsdManager.RegistrationListener rl : mRegistrationListeners) {
             mNsdManager.unregisterService(rl);
         }
