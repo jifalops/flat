@@ -19,6 +19,7 @@ package com.flat.nsd;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
+import android.text.TextUtils;
 import android.util.Log;
 
 import java.io.BufferedReader;
@@ -41,8 +42,8 @@ public class  ChatConnection {
     private ChatServer mChatServer;
     private ChatClient mChatClient;
 
-    private InetAddress address;
-    private int serverPort;
+//    private InetAddress address;
+//    private int serverPort;
 
     private static final String TAG = ChatConnection.class.getSimpleName();
 
@@ -63,8 +64,8 @@ public class  ChatConnection {
         if (mChatClient != null) {
             Log.v(TAG, "mChatClient is not null.");
         }
-        this.address = address;
-        this.serverPort = port;
+//        this.address = address;
+//        this.serverPort = port;
         mChatClient = new ChatClient(address, port);
     }
 
@@ -105,9 +106,9 @@ public class  ChatConnection {
 
     private synchronized void setServerSocket(Socket socket) {
         if (socket == null) {
-            Log.v(TAG, "setServerSocket() being called on null socket.");
+            Log.e(TAG, "setServerSocket() being called on null socket, exiting.");
+            return;
         } else {
-            Log.d(TAG, "setServerSocket() being called on " + socket.getInetAddress() + ":" + socket.getPort());
             if (mConnectionSocket == null) {
                 Log.v(TAG, "mServerSocket is null");
             } else if (mConnectionSocket.isConnected()) {
@@ -119,16 +120,17 @@ public class  ChatConnection {
                 }
             }
         }
+        Log.i(TAG, "setServerSocket() being called on " + getSocketInfo(socket));
         mConnectionSocket = socket;
     }
 
     private synchronized void setClientSocket(Socket socket) {
         if (socket == null) {
-            Log.v(TAG, "setClientSocket() being called on null socket.");
+            Log.e(TAG, "setClientSocket() being called on null socket, exiting.");
+            return;
         } else {
-            Log.d(TAG, "setClientSocket() being called on " + socket.getInetAddress() + ":" + socket.getPort());
             if (mConnectionSocket == null) {
-                Log.v(TAG, "mConnectionSocket is null");
+                Log.v(TAG, "mClientSocket is null");
             } else if (mConnectionSocket.isConnected()) {
                 Log.d(TAG, "client socket is connected, closing...");
                 try {
@@ -138,14 +140,15 @@ public class  ChatConnection {
                 }
             }
         }
+        Log.i(TAG, "setClientSocket() being called on " + getSocketInfo(socket));
         mConnectionSocket = socket;
     }
 
 
-    private Socket getServerSocket() {
+    private synchronized Socket getServerSocket() {
         return mConnectionSocket;
     }
-    private Socket getClientSocket() {
+    private synchronized Socket getClientSocket() {
         return mConnectionSocket;
     }
 
@@ -183,14 +186,15 @@ public class  ChatConnection {
                     setLocalPort(socket.getLocalPort());
                     
                     while (!Thread.currentThread().isInterrupted()) {
-                        Log.i(TAG, "ServerSocket Created, awaiting connection");
+                        Log.i(TAG, "ServerSocket Created, awaiting connection. " + getSocketInfo(socket, ChatServer.this, ServerThread.this));
                         setServerSocket(socket.accept());
-                        Log.i(TAG, "Connected.");
+                        Log.e(TAG, "Server connected to " + getSocketInfo(getServerSocket(), ChatServer.this, ServerThread.this));
                         if (mChatClient == null) {
                             int port = mConnectionSocket.getPort();
                             InetAddress address = mConnectionSocket.getInetAddress();
                             connectToServer(address, port);
                         }
+                        break; // TODO since the example used only one ChatConnection instance, this loop may not be needed (each instance gets one ChatServer and one ChatClient
                     }
                 } catch (IOException e) {
                     Log.e(TAG, "Error creating ServerSocket");
@@ -235,6 +239,7 @@ public class  ChatConnection {
                     if (getClientSocket() == null) {
                         setClientSocket(new Socket(mAddress, PORT));
                         Log.d(CLIENT_TAG, "Client-side socket initialized.");
+                        Log.e(CLIENT_TAG, "Client connection established to " + getSocketInfo(getClientSocket(), ChatClient.this, SendingThread.this));
 
                     } else {
                         Log.d(CLIENT_TAG, "Socket already initialized, skipping.");
@@ -245,9 +250,9 @@ public class  ChatConnection {
                     mRecThread.start();
 
                 } catch (UnknownHostException e) {
-                    Log.e(CLIENT_TAG, "Initializing socket failed, UHE"+ e.getMessage());
+                    Log.e(CLIENT_TAG, "Initializing socket failed, UHE" + e.getMessage());
                 } catch (IOException e) {
-                    Log.e(CLIENT_TAG, "Initializing socket failed, IOE."+ e.getMessage());
+                    Log.e(CLIENT_TAG, "Initializing socket failed, IOE." + e.getMessage());
                 }
 
                 while (true) {
@@ -261,6 +266,9 @@ public class  ChatConnection {
             }
         }
 
+        /**
+         * The tricky thread
+         */
         class ReceivingThread implements Runnable {
 
             @Override
@@ -269,23 +277,23 @@ public class  ChatConnection {
                 BufferedReader input;
                 try {
                     input = new BufferedReader(new InputStreamReader(
-                            mConnectionSocket.getInputStream())); // TODO use mServerSocket?
+                            mConnectionSocket.getInputStream()));
                     while (!Thread.currentThread().isInterrupted()) {
 
                         String messageStr = null;
                         messageStr = input.readLine();
                         if (messageStr != null) {
-                            Log.d(CLIENT_TAG, "Read from the stream: " + messageStr);
+                            Log.d(CLIENT_TAG, "Msg: " + messageStr + "\nfrom " + getSocketInfo(getClientSocket(), ChatClient.this, ReceivingThread.this));
                             updateMessages(messageStr, false);
                         } else {
-                            Log.d(CLIENT_TAG, "The nulls! The nulls! (receiving thread for " + mAddress.getHostAddress() + ")");
+                            Log.e(CLIENT_TAG, "Null message for " + getSocketInfo(getClientSocket(), ChatClient.this, ReceivingThread.this));
                             break;
                         }
                     }
                     input.close();
 
                 } catch (IOException e) {
-                    Log.e(CLIENT_TAG, "Server loop error: ");
+                    Log.e(CLIENT_TAG, "Server loop error: " + e.getMessage());
                 }
             }
         }
@@ -324,5 +332,24 @@ public class  ChatConnection {
             }
             Log.v(CLIENT_TAG, "Client sent message: " + msg);
         }
+    }
+
+    public String getSocketInfo(Socket socket, Object... objects) {
+        String s = "{no socket info}";
+        try {
+            s = socket.getInetAddress().getHostAddress()+":"+socket.getPort()+" (local "+socket.getLocalPort()+").\n"
+                    + ChatConnection.this.toString() + "\n";
+            s += TextUtils.join("\n", objects);
+        } catch (NullPointerException ignored) {}
+        return s;
+    }
+    public String getSocketInfo(ServerSocket socket, Object... objects) {
+        String s = "{no socket info}";
+        try {
+            s = socket.getInetAddress().getHostAddress()+":"+socket.getLocalPort()+" (local).\n"
+                    + ChatConnection.this.toString() + "\n";
+            s += TextUtils.join("\n", objects);
+        } catch (NullPointerException ignored) {}
+        return s;
     }
 }

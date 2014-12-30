@@ -24,8 +24,10 @@ import android.util.Log;
 
 import com.flat.localization.util.Util;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 public class NsdHelper {
@@ -38,10 +40,12 @@ public class NsdHelper {
     NsdManager mNsdManager;
     NsdManager.ResolveListener mResolveListener;
     NsdManager.DiscoveryListener mDiscoveryListener;
-    NsdManager.RegistrationListener mRegistrationListener;
+
+    private final List<NsdManager.RegistrationListener> mRegistrationListeners = Collections.synchronizedList(new ArrayList<NsdManager.RegistrationListener>());
 
     private String mServiceName;
     private Handler mUpdateHandler;
+    private String mIp;
 
     Map<NsdServiceInfo, ChatConnection> mConnections = Collections.synchronizedMap(new LinkedHashMap<NsdServiceInfo, ChatConnection>());
     ChatConnection mAdvertisingConnection;
@@ -52,16 +56,16 @@ public class NsdHelper {
         mContext = context;
         mUpdateHandler = handler;
         mNsdManager = (NsdManager) context.getSystemService(Context.NSD_SERVICE);
-        String ip = Util.getWifiIp(context);
-        if (ip == null) ip = "0.0.0.0";
-        mServiceName = SERVICE_PREFIX + ip;
+        mIp = Util.getWifiIp(context);
+        if (mIp == null) mIp = "0.0.0.0";
+        mServiceName = SERVICE_PREFIX + mIp;
 
     }
 
     public void initializeNsd() {
         initializeResolveListener();
         initializeDiscoveryListener();
-        initializeRegistrationListener();
+        //createRegistrationListener();
 
         //mNsdManager.init(mContext.getMainLooper(), this);
         initializeAdvertisingConnection();
@@ -69,8 +73,8 @@ public class NsdHelper {
 
     private void initializeAdvertisingConnection() {
         if (mAdvertisingConnection == null) {
-            Log.d(TAG, "initializing null advertising service");
             mAdvertisingConnection = new ChatConnection(mUpdateHandler);
+            Log.i(TAG, "Created advertising connection " + mAdvertisingConnection.toString());
         }
         if(mAdvertisingConnection.getLocalPort() > -1) {
             registerService(mAdvertisingConnection.getLocalPort());
@@ -95,7 +99,7 @@ public class NsdHelper {
 
             @Override
             public void onDiscoveryStarted(String regType) {
-                Log.e(TAG, "Service discovery started, I am " + mServiceName); // Log.e is red
+                Log.d(TAG, "Service discovery started, I am " + mServiceName);
             }
 
             @Override
@@ -142,16 +146,16 @@ public class NsdHelper {
     }
 
     private void resolveService(NsdServiceInfo service) {
-        Log.d(TAG, "Resolving service...");
+        Log.d(TAG, "Resolving service " + getServiceString(service));
         try {
             mNsdManager.resolveService(service, mResolveListener);
         } catch (IllegalArgumentException e) {
-            Log.e(TAG, "Failed to resolve service " + service.getServiceName() + ", " + e.getMessage() + ". Retrying...");
+            Log.e(TAG, "Failed to resolve service, " + e.getMessage() + ". Retrying...");
             initializeResolveListener();
             try {
                 mNsdManager.resolveService(service, mResolveListener);
             } catch (IllegalArgumentException e2) {
-                Log.e(TAG, "Failed to resolve service " + service.getServiceName() + ", " + e2.getMessage());
+                Log.e(TAG, "Failed to resolve service, " + e2.getMessage());
                 initializeResolveListener();
             }
         }
@@ -172,10 +176,10 @@ public class NsdHelper {
 
             @Override
             public void onServiceResolved(NsdServiceInfo serviceInfo) {
-                Log.i(TAG, "Resolve Succeeded. " + serviceInfo);
+                Log.i(TAG, "Resolve Succeeded for " + getServiceString(serviceInfo));
 
                 if (serviceInfo.getServiceName().equals(mServiceName)) {
-                    Log.wtf(TAG, "Same service name.");
+                    Log.e(TAG, "Same service name. Connection aborted.");
                     return;
                 }
 
@@ -186,7 +190,7 @@ public class NsdHelper {
 
     public void retryConnections() {
         for (NsdServiceInfo service : mConnections.keySet()) {
-            Log.d(TAG, "Retrying connection to " + service.getHost().getHostAddress() + ":" + service.getPort());
+            Log.d(TAG, "Retrying connection to " + getServiceString(service));
             mConnections.get(service).connectToServer(service.getHost(), service.getPort());
         }
     }
@@ -196,7 +200,6 @@ public class NsdHelper {
             Log.w(TAG, "Resolved null serviceInfo.");
             return;
         }
-
         ChatConnection conn;
         if (service.getPort() == mAdvertisingConnection.getLocalPort()) {
             conn = mAdvertisingConnection;
@@ -205,60 +208,66 @@ public class NsdHelper {
         }
 
         if (mConnections.containsValue(conn)) {
-            Log.d(TAG, "Connection already in list, port " + conn.getLocalPort());
+            Log.d(TAG, "Connection already in list, " + getServiceString(service));
         } else {
-            Log.i(TAG, "Connecting to " + service.getServiceName() + " port " + service.getPort());
+            Log.i(TAG, "Connecting to " + getServiceString(service));
             // TODO causing failed connections?
             conn.connectToServer(service.getHost(), service.getPort());
             mConnections.put(service, conn);
         }
     }
 
-    public void initializeRegistrationListener() {
-        if (mRegistrationListener == null) {
-            Log.v(TAG, "initializing registration listener (null)");
-        } else {
-            Log.v(TAG, "initializing registration listener (not null)");
-        }
-        mRegistrationListener = new NsdManager.RegistrationListener() {
+    public NsdManager.RegistrationListener createRegistrationListener() {
+
+        NsdManager.RegistrationListener listener = new NsdManager.RegistrationListener() {
 
             @Override
             public void onServiceRegistered(NsdServiceInfo nsdServiceInfo) {
                 mServiceName = nsdServiceInfo.getServiceName();
+                Log.d(TAG, getServiceString(nsdServiceInfo) + " onServiceRegistered()");
             }
             
             @Override
             public void onRegistrationFailed(NsdServiceInfo nsdServiceInfo, int errorCode) {
-                Log.e(TAG, "Registration failed: " + errorCode);
+                Log.e(TAG, "Registration failed for " + getServiceString(nsdServiceInfo) + ". Error " + errorCode);
             }
 
             @Override
             public void onServiceUnregistered(NsdServiceInfo nsdServiceInfo) {
-                Log.i(TAG, "Service unregistered");
+                Log.i(TAG, "Service unregistered for " + getServiceString(nsdServiceInfo));
             }
             
             @Override
             public void onUnregistrationFailed(NsdServiceInfo nsdServiceInfo, int errorCode) {
-                Log.e(TAG, "Unregistration failed: " + errorCode);
+                Log.e(TAG, "Unregistration failed for " + getServiceString(nsdServiceInfo) + ". Error " + errorCode);
             }
             
         };
+        mRegistrationListeners.add(listener);
+        return listener;
     }
 
     public void registerService(int port) {
-        Log.i(TAG, "Registering service on port " + port);
+        Log.e(TAG, "Registering service at " + mIp + ":" + port); // Log.e is red
         NsdServiceInfo serviceInfo  = new NsdServiceInfo();
         serviceInfo.setPort(port);
         serviceInfo.setServiceName(mServiceName);
         serviceInfo.setServiceType(SERVICE_TYPE);
 
+        NsdManager.RegistrationListener listener = createRegistrationListener();
         try {
             mNsdManager.registerService(
-                    serviceInfo, NsdManager.PROTOCOL_DNS_SD, mRegistrationListener);
+                    serviceInfo, NsdManager.PROTOCOL_DNS_SD, listener);
         } catch (IllegalArgumentException e) {
-            Log.e(TAG, "Failed to register service, " + e.getMessage());
-            Log.i(TAG, "Reinitializing registration listener...");
-            initializeRegistrationListener();
+            Log.e(TAG, "Failed to register service, " + e.getMessage() + ". Retrying...");
+            mRegistrationListeners.remove(listener);
+            try {
+                listener = createRegistrationListener();
+                mNsdManager.registerService(
+                        serviceInfo, NsdManager.PROTOCOL_DNS_SD, listener);
+            } catch (IllegalArgumentException e2) {
+                Log.e(TAG, "Failed to register service, " + e2.getMessage());
+            }
         }
     }
 
@@ -296,6 +305,15 @@ public class NsdHelper {
             conn.tearDown();
         }
         mAdvertisingConnection.tearDown();
-        mNsdManager.unregisterService(mRegistrationListener);
+        for (NsdManager.RegistrationListener rl : mRegistrationListeners) {
+            mNsdManager.unregisterService(rl);
+        }
+    }
+
+    public static String getServiceString(NsdServiceInfo service) {
+        try {
+            return service.getHost().getHostAddress() + ":" + service.getPort();
+        } catch (NullPointerException ignored) {}
+        return null;
     }
 }
