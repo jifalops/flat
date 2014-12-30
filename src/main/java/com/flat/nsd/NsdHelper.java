@@ -71,9 +71,9 @@ public class NsdHelper {
         initializeAdvertisingConnection();
     }
 
-    private void initializeAdvertisingConnection() {
+    void initializeAdvertisingConnection() {
         if (mAdvertisingConnection == null) {
-            mAdvertisingConnection = new ChatConnection(mUpdateHandler);
+            mAdvertisingConnection = new ChatConnection(this, mUpdateHandler);
             Log.i(TAG, "Created advertising connection " + mAdvertisingConnection.toString());
         }
         if(mAdvertisingConnection.getLocalPort() > -1) {
@@ -146,7 +146,7 @@ public class NsdHelper {
     }
 
     private void resolveService(NsdServiceInfo service) {
-        Log.d(TAG, "Resolving service " + getServiceString(service));
+        Log.i(TAG, "Resolving service " + getServiceString(service));
         try {
             mNsdManager.resolveService(service, mResolveListener);
         } catch (IllegalArgumentException e) {
@@ -204,7 +204,7 @@ public class NsdHelper {
         if (service.getPort() == mAdvertisingConnection.getLocalPort()) {
             conn = mAdvertisingConnection;
         } else {
-            conn = new ChatConnection(mUpdateHandler);
+            conn = new ChatConnection(this, mUpdateHandler);
         }
 
         if (mConnections.containsValue(conn)) {

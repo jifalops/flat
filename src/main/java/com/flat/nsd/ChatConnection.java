@@ -49,8 +49,10 @@ public class  ChatConnection {
 
     private Socket mConnectionSocket;
     private AtomicInteger mPort = new AtomicInteger(-1);
+    private NsdHelper mHelper;
 
-    public ChatConnection(Handler handler) {
+    public ChatConnection(NsdHelper helper, Handler handler) {
+        mHelper = helper;
         mUpdateHandler = handler;
         mChatServer = new ChatServer(handler);
     }
@@ -194,6 +196,7 @@ public class  ChatConnection {
                             InetAddress address = mConnectionSocket.getInetAddress();
                             connectToServer(address, port);
                         }
+                        mHelper.initializeAdvertisingConnection();
                         break; // TODO since the example used only one ChatConnection instance, this loop may not be needed (each instance gets one ChatServer and one ChatClient
                     }
                 } catch (IOException e) {
