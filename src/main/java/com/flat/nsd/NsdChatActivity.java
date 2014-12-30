@@ -17,11 +17,9 @@
 package com.flat.nsd;
 
 import android.app.Activity;
-import android.net.nsd.NsdServiceInfo;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
-import android.util.Log;
 import android.view.View;
 import android.widget.EditText;
 import android.widget.TextView;
@@ -37,8 +35,7 @@ public class NsdChatActivity extends Activity {
 
     public static final String TAG = "NsdChat";
 
-    ChatConnection mConnection;
-//    ChatConnection mConnection2;
+    ChatConnection mRegistrationConnection;
 
     /** Called when the activity is first created. */
     @Override
@@ -55,29 +52,16 @@ public class NsdChatActivity extends Activity {
             }
         };
 
-        mConnection = new ChatConnection(mUpdateHandler);
-        //mConnection2 = new ChatConnection(mUpdateHandler);
+        mRegistrationConnection = new ChatConnection(mUpdateHandler);
 
-        mNsdHelper = new NsdHelper(this);
+        mNsdHelper = new NsdHelper(this, mUpdateHandler);
         mNsdHelper.initializeNsd();
-        clickAdvertise(null);
     }
 
+
+
     public void clickAdvertise(View v) {
-        Log.i(TAG, "Advertising service");
-        // Register service
-        if(mConnection.getLocalPort() > -1) {
-            Log.d(TAG, "Registering on port " + mConnection.getLocalPort());
-            mNsdHelper.registerService(mConnection.getLocalPort());
-        } else {
-            Log.d(TAG, "clickAdvertise(): no port to connect to (ServerSocket isn't bound).");
-        }
-        // Register service
-//        if(mConnection2.getLocalPort() > -1) {
-//            mNsdHelper.registerService(mConnection2.getLocalPort());
-//        } else {
-//            Log.d(TAG, "ServerSocket2 isn't bound.");
-//        }
+//        advertise();
     }
 
     public void clickDiscover(View v) {
@@ -85,14 +69,14 @@ public class NsdChatActivity extends Activity {
     }
 
     public void clickConnect(View v) {
-        NsdServiceInfo service = mNsdHelper.getChosenServiceInfo();
-        if (service != null) {
-            Log.d(TAG, "Connecting.");
-            mConnection.connectToServer(service.getHost(),
-                    service.getPort());
-        } else {
-            Log.d(TAG, "No service to connect to!");
-        }
+//        NsdServiceInfo service = mNsdHelper.getChosenServiceInfo();
+//        if (service != null) {
+//            Log.d(TAG, "Connecting...");
+//            mConnection.connectToServer(service.getHost(),
+//                    service.getPort());
+//        } else {
+//            Log.d(TAG, "No service to connect to!");
+//        }
     }
 
     public void clickSend(View v) {
@@ -100,7 +84,7 @@ public class NsdChatActivity extends Activity {
         if (messageView != null) {
             String messageString = messageView.getText().toString();
             if (!messageString.isEmpty()) {
-                mConnection.sendMessage(messageString);
+                mRegistrationConnection.sendMessage(messageString);
             }
             messageView.setText("");
         }
@@ -129,7 +113,7 @@ public class NsdChatActivity extends Activity {
     @Override
     protected void onDestroy() {
         mNsdHelper.tearDown();
-        mConnection.tearDown();
+        mRegistrationConnection.tearDown();
         super.onDestroy();
     }
 }

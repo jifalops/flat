@@ -42,7 +42,7 @@ public class  ChatConnection {
 
     private static final String TAG = ChatConnection.class.getSimpleName();
 
-    private Socket mSocket;
+    private Socket mServerSocket, mClientSocket;
     private int mPort = -1;
 
     public ChatConnection(Handler handler) {
@@ -57,7 +57,7 @@ public class  ChatConnection {
 
     public void connectToServer(InetAddress address, int port) {
         if (mChatClient != null) {
-            Log.d(TAG, "mChatClient is not null.");
+            Log.v(TAG, "mChatClient is not null.");
         }
         mChatClient = new ChatClient(address, port);
     }
@@ -97,46 +97,69 @@ public class  ChatConnection {
 
     }
 
-    private synchronized void setSocket(Socket socket) {
-        Log.d(TAG, "setSocket being called.");
+    private synchronized void setServerSocket(Socket socket) {
         if (socket == null) {
-            Log.d(TAG, "Setting a null socket.");
-        }
-        if (mSocket != null) {
-            Log.d(TAG, "setSocket(): mSocket is not null");
-            if (mSocket.isConnected()) {
-                Log.d(TAG, "setSocket(): mSocket is connected, closing...");
+            Log.v(TAG, "setServerSocket() being called on null socket.");
+        } else {
+            Log.d(TAG, "setServerSocket() being called on " + socket.getInetAddress() + ":" + socket.getPort());
+            if (mServerSocket == null) {
+                Log.v(TAG, "mServerSocket is null");
+            } else if (mServerSocket.isConnected()) {
+                Log.d(TAG, "server socket is connected, closing...");
                 try {
-                    mSocket.close();
+                    mServerSocket.close();
                 } catch (IOException e) {
-                    Log.e(TAG, "Error closing chat connection.");
+                    Log.e(TAG, "Error closing chat connection (server socket).");
                 }
             }
         }
-        mSocket = socket;
+        mServerSocket = socket;
     }
 
-    private Socket getSocket() {
-        return mSocket;
+    private synchronized void setClientSocket(Socket socket) {
+        if (socket == null) {
+            Log.v(TAG, "setClientSocket() being called on null socket.");
+        } else {
+            Log.d(TAG, "setClientSocket() being called on " + socket.getInetAddress() + ":" + socket.getPort());
+            if (mClientSocket == null) {
+                Log.v(TAG, "mClientSocket is null");
+            } else if (mClientSocket.isConnected()) {
+                Log.d(TAG, "client socket is connected, closing...");
+                try {
+                    mClientSocket.close();
+                } catch (IOException e) {
+                    Log.e(TAG, "Error closing chat connection (client socket).");
+                }
+            }
+        }
+        mClientSocket = socket;
+    }
+
+
+    private Socket getServerSocket() {
+        return mServerSocket;
+    }
+    private Socket getClientSocket() {
+        return mClientSocket;
     }
 
     private class ChatServer {
-        ServerSocket mServerSocket = null;
-        Thread mThread = null;
+        ServerSocket socket = null;
+        Thread thread = null;
 
         public ChatServer(Handler handler) {
-            mThread = new Thread(new ServerThread());
-            mThread.start();
+            thread = new Thread(new ServerThread());
+            thread.start();
         }
 
         public void tearDown() {
-            if (mThread != null) mThread.interrupt();
+            if (thread != null) thread.interrupt();
             if (mChatServer == null) {
                 Log.d(TAG, "Attempted to tearDown null chat server");
                 return;
             }
             try {
-                mServerSocket.close();
+                socket.close();
             } catch (IOException ioe) {
                 Log.e(TAG, "Error when closing server socket.");
             }
@@ -150,16 +173,16 @@ public class  ChatConnection {
                 try {
                     // Since discovery will happen via Nsd, we don't need to care which port is
                     // used.  Just grab an available one  and advertise it via Nsd.
-                    mServerSocket = new ServerSocket(0);
-                    setLocalPort(mServerSocket.getLocalPort());
+                    socket = new ServerSocket(0);
+                    setLocalPort(socket.getLocalPort());
                     
                     while (!Thread.currentThread().isInterrupted()) {
                         Log.i(TAG, "ServerSocket Created, awaiting connection");
-                        setSocket(mServerSocket.accept());
+                        setServerSocket(socket.accept());
                         Log.i(TAG, "Connected.");
                         if (mChatClient == null) {
-                            int port = mSocket.getPort();
-                            InetAddress address = mSocket.getInetAddress();
+                            int port = mServerSocket.getPort();
+                            InetAddress address = mServerSocket.getInetAddress();
                             connectToServer(address, port);
                         }
                     }
@@ -203,8 +226,8 @@ public class  ChatConnection {
             @Override
             public void run() {
                 try {
-                    if (getSocket() == null) {
-                        setSocket(new Socket(mAddress, PORT));
+                    if (getClientSocket() == null) {
+                        setClientSocket(new Socket(mAddress, PORT));
                         Log.d(CLIENT_TAG, "Client-side socket initialized.");
 
                     } else {
@@ -239,7 +262,7 @@ public class  ChatConnection {
                 BufferedReader input;
                 try {
                     input = new BufferedReader(new InputStreamReader(
-                            mSocket.getInputStream()));
+                            mClientSocket.getInputStream())); // TODO use mServerSocket?
                     while (!Thread.currentThread().isInterrupted()) {
 
                         String messageStr = null;
@@ -261,17 +284,18 @@ public class  ChatConnection {
         }
 
         public void tearDown() {
-            if (getSocket() == null) return;
-            try {
-                getSocket().close();
-            } catch (IOException ioe) {
-                Log.e(CLIENT_TAG, "Error when closing server socket.");
+            if (getClientSocket() != null) {
+                try {
+                    getClientSocket().close();
+                } catch (IOException ioe) {
+                    Log.e(CLIENT_TAG, "Error when closing client socket.");
+                }
             }
         }
 
         public void sendMessage(String msg) {
             try {
-                Socket socket = getSocket();
+                Socket socket = getClientSocket();
                 if (socket == null) {
                     Log.d(CLIENT_TAG, "Socket is null, wtf?");
                 } else if (socket.getOutputStream() == null) {
@@ -280,7 +304,7 @@ public class  ChatConnection {
 
                 PrintWriter out = new PrintWriter(
                         new BufferedWriter(
-                                new OutputStreamWriter(getSocket().getOutputStream())), true);
+                                new OutputStreamWriter(getClientSocket().getOutputStream())), true);
                 out.println(msg);
                 out.flush();
                 updateMessages(msg, true);
