@@ -61,6 +61,7 @@ public class NsdHelper {
             if (server != null) server.tearDown();
         }
     }
+
     final List<Connection> mConnections = Collections.synchronizedList(new ArrayList<Connection>());
 
 
