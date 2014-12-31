@@ -35,6 +35,8 @@ public class NsdHelper {
     private static final String SERVICE_TYPE = "_http._tcp.";
     private static final String SERVICE_PREFIX = "flatloco_";
 
+    public static final int HOST_CONNECTION_LIMIT = 1;
+
     Context mContext;
 
     NsdManager mNsdManager;
@@ -138,7 +140,7 @@ public class NsdHelper {
                 } else if (service.getServiceName().equals(mServiceName)) {
                     Log.d(TAG, "Same machine: " + mServiceName);
                 } else if (service.getServiceName().startsWith(SERVICE_PREFIX)
-                            && socketManager.countConnectionsTo(service.getServiceName()) < 2) {
+                            && socketManager.countConnectionsTo(service.getServiceName()) < HOST_CONNECTION_LIMIT) {
                     resolveService(service);
                 }
             }
@@ -254,7 +256,7 @@ public class NsdHelper {
             @Override
             public void onServiceRegistered(NsdServiceInfo nsdServiceInfo) {
                 mServiceName = nsdServiceInfo.getServiceName();
-                Log.v(TAG, "registered " + nsdServiceInfo);
+                Log.e(TAG, "Registered service " + nsdServiceInfo.getServiceName());
             }
 
             @Override
@@ -277,7 +279,7 @@ public class NsdHelper {
 
 
     public void registerService(int port) {
-        Log.e(TAG, "Registering service at " + mIp + ":" + port); // Log.e is red
+        Log.i(TAG, "Registering service at " + mIp + ":" + port); // Log.e is red
         NsdServiceInfo serviceInfo  = new NsdServiceInfo();
         serviceInfo.setPort(port);
         serviceInfo.setServiceName(mServiceName);

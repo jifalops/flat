@@ -65,7 +65,7 @@ public class MyServerSocket implements SocketController {
     @Override public synchronized boolean isFinished() { return finished; }
     private synchronized void finish() {
         finished = true;
-        closeServer();
+        //closeServer();
         for (ServerListener l : listeners) {
             l.onFinished(this);
         }
@@ -74,15 +74,15 @@ public class MyServerSocket implements SocketController {
     private boolean closed;
     /** Closes ServerSocket only, not the accepted Socket */
     private synchronized void closeServer() {
-//        if (!closed && serverSocket != null) {
-//            try {
-//                serverSocket.close();
-//                setConnected(false);
-//                closed = true;
-//            } catch (IOException e) {
-//                Log.e(TAG, "Failed to close server socket.");
-//            }
-//        }
+        if (!closed && serverSocket != null) {
+            try {
+                serverSocket.close();
+                closed = true;
+                setConnected(false);
+            } catch (IOException e) {
+                Log.e(TAG, "Failed to close server socket.");
+            }
+        }
     }
 
 

@@ -31,8 +31,8 @@ public class MySocketManager {
 
 
 
-    private MyServerSocket server;
     private final List<MyConnectionSocket> connections = Collections.synchronizedList(new ArrayList<MyConnectionSocket>());
+    private final List<MyServerSocket> servers = Collections.synchronizedList(new ArrayList<MyServerSocket>());
 
 
     public int sendMessage(String msg) {
@@ -68,7 +68,10 @@ public class MySocketManager {
     public void stop() {
         if (running) {
             running = false;
-            server.cancel();
+            for (MyServerSocket mss : servers) {
+                mss.cancel();
+            }
+            servers.clear();
             for (MyConnectionSocket mcs : connections) {
                 mcs.cancel();
             }
@@ -78,8 +81,9 @@ public class MySocketManager {
 
     private void initializeServer() {
         if (!running) return;
-        server = new MyServerSocket();
+        MyServerSocket server = new MyServerSocket();
         server.registerListener(serverListener);
+        servers.add(server);
         server.start();
     }
 
@@ -97,6 +101,14 @@ public class MySocketManager {
         conn.start();
     }
 
+    public void connectTo(Socket socket) {
+        if (!running) return;
+        MyConnectionSocket conn = new MyConnectionSocket(socket);
+        conn.registerListener(connectionSocketListener);
+        connections.add(conn);
+        conn.start();
+    }
+
     private final MyServerSocket.ServerListener serverListener = new MyServerSocket.ServerListener() {
         @Override
         public void onNewServerSocket(MyServerSocket mss, ServerSocket ss) {
@@ -105,7 +117,7 @@ public class MySocketManager {
 
         @Override
         public void onConnected(MyServerSocket mss, Socket socket) {
-            connectTo(socket.getInetAddress(), socket.getPort());
+            connectTo(socket);
             notifyHandler(serverConnected, null, mss);
         }
 

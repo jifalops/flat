@@ -92,6 +92,11 @@ public class MyConnectionSocket implements SocketController {
         this.port = port;
     }
 
+    public MyConnectionSocket(Socket socket) {
+        this(socket.getInetAddress(), socket.getPort());
+        this.socket = socket;
+    }
+
 
     private Thread sendThread;
     private Thread receiveThread;
