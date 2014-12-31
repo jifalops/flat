@@ -37,7 +37,7 @@ public class NsdChatActivity extends Activity {
     private TextView mStatusView;
     private final MySocketManager.SocketListener socketListener = new MySocketManager.SocketListener() {
         @Override
-        public void onConnected(MyServerSocket server, Socket socket) {
+        public void onServerConnected(MyServerSocket server, Socket socket) {
 
         }
 
@@ -64,6 +64,11 @@ public class NsdChatActivity extends Activity {
         @Override
         public void onClientFinished(MyConnectionSocket socket) {
 
+        }
+
+        @Override
+        public void onClientConnected(MyConnectionSocket mcs, Socket socket) {
+            addChatLine(socket.getInetAddress().getHostAddress() + " has joined.");
         }
     };
 

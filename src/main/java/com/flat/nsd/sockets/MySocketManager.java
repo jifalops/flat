@@ -5,7 +5,6 @@ import android.os.Handler;
 import android.os.Message;
 import android.util.Log;
 
-import java.io.IOException;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -84,22 +83,10 @@ public class MySocketManager {
         server.start();
     }
 
-    private void addNewConnection(Socket s) {
-        if (!running) return;
-        MyConnectionSocket conn = new MyConnectionSocket(s);
-        conn.registerListener(connectionSocketListener);
-        connections.add(conn);
-        conn.start();
-    }
-
     private void retryConnection(MyConnectionSocket mcs) {
         if (!running) return;
         connections.remove(mcs);
-        try {
-            addNewConnection(new Socket(mcs.getAddress(), mcs.getPort()));
-        } catch (IOException e) {
-            Log.e(TAG, "Failed retrying connection to " + Sockets.toString(mcs.getAddress(), mcs.getPort()));
-        }
+        connectTo(mcs.getAddress(), mcs.getPort());
     }
 
     public void connectTo(InetAddress address, int port) {
@@ -113,41 +100,49 @@ public class MySocketManager {
     private final MyServerSocket.ServerListener serverListener = new MyServerSocket.ServerListener() {
         @Override
         public void onNewServerSocket(MyServerSocket mss, ServerSocket ss) {
-            sendToHandler(newServer, null, mss);
+            notifyHandler(newServer, null, mss);
         }
 
         @Override
         public void onConnected(MyServerSocket mss, Socket socket) {
-            addNewConnection(socket);
-            sendToHandler(connected, null, mss);
+            connectTo(socket.getInetAddress(), socket.getPort());
+            notifyHandler(serverConnected, null, mss);
         }
 
         @Override
         public void onFinished(MyServerSocket mss) {
             initializeServer();
-            sendToHandler(serverFinished, null, mss);
+            notifyHandler(serverFinished, null, mss);
         }
     };
 
     private final MyConnectionSocket.ConnectionListener connectionSocketListener = new MyConnectionSocket.ConnectionListener() {
         @Override
+        public void onConnected(MyConnectionSocket mcs, Socket socket) {
+            notifyHandler(clientConnected, null, mcs);
+        }
+
+        @Override
         public void onMessageSent(MyConnectionSocket mcs, String s) {
-            sendToHandler(sent, s, mcs);
+            notifyHandler(sent, s, mcs);
         }
 
         @Override
         public void onMessageReceived(MyConnectionSocket mcs, String s) {
-            sendToHandler(received, s, mcs);
+            notifyHandler(received, s, mcs);
         }
 
         @Override
         public void onFinished(MyConnectionSocket mcs) {
+            notifyHandler(clientFinished, null, mcs);
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException ignored) {}
             retryConnection(mcs);
-            sendToHandler(clientFinished, null, mcs);
         }
     };
 
-    private void sendToHandler(int type, String s, Object obj) {
+    private void notifyHandler(int type, String s, Object obj) {
         Bundle data = new Bundle();
         data.putString("string", s);
         Message msg = handler.obtainMessage();
@@ -157,7 +152,7 @@ public class MySocketManager {
         handler.sendMessage(msg);
     }
 
-    private final int connected=1, serverFinished=2, newServer=3, sent=4, received=5, clientFinished=6;
+    private final int serverConnected=1, serverFinished=2, newServer=3, sent=4, received=5, clientFinished=6, clientConnected=7;
 
     private final Handler handler = new Handler() {
         @Override
@@ -165,10 +160,10 @@ public class MySocketManager {
             MyServerSocket mss;
             MyConnectionSocket mcs;
             switch (msg.arg1) {
-                case connected:
+                case serverConnected:
                     mss = (MyServerSocket) msg.obj;
                     for (SocketListener l : listeners) {
-                        l.onConnected(mss, mss.getAcceptedSocket());
+                        l.onServerConnected(mss, mss.getAcceptedSocket());
                     }
                     break;
                 case serverFinished:
@@ -201,6 +196,12 @@ public class MySocketManager {
                         l.onClientFinished(mcs);
                     }
                     break;
+                case clientConnected:
+                    mcs = (MyConnectionSocket) msg.obj;
+                    for (SocketListener l : listeners) {
+                        l.onClientConnected(mcs, mcs.getSocket());
+                    }
+                    break;
             }
         }
     };
@@ -210,12 +211,13 @@ public class MySocketManager {
      * Allow other objects to react to events. Called on main thread.
      */
     public static interface SocketListener {
-        void onConnected(MyServerSocket server, Socket socket);
-        void onServerFinished(MyServerSocket server);
-        void onNewServerSocket(MyServerSocket mss, ServerSocket ss);
-        void onMessageSent(MyConnectionSocket socket, String msg);
-        void onMessageReceived(MyConnectionSocket socket, String msg);
-        void onClientFinished(MyConnectionSocket socket);
+        void onServerConnected(MyServerSocket mss, Socket socket);
+        void onServerFinished(MyServerSocket mss);
+        void onNewServerSocket(MyServerSocket mss, ServerSocket socket);
+        void onMessageSent(MyConnectionSocket mcs, String msg);
+        void onMessageReceived(MyConnectionSocket mcs, String msg);
+        void onClientFinished(MyConnectionSocket mcs);
+        void onClientConnected(MyConnectionSocket mcs, Socket socket);
     }
     // a List of unique listener instances.
     private final List<SocketListener> listeners = new ArrayList<SocketListener>(1);

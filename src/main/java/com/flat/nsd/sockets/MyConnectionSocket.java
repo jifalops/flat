@@ -29,7 +29,10 @@ public class MyConnectionSocket implements SocketController {
 
 
     private Socket socket;
-    private synchronized void setSocket(Socket s) { socket = s; }
+    private synchronized void setSocket(Socket s) {
+        socket = s;
+        setConnected(true);
+    }
     public synchronized Socket getSocket() {
         return socket;
     }
@@ -39,6 +42,11 @@ public class MyConnectionSocket implements SocketController {
     @Override public synchronized boolean isConnected() { return connected; }
     private synchronized void setConnected(boolean conn) {
         connected = conn;
+        if (conn) {
+            for (ConnectionListener l : listeners) {
+                l.onConnected(this, getSocket());
+            }
+        }
     }
 
     private boolean canceled;
@@ -79,17 +87,9 @@ public class MyConnectionSocket implements SocketController {
     private final int port;
     public int getPort() { return port; }
 
-    public MyConnectionSocket(Socket socket) {
-        this.socket = socket;
-        address = socket.getInetAddress();
-        port = socket.getPort();
-        connected = true;
-    }
-
     public MyConnectionSocket(InetAddress address, int port) {
         this.address = address;
         this.port = port;
-        connected = true;
     }
 
 
@@ -107,8 +107,6 @@ public class MyConnectionSocket implements SocketController {
             }
             sendThread = new Thread(new SendingThread());
             sendThread.start();
-            receiveThread = new Thread(new ReceivingThread());
-            receiveThread.start();
             started = true;
         }
     }
@@ -135,7 +133,7 @@ public class MyConnectionSocket implements SocketController {
         } catch (IOException e) {
             Log.d(TAG, "I/O Exception");
         } catch (Exception e) {
-            Log.d(TAG, "Exception during sendMessage()", e);
+            Log.d(TAG, "Exception during sendMessage()");
         }
         Log.v(TAG, "Sent message: " + msg);
     }
@@ -147,24 +145,32 @@ public class MyConnectionSocket implements SocketController {
         @Override
         public void run() {
             try {
-                while (!closed && !Thread.currentThread().isInterrupted()) {
-                    if (socket == null) {
-                        Log.e(TAG, "Socket is null, creating another at " + address.getHostAddress()+":"+port);
-                        setSocket(new Socket(address, port));
-                    }
-                    try {
-                        String msg = queue.take();
-                        sendMessage(msg);
-                    } catch (InterruptedException ie) {
-                        Log.d(TAG, "Message sending loop interrupted, exiting");
-                    }
+                if (getSocket() == null) {
+                    Log.d(TAG, "Socket is null, creating another at " + address.getHostAddress()+":"+port);
+                    setSocket(new Socket(address, port));
                 }
+
+                // will use the socket just created
+                receiveThread = new Thread(new ReceivingThread());
+                receiveThread.start();
+
+            } catch (UnknownHostException e) {
+                Log.e(TAG, "Initializing socket failed, UHE" + e.getMessage());
             } catch (IOException e) {
-                Log.d(TAG, "Error running send thread, " + e.getMessage());
-            } finally {
-                if (!isCanceled()) {
-                    finish();
+                Log.e(TAG, "Initializing socket failed, IOE." + e.getMessage());
+            }
+
+            while (!closed && !Thread.currentThread().isInterrupted()) {
+                try {
+                    String msg = queue.take();
+                    sendMessage(msg);
+                } catch (InterruptedException ie) {
+                    Log.d(TAG, "Message sending loop interrupted, exiting");
                 }
+            }
+
+            if (!isCanceled()) {
+                finish();
             }
         }
     }
@@ -208,10 +214,12 @@ public class MyConnectionSocket implements SocketController {
      * Allow other objects to react to events.
      */
     public static interface ConnectionListener {
+        /** called on server thread */
+        void onConnected(MyConnectionSocket mcs, Socket socket);
         /** called on send thread. */
-        void onMessageSent(MyConnectionSocket socket, String msg);
+        void onMessageSent(MyConnectionSocket mcs, String msg);
         /** called on receive thread. */
-        void onMessageReceived(MyConnectionSocket socket, String msg);
+        void onMessageReceived(MyConnectionSocket mcs, String msg);
         /** called on send or receive thread. */
         void onFinished(MyConnectionSocket socket);
     }

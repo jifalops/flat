@@ -49,8 +49,8 @@ public class NsdHelper {
 
     private final MySocketManager.SocketListener socketListener = new MySocketManager.SocketListener() {
         @Override
-        public void onConnected(MyServerSocket mss, Socket socket) {
-            Log.i(TAG, "Connected to " + Sockets.toString(socket));
+        public void onServerConnected(MyServerSocket mss, Socket socket) {
+            Log.i(TAG, "Server connected to " + Sockets.toString(socket));
         }
 
         @Override
@@ -77,6 +77,11 @@ public class NsdHelper {
         @Override
         public void onClientFinished(MyConnectionSocket mcs) {
             Log.v(TAG, "onClientFinished " + Sockets.toString(mcs.getSocket()));
+        }
+
+        @Override
+        public void onClientConnected(MyConnectionSocket mcs, Socket socket) {
+            Log.i(TAG, "Client connected to " + Sockets.toString(socket));
         }
     };
 
@@ -197,7 +202,7 @@ public class NsdHelper {
             public void onServiceResolved(NsdServiceInfo serviceInfo) {
                 Log.i(TAG, "Resolve Succeeded for " + getServiceString(serviceInfo));
 
-                if (serviceInfo.getServiceName().equals(mServiceName)) {
+                if (serviceInfo.getServiceName().contains(mIp)) {
                     Log.e(TAG, "Same service name. Connection aborted.");
                     return;
                 }
