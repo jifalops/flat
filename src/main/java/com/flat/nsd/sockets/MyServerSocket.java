@@ -22,7 +22,12 @@ public class MyServerSocket implements SocketController {
 
 
     private ServerSocket serverSocket;
-    private synchronized void setServerSocket(ServerSocket ss) { serverSocket = ss; }
+    private synchronized void setServerSocket(ServerSocket ss) { 
+        serverSocket = ss;
+        for (ServerListener l : listeners) {
+            l.onNewServerSocket(this, ss);
+        }
+    }
     public synchronized ServerSocket getServerSocket() {
         return serverSocket;
     }
@@ -43,7 +48,7 @@ public class MyServerSocket implements SocketController {
     private synchronized void setConnected(boolean conn) {
         connected = conn;
         if (conn) {
-            for (MyServerSocketListener l : listeners) {
+            for (ServerListener l : listeners) {
                 l.onConnected(this, acceptedSocket);
             }
         }
@@ -61,7 +66,7 @@ public class MyServerSocket implements SocketController {
     private synchronized void finish() {
         finished = true;
         closeServer();
-        for (MyServerSocketListener l : listeners) {
+        for (ServerListener l : listeners) {
             l.onFinished(this);
         }
     }
@@ -101,10 +106,10 @@ public class MyServerSocket implements SocketController {
             try {
                 if (!isConnected() && !closed) {
                     setServerSocket(new ServerSocket(port));
-                    Log.i(TAG, "Server " + Sockets.toString(serverSocket) + " created, awaiting connection...");
+                    Log.e(TAG, "Server listening on port " + serverSocket.getLocalPort() + ", awaiting connection...");
                     setAcceptedSocket(serverSocket.accept());
-                    Log.i(TAG, "Server " + Sockets.toString(serverSocket) + " is accepting connection to " + Sockets.toString(acceptedSocket));
-                    closeServer();
+                    Log.e(TAG, "Server on port " + serverSocket.getLocalPort() + " is accepting connection to " + Sockets.toString(acceptedSocket));
+                    //closeServer();
                     setConnected(true);
                 }
             } catch (IOException e) {
@@ -123,23 +128,22 @@ public class MyServerSocket implements SocketController {
     /**
      * Allow other objects to react to events.
      */
-    public static interface MyServerSocketListener {
-        /**
-         * Called on separate thread (this). Implementations should
-         * return whether the connection was accepted or not.
-         */
+    public static interface ServerListener {
+        /** called on server thread */
         void onConnected(MyServerSocket server, Socket socket);
-        /** called on separate thread (this). */
+        /** called on server thread */
         void onFinished(MyServerSocket server);
+        /** called on server thread */
+        void onNewServerSocket(MyServerSocket mss, ServerSocket ss);
     }
     // a List of unique listener instances.
-    private final List<MyServerSocketListener> listeners = new ArrayList<MyServerSocketListener>(1);
-    public boolean registerListener(MyServerSocketListener l) {
+    private final List<ServerListener> listeners = new ArrayList<ServerListener>(1);
+    public boolean registerListener(ServerListener l) {
         if (listeners.contains(l)) return false;
         listeners.add(l);
         return true;
     }
-    public boolean unregisterListener(MyServerSocketListener l) {
+    public boolean unregisterListener(ServerListener l) {
         return listeners.remove(l);
     }
     public int unregisterListeners() {

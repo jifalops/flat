@@ -19,14 +19,16 @@ package com.flat.nsd;
 import android.content.Context;
 import android.net.nsd.NsdManager;
 import android.net.nsd.NsdServiceInfo;
-import android.os.Handler;
 import android.util.Log;
 
 import com.flat.localization.util.Util;
+import com.flat.nsd.sockets.MyConnectionSocket;
+import com.flat.nsd.sockets.MyServerSocket;
+import com.flat.nsd.sockets.MySocketManager;
+import com.flat.nsd.sockets.Sockets;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.net.ServerSocket;
+import java.net.Socket;
 
 public class NsdHelper {
     private static final String TAG = NsdHelper.class.getSimpleName();
@@ -38,86 +40,77 @@ public class NsdHelper {
     NsdManager mNsdManager;
     NsdManager.ResolveListener mResolveListener;
     NsdManager.DiscoveryListener mDiscoveryListener;
-
-    private final List<NsdManager.RegistrationListener> mRegistrationListeners = Collections.synchronizedList(new ArrayList<NsdManager.RegistrationListener>());
+    NsdManager.RegistrationListener mRegistrationListener;
 
     private String mServiceName;
-    private Handler mUpdateHandler;
     private String mIp;
 
-    static class Connection {
-        NsdServiceInfo clientInfo;
-        ChatConnection client, server;
-        boolean clientMatches(NsdServiceInfo info) {
-            if (info == null || clientInfo == null) return false;
-            return info.getServiceName().contains(clientInfo.getHost().getHostAddress());
+    private MySocketManager socketManager;
+
+    private final MySocketManager.SocketListener socketListener = new MySocketManager.SocketListener() {
+        @Override
+        public void onConnected(MyServerSocket mss, Socket socket) {
+            Log.i(TAG, "Connected to " + Sockets.toString(socket));
         }
-        boolean serverMatches(NsdServiceInfo info) {
-            if (info == null || server == null) return false;
-            return info.getServiceName().contains(server..getHost().getHostAddress());
+
+        @Override
+        public void onServerFinished(MyServerSocket mss) {
+            Log.v(TAG, "onServerFinished " + Sockets.toString(mss.getServerSocket()));
         }
-        void tearDown() {
-            if (client != null) client.tearDown();
-            if (server != null) server.tearDown();
+
+        @Override
+        public void onNewServerSocket(MyServerSocket mss, ServerSocket ss) {
+            registerService(ss.getLocalPort());
+            Log.v(TAG, "onNewServerSocket " + Sockets.toString(ss));
         }
-    }
 
-    final List<Connection> mConnections = Collections.synchronizedList(new ArrayList<Connection>());
+        @Override
+        public void onMessageSent(MyConnectionSocket mcs, String msg) {
+            Log.v(TAG, "onMessageSent " + Sockets.toString(mcs.getSocket()));
+        }
+
+        @Override
+        public void onMessageReceived(MyConnectionSocket mcs, String msg) {
+            Log.v(TAG, "onMessageReceived " + Sockets.toString(mcs.getSocket()));
+        }
+
+        @Override
+        public void onClientFinished(MyConnectionSocket mcs) {
+            Log.v(TAG, "onClientFinished " + Sockets.toString(mcs.getSocket()));
+        }
+    };
 
 
-
-    public NsdHelper(Context context, Handler handler) {
+    public NsdHelper(Context context) {
         mContext = context;
-        mUpdateHandler = handler;
         mNsdManager = (NsdManager) context.getSystemService(Context.NSD_SERVICE);
         mIp = Util.getWifiIp(context);
         if (mIp == null) mIp = "0.0.0.0";
         mServiceName = SERVICE_PREFIX + mIp;
+
+        socketManager = MySocketManager.getInstance();
     }
 
     public void initializeNsd() {
         initializeResolveListener();
         initializeDiscoveryListener();
-        //createRegistrationListener();
+        initializeRegistrationListener();
 
         //mNsdManager.init(mContext.getMainLooper(), this);
-        createServerConnection();
+        //createServerConnection();
     }
 
-    void createServerConnection() { createServerConnection(null); }
-    void createServerConnection(Connection conn) {
-        boolean isAlreadyWaiting = false;
-        if (conn == null) {
-            synchronized (mConnections) {
-                for (Connection c : mConnections) {
-                    if (c.server != null && c.client == null) {
-                        isAlreadyWaiting = true;
-                        break;
-                    }
-                }
-            }
-            if (isAlreadyWaiting) {
-                Log.d(TAG, "Already waiting, aborting new connection");
-                return;
-            }
-
-            conn = new Connection();
-            mConnections.add(conn);
-            conn.server = new ChatConnection(this, mUpdateHandler);
-            Log.i(TAG, "Created advertising connection " + conn.toString());
-        }
-        if(conn.server.getLocalPort() > -1) {
-            registerService(conn.server.getLocalPort());
-        } else {
-            Log.d(TAG, "no port to connect to (ServerSocket isn't bound). Retrying...");
-            try {
-                Thread.sleep(100);
-            } catch (InterruptedException e) {
-
-            }
-            createServerConnection(conn);
-        }
+    public void start() {
+        socketManager.registerListener(socketListener);
+        socketManager.start();
     }
+    public void stop() {
+        socketManager.stop();
+        socketManager.unregisterListener(socketListener);
+        mNsdManager.unregisterService(mRegistrationListener); // TODO might not be registered yet
+    }
+
+
 
     public void initializeDiscoveryListener() {
         if (mDiscoveryListener == null) {
@@ -139,37 +132,16 @@ public class NsdHelper {
                     Log.d(TAG, "Unknown Service Type: " + service.getServiceType());
                 } else if (service.getServiceName().equals(mServiceName)) {
                     Log.d(TAG, "Same machine: " + mServiceName);
-                } else if (service.getServiceName().startsWith(SERVICE_PREFIX)){
-                    boolean found = false;
-                    for (Connection conn : mConnections) {
-                        if (conn.clientMatches(service)) {
-                            found = true;
-                            break;
-                        }
-                    }
-                    if (!found) {
-                        resolveService(service);
-                    }
+                } else if (service.getServiceName().startsWith(SERVICE_PREFIX)
+                            && socketManager.countConnectionsTo(service.getServiceName()) < 1) {
+                    resolveService(service);
                 }
             }
 
             @Override
             public void onServiceLost(NsdServiceInfo service) {
                 Log.e(TAG, "service lost " + service);
-                for (Connection conn : mConnections) {
-                    if (conn.clientMatches(service)|| conn.serverMatches(service)) {
-                        mConnections.remove(conn);
-                        if (conn.client != null) {
-                            conn.client.tearDown();
-                        }
-                        if (conn.server != null) {
-                            conn.server.tearDown();
-                            createServerConnection();
-                        }
-                        break;
-                    }
-                }
-
+                // TODO remove connection in socketmanager
             }
             
             @Override
@@ -230,51 +202,56 @@ public class NsdHelper {
                     return;
                 }
 
-                connect(serviceInfo);
+                socketManager.connectTo(serviceInfo.getHost(), serviceInfo.getPort());
             }
         };
     }
 
-    public void retryConnections() {
-        for (Connection conn : mConnections) {
-            Log.d(TAG, "Retrying connection to " + getServiceString(conn.clientInfo));
-            conn.client.connectToServer(conn.clientInfo.getHost(), conn.clientInfo.getPort());
+
+//    public void retryConnections() {
+//        for (Connection conn : mConnections) {
+//            Log.d(TAG, "Retrying connection to " + getServiceString(conn.clientInfo));
+//            conn.client.connectToServer(conn.clientInfo.getHost(), conn.clientInfo.getPort());
+//        }
+//    }
+//
+//    private void connect(NsdServiceInfo service) {
+//        if (service == null) {
+//            Log.w(TAG, "Resolved null serviceInfo.");
+//            return;
+//        }
+//
+//        for (Connection conn : mConnections) {
+//            if (conn.clientMatches(service)) {
+//                Log.d(TAG, "Connection already in list, " + getServiceString(service));
+//                return;
+//            }
+//        }
+//
+//        Connection conn = new Connection();
+//        conn.clientInfo = service;
+//        conn.client = new ChatConnection(this, mUpdateHandler);
+//
+//        Log.i(TAG, "Connecting to " + getServiceString(service));
+//        conn.client.connectToServer(service.getHost(), service.getPort());
+//        mConnections.add(conn);
+//
+//    }
+
+    public void initializeRegistrationListener() {
+        if (mRegistrationListener == null) {
+            Log.v(TAG, "initializing registration listener (null)");
+        } else {
+            Log.v(TAG, "initializing registration listener (not null)");
         }
-    }
-
-    private void connect(NsdServiceInfo service) {
-        if (service == null) {
-            Log.w(TAG, "Resolved null serviceInfo.");
-            return;
-        }
-
-        for (Connection conn : mConnections) {
-            if (conn.clientMatches(service)) {
-                Log.d(TAG, "Connection already in list, " + getServiceString(service));
-                return;
-            }
-        }
-
-        Connection conn = new Connection();
-        conn.clientInfo = service;
-        conn.client = new ChatConnection(this, mUpdateHandler);
-
-        Log.i(TAG, "Connecting to " + getServiceString(service));
-        conn.client.connectToServer(service.getHost(), service.getPort());
-        mConnections.add(conn);
-
-    }
-
-    public NsdManager.RegistrationListener createRegistrationListener() {
-
-        NsdManager.RegistrationListener listener = new NsdManager.RegistrationListener() {
+        mRegistrationListener = new NsdManager.RegistrationListener() {
 
             @Override
             public void onServiceRegistered(NsdServiceInfo nsdServiceInfo) {
                 mServiceName = nsdServiceInfo.getServiceName();
-                Log.d(TAG, getServiceString(nsdServiceInfo) + " onServiceRegistered()");
+                Log.v(TAG, "registered " + nsdServiceInfo);
             }
-            
+
             @Override
             public void onRegistrationFailed(NsdServiceInfo nsdServiceInfo, int errorCode) {
                 Log.e(TAG, "Registration failed for " + getServiceString(nsdServiceInfo) + ". Error " + errorCode);
@@ -284,16 +261,15 @@ public class NsdHelper {
             public void onServiceUnregistered(NsdServiceInfo nsdServiceInfo) {
                 Log.i(TAG, "Service unregistered for " + getServiceString(nsdServiceInfo));
             }
-            
+
             @Override
             public void onUnregistrationFailed(NsdServiceInfo nsdServiceInfo, int errorCode) {
                 Log.e(TAG, "Unregistration failed for " + getServiceString(nsdServiceInfo) + ". Error " + errorCode);
             }
-            
+
         };
-        mRegistrationListeners.add(listener);
-        return listener;
     }
+
 
     public void registerService(int port) {
         Log.e(TAG, "Registering service at " + mIp + ":" + port); // Log.e is red
@@ -302,24 +278,22 @@ public class NsdHelper {
         serviceInfo.setServiceName(mServiceName);
         serviceInfo.setServiceType(SERVICE_TYPE);
 
-        NsdManager.RegistrationListener listener = createRegistrationListener();
         try {
             mNsdManager.registerService(
-                    serviceInfo, NsdManager.PROTOCOL_DNS_SD, listener);
+                    serviceInfo, NsdManager.PROTOCOL_DNS_SD, mRegistrationListener);
         } catch (IllegalArgumentException e) {
             Log.e(TAG, "Failed to register service, " + e.getMessage() + ". Retrying...");
-            mRegistrationListeners.remove(listener);
             try {
-                listener = createRegistrationListener();
+                initializeRegistrationListener();
                 mNsdManager.registerService(
-                        serviceInfo, NsdManager.PROTOCOL_DNS_SD, listener);
+                        serviceInfo, NsdManager.PROTOCOL_DNS_SD, mRegistrationListener);
             } catch (IllegalArgumentException e2) {
                 Log.e(TAG, "Failed to register service, " + e2.getMessage());
             }
         }
     }
 
-    public void discoverServices() {
+    public void discoverServices() { //TODO this doesn't normally fail and probably doesnt need to retry
         // This is a work-around for the "listener already in use" error.
         // It seems discoverServices() needs a new DiscoveryListener each call.
         try {
@@ -340,22 +314,13 @@ public class NsdHelper {
     }
     
     public void stopDiscovery() {
-
         try {
             mNsdManager.stopServiceDiscovery(mDiscoveryListener);
         } catch (IllegalArgumentException e) {
             Log.e(TAG, "Exception while stopping discovery, " + e.getMessage());
         }
     }
-    
-    public void tearDown() {
-        for (Connection conn : mConnections) {
-            conn.tearDown();
-        }
-        for (NsdManager.RegistrationListener rl : mRegistrationListeners) {
-            mNsdManager.unregisterService(rl);
-        }
-    }
+
 
     public static String getServiceString(NsdServiceInfo service) {
         try {

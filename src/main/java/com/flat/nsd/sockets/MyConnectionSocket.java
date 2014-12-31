@@ -53,7 +53,7 @@ public class MyConnectionSocket implements SocketController {
     private synchronized void finish() {
         finished = true;
         close();
-        for (MyConnectionSocketListener l : listeners) {
+        for (ConnectionListener l : listeners) {
             l.onFinished(this);
         }
     }
@@ -83,6 +83,12 @@ public class MyConnectionSocket implements SocketController {
         this.socket = socket;
         address = socket.getInetAddress();
         port = socket.getPort();
+        connected = true;
+    }
+
+    public MyConnectionSocket(InetAddress address, int port) {
+        this.address = address;
+        this.port = port;
         connected = true;
     }
 
@@ -121,7 +127,7 @@ public class MyConnectionSocket implements SocketController {
             out.println(msg);
             out.flush();
 
-            for (MyConnectionSocketListener l : listeners) {
+            for (ConnectionListener l : listeners) {
                 l.onMessageSent(this, msg);
             }
         } catch (UnknownHostException e) {
@@ -129,7 +135,7 @@ public class MyConnectionSocket implements SocketController {
         } catch (IOException e) {
             Log.d(TAG, "I/O Exception");
         } catch (Exception e) {
-            Log.d(TAG, "Exception during sendMessage()");
+            Log.d(TAG, "Exception during sendMessage()", e);
         }
         Log.v(TAG, "Sent message: " + msg);
     }
@@ -175,7 +181,7 @@ public class MyConnectionSocket implements SocketController {
                 while (!closed && !Thread.currentThread().isInterrupted()) {
                     msg = input.readLine();
                     if (msg != null) {
-                        for (MyConnectionSocketListener l : listeners) {
+                        for (ConnectionListener l : listeners) {
                             l.onMessageReceived(MyConnectionSocket.this, msg);
                         }
                     } else {
@@ -201,7 +207,7 @@ public class MyConnectionSocket implements SocketController {
     /**
      * Allow other objects to react to events.
      */
-    public static interface MyConnectionSocketListener {
+    public static interface ConnectionListener {
         /** called on send thread. */
         void onMessageSent(MyConnectionSocket socket, String msg);
         /** called on receive thread. */
@@ -210,13 +216,13 @@ public class MyConnectionSocket implements SocketController {
         void onFinished(MyConnectionSocket socket);
     }
     // a List of unique listener instances.
-    private final List<MyConnectionSocketListener> listeners = new ArrayList<MyConnectionSocketListener>(1);
-    public boolean registerListener(MyConnectionSocketListener l) {
+    private final List<ConnectionListener> listeners = new ArrayList<ConnectionListener>(1);
+    public boolean registerListener(ConnectionListener l) {
         if (listeners.contains(l)) return false;
         listeners.add(l);
         return true;
     }
-    public boolean unregisterListener(MyConnectionSocketListener l) {
+    public boolean unregisterListener(ConnectionListener l) {
         return listeners.remove(l);
     }
     public int unregisterListeners() {

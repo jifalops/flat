@@ -13,8 +13,10 @@ public class Sockets {
     public static String toString(ServerSocket socket, Object... objects) {
         String s = "{no socket info}";
         try {
-            s = socket.getInetAddress().getHostAddress()+":"+socket.getLocalPort()+" (local).\n";
-            s += TextUtils.join("\n", objects);
+            s = socket.getInetAddress().getHostAddress()+":"+socket.getLocalPort()+" (local).";
+            if (objects.length > 0) {
+                s += "\n" + TextUtils.join("\n", objects);
+            }
         } catch (NullPointerException ignored) {}
         return s;
     }
@@ -22,8 +24,10 @@ public class Sockets {
     public static String toString(Socket socket, Object... objects) {
         String s = "{no socket info}";
         try {
-            s = socket.getInetAddress().getHostAddress()+":"+socket.getPort()+" (local "+socket.getLocalPort()+").\n";
-            s += TextUtils.join("\n", objects);
+            s = socket.getInetAddress().getHostAddress()+":"+socket.getPort()+" (local "+socket.getLocalPort()+").";
+            if (objects.length > 0) {
+                s += "\n" + TextUtils.join("\n", objects);
+            }
         } catch (NullPointerException ignored) {}
         return s;
     }

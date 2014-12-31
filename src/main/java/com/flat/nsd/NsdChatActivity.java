@@ -18,20 +18,54 @@ package com.flat.nsd;
 
 import android.app.Activity;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.Message;
 import android.view.View;
 import android.widget.EditText;
 import android.widget.TextView;
 
 import com.flat.R;
+import com.flat.nsd.sockets.MyConnectionSocket;
+import com.flat.nsd.sockets.MyServerSocket;
+import com.flat.nsd.sockets.MySocketManager;
+
+import java.net.ServerSocket;
+import java.net.Socket;
 
 public class NsdChatActivity extends Activity {
 
     NsdHelper mNsdHelper;
 
     private TextView mStatusView;
-    private Handler mUpdateHandler;
+    private final MySocketManager.SocketListener socketListener = new MySocketManager.SocketListener() {
+        @Override
+        public void onConnected(MyServerSocket server, Socket socket) {
+
+        }
+
+        @Override
+        public void onServerFinished(MyServerSocket server) {
+
+        }
+
+        @Override
+        public void onNewServerSocket(MyServerSocket mss, ServerSocket ss) {
+
+        }
+
+        @Override
+        public void onMessageSent(MyConnectionSocket socket, String msg) {
+
+        }
+
+        @Override
+        public void onMessageReceived(MyConnectionSocket socket, String msg) {
+            addChatLine(msg);
+        }
+
+        @Override
+        public void onClientFinished(MyConnectionSocket socket) {
+
+        }
+    };
 
     public static final String TAG = "NsdChat";
 
@@ -44,19 +78,17 @@ public class NsdChatActivity extends Activity {
         setContentView(R.layout.nsd_activity);
         mStatusView = (TextView) findViewById(R.id.status);
 
-        mUpdateHandler = new Handler() {
-                @Override
-            public void handleMessage(Message msg) {
-                String chatLine = msg.getData().getString("msg");
-                addChatLine(chatLine);
-            }
-        };
-
-        //mRegistrationConnection = new ChatConnection(mUpdateHandler);
-
-        mNsdHelper = new NsdHelper(this, mUpdateHandler);
+        mNsdHelper = new NsdHelper(this);
         mNsdHelper.initializeNsd();
+        mNsdHelper.start();
     }
+
+    @Override
+    protected void onDestroy() {
+        mNsdHelper.stop();
+        super.onDestroy();
+    }
+
 
 
 
@@ -77,7 +109,7 @@ public class NsdChatActivity extends Activity {
 //        } else {
 //            Log.d(TAG, "No service to connect to!");
 //        }
-        mNsdHelper.retryConnections();
+//        mNsdHelper.retryConnections();
     }
 
     public void clickSend(View v) {
@@ -85,11 +117,7 @@ public class NsdChatActivity extends Activity {
         if (messageView != null) {
             String messageString = messageView.getText().toString();
             if (!messageString.isEmpty()) {
-                for (NsdHelper.Connection conn : mNsdHelper.mConnections) {
-                    if (conn.server != null) {
-                        conn.server.sendMessage(messageString); // TODO why client and not server?
-                    }
-                }
+                MySocketManager.getInstance().sendMessage(messageString);
             }
             messageView.setText("");
         }
@@ -104,20 +132,16 @@ public class NsdChatActivity extends Activity {
         if (mNsdHelper != null) {
             mNsdHelper.stopDiscovery();
         }
+        MySocketManager.getInstance().unregisterListener(socketListener);
         super.onPause();
     }
     
     @Override
     protected void onResume() {
         super.onResume();
+        MySocketManager.getInstance().registerListener(socketListener);
         if (mNsdHelper != null) {
             mNsdHelper.discoverServices();
         }
-    }
-    
-    @Override
-    protected void onDestroy() {
-        mNsdHelper.tearDown();
-        super.onDestroy();
     }
 }
