@@ -136,7 +136,7 @@ public class MySocketManager {
         public void onFinished(MyConnectionSocket mcs) {
             notifyHandler(clientFinished, null, mcs);
             try {
-                Thread.sleep(1000);
+                Thread.sleep(100);
             } catch (InterruptedException ignored) {}
             retryConnection(mcs);
         }

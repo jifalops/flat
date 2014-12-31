@@ -138,7 +138,7 @@ public class NsdHelper {
                 } else if (service.getServiceName().equals(mServiceName)) {
                     Log.d(TAG, "Same machine: " + mServiceName);
                 } else if (service.getServiceName().startsWith(SERVICE_PREFIX)
-                            && socketManager.countConnectionsTo(service.getServiceName()) < 1) {
+                            && socketManager.countConnectionsTo(service.getServiceName()) < 2) {
                     resolveService(service);
                 }
             }
