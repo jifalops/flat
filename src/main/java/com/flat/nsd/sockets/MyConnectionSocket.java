@@ -17,9 +17,14 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 
 /**
+ * This class uses two threads (send and receive) to communicate over a socket. If either thread
+ * fails the socket will be closed and the instance of this class will be finished. Calling
+ * cancel() on this class will interrupt the two threads as well as close the socket, but finish()
+ * will not be called.
+ *
  * @author Jacob Phillips (12/2014, jphilli85 at gmail)
  */
-public class MyConnectionSocket implements ConnectionController {
+public class MyConnectionSocket implements SocketController {
     private static final String TAG = MyConnectionSocket.class.getSimpleName();
 
 
@@ -57,6 +62,8 @@ public class MyConnectionSocket implements ConnectionController {
     private synchronized void close() {
         if (!closed && socket != null) {
             try {
+                receiveThread.interrupt();
+                sendThread.interrupt();
                 socket.close();
                 setConnected(false);
                 closed = true;
@@ -67,7 +74,11 @@ public class MyConnectionSocket implements ConnectionController {
     }
 
     private final InetAddress address;
+    public InetAddress getAddress() { return address; }
+
     private final int port;
+    public int getPort() { return port; }
+
     public MyConnectionSocket(Socket socket) {
         this.socket = socket;
         address = socket.getInetAddress();

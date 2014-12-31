@@ -13,10 +13,11 @@ import java.util.List;
  * serverSocket.accept(). After accepting an incoming socket, the serverSocket is closed, the
  * state changes to connected (calling connection listeners), and then this instance is finished
  * (again calling finished listeners). If serverSocket.accept() fails, finish() will still be called.
+ * After a connection is accepted, the instance of this class can be discarded.
  *
  * @author Jacob Phillips (12/2014, jphilli85 at gmail)
  */
-public class MyServerSocket implements ConnectionController {
+public class MyServerSocket implements SocketController {
     private static final String TAG = MyServerSocket.class.getSimpleName();
 
 
@@ -43,7 +44,7 @@ public class MyServerSocket implements ConnectionController {
         connected = conn;
         if (conn) {
             for (MyServerSocketListener l : listeners) {
-                l.onConnected(this);
+                l.onConnected(this, acceptedSocket);
             }
         }
     }
@@ -127,7 +128,7 @@ public class MyServerSocket implements ConnectionController {
          * Called on separate thread (this). Implementations should
          * return whether the connection was accepted or not.
          */
-        void onConnected(MyServerSocket server);
+        void onConnected(MyServerSocket server, Socket socket);
         /** called on separate thread (this). */
         void onFinished(MyServerSocket server);
     }
