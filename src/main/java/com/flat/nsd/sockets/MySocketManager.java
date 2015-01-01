@@ -68,10 +68,12 @@ public class MySocketManager {
     public void stop() {
         if (running) {
             running = false;
+
             for (MyServerSocket mss : servers) {
                 mss.cancel();
             }
             servers.clear();
+
             for (MyConnectionSocket mcs : connections) {
                 mcs.cancel();
             }

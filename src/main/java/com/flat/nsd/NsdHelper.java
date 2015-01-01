@@ -22,13 +22,10 @@ import android.net.nsd.NsdServiceInfo;
 import android.util.Log;
 
 import com.flat.localization.util.Util;
-import com.flat.nsd.sockets.MyConnectionSocket;
-import com.flat.nsd.sockets.MyServerSocket;
-import com.flat.nsd.sockets.MySocketManager;
+import com.flat.nsd.sockets.SocketHandler;
 import com.flat.nsd.sockets.Sockets;
 
 import java.net.ServerSocket;
-import java.net.Socket;
 
 public class NsdHelper {
     private static final String TAG = NsdHelper.class.getSimpleName();
@@ -47,43 +44,68 @@ public class NsdHelper {
     private String mServiceName;
     private String mIp;
 
-    private MySocketManager socketManager;
+    private SocketHandler mSocketHandler;
 
-    private final MySocketManager.SocketListener socketListener = new MySocketManager.SocketListener() {
-        @Override
-        public void onServerConnected(MyServerSocket mss, Socket socket) {
-            Log.i(TAG, "Server connected to " + Sockets.toString(socket));
-        }
+//    private MySocketManager socketManager;
 
-        @Override
-        public void onServerFinished(MyServerSocket mss) {
-            Log.v(TAG, "onServerFinished " + Sockets.toString(mss.getServerSocket()));
-        }
+//    private final MySocketManager.SocketListener socketListener = new MySocketManager.SocketListener() {
+//        @Override
+//        public void onServerConnected(MyServerSocket mss, Socket socket) {
+//            Log.i(TAG, "Server connected to " + Sockets.toString(socket));
+//        }
+//
+//        @Override
+//        public void onServerFinished(MyServerSocket mss) {
+//            Log.v(TAG, "onServerFinished " + Sockets.toString(mss.getServerSocket()));
+//        }
+//
+//        @Override
+//        public void onNewServerSocket(MyServerSocket mss, ServerSocket ss) {
+//            registerService(ss.getLocalPort());
+//            Log.v(TAG, "onNewServerSocket " + Sockets.toString(ss));
+//        }
+//
+//        @Override
+//        public void onMessageSent(MyConnectionSocket mcs, String msg) {
+//            Log.v(TAG, "onMessageSent " + Sockets.toString(mcs.getSocket()));
+//        }
+//
+//        @Override
+//        public void onMessageReceived(MyConnectionSocket mcs, String msg) {
+//            Log.v(TAG, "onMessageReceived " + Sockets.toString(mcs.getSocket()));
+//        }
+//
+//        @Override
+//        public void onClientFinished(MyConnectionSocket mcs) {
+//            Log.v(TAG, "onClientFinished " + Sockets.toString(mcs.getSocket()));
+//        }
+//
+//        @Override
+//        public void onClientConnected(MyConnectionSocket mcs, Socket socket) {
+//            Log.i(TAG, "Client connected to " + Sockets.toString(socket));
+//        }
+//    };
 
+
+    private final SocketHandler.ConnectionListener connectionListener = new SocketHandler.ConnectionListener() {
         @Override
-        public void onNewServerSocket(MyServerSocket mss, ServerSocket ss) {
+        public void onListening(ServerSocket ss) {
             registerService(ss.getLocalPort());
-            Log.v(TAG, "onNewServerSocket " + Sockets.toString(ss));
         }
 
         @Override
-        public void onMessageSent(MyConnectionSocket mcs, String msg) {
-            Log.v(TAG, "onMessageSent " + Sockets.toString(mcs.getSocket()));
+        public void onConnected(SocketHandler.SocketConnection conn) {
+            Log.v(TAG, "onConnected " + Sockets.toString(conn.getSocket()));
         }
 
         @Override
-        public void onMessageReceived(MyConnectionSocket mcs, String msg) {
-            Log.v(TAG, "onMessageReceived " + Sockets.toString(mcs.getSocket()));
+        public void onMessageSent(SocketHandler.SocketConnection conn, String msg) {
+            Log.v(TAG, "onMessageSent " + Sockets.toString(conn.getSocket()));
         }
 
         @Override
-        public void onClientFinished(MyConnectionSocket mcs) {
-            Log.v(TAG, "onClientFinished " + Sockets.toString(mcs.getSocket()));
-        }
-
-        @Override
-        public void onClientConnected(MyConnectionSocket mcs, Socket socket) {
-            Log.i(TAG, "Client connected to " + Sockets.toString(socket));
+        public void onMessageReceived(SocketHandler.SocketConnection conn, String msg) {
+            Log.v(TAG, "onMessageReceived " + Sockets.toString(conn.getSocket()));
         }
     };
 
@@ -95,8 +117,11 @@ public class NsdHelper {
         if (mIp == null) mIp = "0.0.0.0";
         mServiceName = SERVICE_PREFIX + mIp;
 
-        socketManager = MySocketManager.getInstance();
+        mSocketHandler = new SocketHandler();
+//        socketManager = MySocketManager.getInstance();
     }
+
+    public SocketHandler getSocketHandler() { return mSocketHandler; }
 
     public void initializeNsd() {
         initializeResolveListener();
@@ -108,16 +133,18 @@ public class NsdHelper {
     }
 
     public void start() {
-        socketManager.registerListener(socketListener);
-        socketManager.start();
+        mSocketHandler.registerListener(connectionListener);
+        mSocketHandler.startServer();
     }
     public void stop() {
-        socketManager.stop();
-        socketManager.unregisterListener(socketListener);
+        mSocketHandler.stopServer();
+        mSocketHandler.unregisterListener(connectionListener);
         mNsdManager.unregisterService(mRegistrationListener); // TODO might not be registered yet
     }
 
-
+    public void send(String msg) {
+        mSocketHandler.send(msg);
+    }
 
     public void initializeDiscoveryListener() {
         if (mDiscoveryListener == null) {
@@ -140,7 +167,7 @@ public class NsdHelper {
                 } else if (service.getServiceName().equals(mServiceName)) {
                     Log.d(TAG, "Same machine: " + mServiceName);
                 } else if (service.getServiceName().startsWith(SERVICE_PREFIX)
-                            && socketManager.countConnectionsTo(service.getServiceName()) < HOST_CONNECTION_LIMIT) {
+                            && mSocketHandler.countConnectionsTo(service.getServiceName()) < HOST_CONNECTION_LIMIT) {
                     resolveService(service);
                 }
             }
@@ -209,7 +236,7 @@ public class NsdHelper {
                     return;
                 }
 
-                socketManager.connectTo(serviceInfo.getHost(), serviceInfo.getPort());
+                mSocketHandler.addConnection(serviceInfo.getHost(), serviceInfo.getPort());
             }
         };
     }

@@ -165,14 +165,14 @@ public class MyConnectionSocket implements SocketController {
                 Log.e(TAG, "Initializing socket failed, IOE." + e.getMessage());
             }
 
-            while (!closed && !Thread.currentThread().isInterrupted()) {
-                try {
-                    String msg = queue.take();
-                    sendMessage(msg);
-                } catch (InterruptedException ie) {
-                    Log.d(TAG, "Message sending loop interrupted, exiting");
-                }
-            }
+//            while (!closed && !Thread.currentThread().isInterrupted()) {
+//                try {
+//                    String msg = queue.take();
+//                    sendMessage(msg);
+//                } catch (InterruptedException ie) {
+//                    Log.d(TAG, "Message sending loop interrupted, exiting");
+//                }
+//            }
 
             if (!isCanceled()) {
                 finish();

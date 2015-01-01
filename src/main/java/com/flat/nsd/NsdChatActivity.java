@@ -23,52 +23,71 @@ import android.widget.EditText;
 import android.widget.TextView;
 
 import com.flat.R;
-import com.flat.nsd.sockets.MyConnectionSocket;
-import com.flat.nsd.sockets.MyServerSocket;
-import com.flat.nsd.sockets.MySocketManager;
+import com.flat.nsd.sockets.SocketHandler;
 
 import java.net.ServerSocket;
-import java.net.Socket;
 
 public class NsdChatActivity extends Activity {
 
     NsdHelper mNsdHelper;
 
     private TextView mStatusView;
-    private final MySocketManager.SocketListener socketListener = new MySocketManager.SocketListener() {
-        @Override
-        public void onServerConnected(MyServerSocket server, Socket socket) {
+//    private final MySocketManager.SocketListener socketListener = new MySocketManager.SocketListener() {
+//        @Override
+//        public void onServerConnected(MyServerSocket server, Socket socket) {
+//
+//        }
+//
+//        @Override
+//        public void onServerFinished(MyServerSocket server) {
+//
+//        }
+//
+//        @Override
+//        public void onNewServerSocket(MyServerSocket mss, ServerSocket ss) {
+//
+//        }
+//
+//        @Override
+//        public void onMessageSent(MyConnectionSocket socket, String msg) {
+//
+//        }
+//
+//        @Override
+//        public void onMessageReceived(MyConnectionSocket socket, String msg) {
+//            addChatLine(msg);
+//        }
+//
+//        @Override
+//        public void onClientFinished(MyConnectionSocket socket) {
+//
+//        }
+//
+//        @Override
+//        public void onClientConnected(MyConnectionSocket mcs, Socket socket) {
+//            addChatLine(socket.getInetAddress().getHostAddress() + " has joined.");
+//        }
+//    };
 
+    private final SocketHandler.ConnectionListener connectionListener = new SocketHandler.ConnectionListener() {
+        @Override
+        public void onListening(ServerSocket ss) {
+            addChatLine("Listening on port " + ss.getLocalPort());
         }
 
         @Override
-        public void onServerFinished(MyServerSocket server) {
-
+        public void onConnected(SocketHandler.SocketConnection conn) {
+            addChatLine("Connected to " + conn.getAddress()+":"+conn.getPort());
         }
 
         @Override
-        public void onNewServerSocket(MyServerSocket mss, ServerSocket ss) {
-
+        public void onMessageSent(SocketHandler.SocketConnection conn, String msg) {
+            addChatLine("@" + conn.getAddress() + ": " + msg);
         }
 
         @Override
-        public void onMessageSent(MyConnectionSocket socket, String msg) {
-
-        }
-
-        @Override
-        public void onMessageReceived(MyConnectionSocket socket, String msg) {
-            addChatLine(msg);
-        }
-
-        @Override
-        public void onClientFinished(MyConnectionSocket socket) {
-
-        }
-
-        @Override
-        public void onClientConnected(MyConnectionSocket mcs, Socket socket) {
-            addChatLine(socket.getInetAddress().getHostAddress() + " has joined.");
+        public void onMessageReceived(SocketHandler.SocketConnection conn, String msg) {
+            addChatLine(conn.getAddress() + ": " + msg);
         }
     };
 
@@ -122,14 +141,19 @@ public class NsdChatActivity extends Activity {
         if (messageView != null) {
             String messageString = messageView.getText().toString();
             if (!messageString.isEmpty()) {
-                MySocketManager.getInstance().sendMessage(messageString);
+                mNsdHelper.send(messageString);
             }
             messageView.setText("");
         }
     }
 
-    public void addChatLine(String line) {
-        mStatusView.append("\n" + line);
+    public void addChatLine(final String line) {
+        mStatusView.post(new Runnable() {
+            @Override
+            public void run() {
+                mStatusView.append("\n" + line);
+            }
+        });
     }
 
     @Override
@@ -137,14 +161,16 @@ public class NsdChatActivity extends Activity {
         if (mNsdHelper != null) {
             mNsdHelper.stopDiscovery();
         }
-        MySocketManager.getInstance().unregisterListener(socketListener);
+        //MySocketManager.getInstance().unregisterListener(socketListener);
+        mNsdHelper.getSocketHandler().unregisterListener(connectionListener);
         super.onPause();
     }
     
     @Override
     protected void onResume() {
         super.onResume();
-        MySocketManager.getInstance().registerListener(socketListener);
+       // MySocketManager.getInstance().registerListener(socketListener);
+        mNsdHelper.getSocketHandler().registerListener(connectionListener);
         if (mNsdHelper != null) {
             mNsdHelper.discoverServices();
         }
