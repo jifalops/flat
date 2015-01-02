@@ -62,10 +62,10 @@ public class MyConnectionSocket {
         return port;
     }
 
-    private boolean shouldFinish;
-    public void start() {
-        finished = false;
-        shouldFinish = true;
+    private boolean started;
+    public synchronized void start() {
+        if (started) return;
+        started = true;
         if (sendThread != null) {
             sendThread.interrupt();
         }
@@ -76,8 +76,8 @@ public class MyConnectionSocket {
         sendThread.start();
     }
 
-    public void stop() {
-        shouldFinish = false;
+    public synchronized void stop() {
+        started = false;
         if (sendThread != null) {
             sendThread.interrupt();
             sendThread = null;
@@ -109,7 +109,7 @@ public class MyConnectionSocket {
     private boolean finished;
     public synchronized boolean isFinished() { return finished; }
     private synchronized void finish() {
-        if (finished || !shouldFinish) return;
+        if (finished) return;
         finished = true;
         stop();
         for (ConnectionListener l : listeners) {

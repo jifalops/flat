@@ -138,8 +138,8 @@ public class NsdChatActivity extends Activity {
 
         @Override
         public void onClientFinished(MyConnectionSocket mcs) {
-            Log.v(TAG, "Client finished: " + Sockets.toString(mcs.getSocket()));
-            addChatLine("Client finished: " + Sockets.toString(mcs.getSocket()));
+            Log.v(TAG, "Client finished: " + Sockets.toString(mcs.getAddress(), mcs.getPort()));
+            addChatLine("Client finished: " + Sockets.toString(mcs.getAddress(), mcs.getPort()));
         }
 
         @Override

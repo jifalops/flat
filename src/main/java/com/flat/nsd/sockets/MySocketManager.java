@@ -96,12 +96,6 @@ public class MySocketManager {
     }
 
 
-    private synchronized void retryConnection(MyConnectionSocket mcs) {
-        connections.remove(mcs);
-        startConnection(new MyConnectionSocket(mcs.getAddress(), mcs.getPort()));
-    }
-
-
     private final MyServerSocket.ServerListener serverListener = new MyServerSocket.ServerListener() {
         @Override
         public void onServerSocketListening(MyServerSocket mss, ServerSocket ss) {
@@ -138,11 +132,8 @@ public class MySocketManager {
 
         @Override
         public void onFinished(MyConnectionSocket mcs) {
+            connections.remove(mcs);
             notifyHandler(clientFinished, null, mcs);
-            try {
-                Thread.sleep(100);
-            } catch (InterruptedException ignored) {}
-            retryConnection(mcs);
         }
     };
 
