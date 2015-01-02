@@ -13,9 +13,8 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * The socket manager takes care of the higher level aspects of maintaining client/server sockets.
- * It will create a new server socket whenever the existing one has connected, and it will attempt
- * to retry client connections that fail.
+ * The socket manager takes care of the higher level aspects of maintaining client/server sockets
+ * such as attempting to retry client connections that fail.
  *
  * @author Jacob Phillips (12/2014, jphilli85 at gmail)
  */
@@ -32,20 +31,18 @@ public class MySocketManager {
 
 
     private final List<MyConnectionSocket> connections = Collections.synchronizedList(new ArrayList<MyConnectionSocket>());
-    private final List<MyServerSocket> servers = Collections.synchronizedList(new ArrayList<MyServerSocket>());
+    private MyServerSocket server;
 
-
-    public int sendMessage(String msg) {
+    public int send(String msg) {
         int count = 0;
         for (MyConnectionSocket mcs : connections) {
-            mcs.sendMessage(msg);
-            ++count;
+            if (mcs.send(msg)) ++count;                 // TODO could use one shared sending thread
         }
         return count;
     }
 
     /** Assumes the serviceName contains an IP */
-    public int countConnectionsTo(String serviceName) {
+    public synchronized int countConnectionsTo(String serviceName) {
         int count = 0;
         synchronized (connections) {
             for (MyConnectionSocket mcs : connections) {
@@ -58,82 +55,75 @@ public class MySocketManager {
         return count;
     }
 
-    private boolean running;
-    public void start() {
-        if (!running) {
-            running = true;
-            initializeServer();
-        }
-    }
-    public void stop() {
-        if (running) {
-            running = false;
-
-            for (MyServerSocket mss : servers) {
-                mss.cancel();
+    public synchronized boolean hasAddress(InetAddress address) {
+        for (MyConnectionSocket mcs : connections) {
+            if (mcs.getAddress().getHostAddress().equals(address.getHostAddress())) {
+                return true;
             }
-            servers.clear();
-
-            for (MyConnectionSocket mcs : connections) {
-                mcs.cancel();
-            }
-            connections.clear();
         }
+        return false;
     }
 
-    private void initializeServer() {
-        if (!running) return;
-        MyServerSocket server = new MyServerSocket();
+
+    public synchronized void startServer() {
+        stopServer();
+        server = new MyServerSocket();
         server.registerListener(serverListener);
-        servers.add(server);
         server.start();
     }
 
-    private void retryConnection(MyConnectionSocket mcs) {
-        if (!running) return;
+    public synchronized void stopServer() {
+        if (server != null) {
+            server.stop();
+            server.unregisterListener(serverListener);
+        }
+    }
+
+    public synchronized boolean startConnection(MyConnectionSocket mcs) {
+        if (hasAddress(mcs.getAddress())) return false;
+        mcs.registerListener(connectionSocketListener);
+        connections.add(mcs);
+        mcs.start();
+        return true;
+    }
+
+    public synchronized void stopConnections() {
+        for (MyConnectionSocket mcs : connections) {
+            mcs.stop();
+            mcs.unregisterListener(connectionSocketListener);
+        }
+        connections.clear();
+    }
+
+
+    private synchronized void retryConnection(MyConnectionSocket mcs) {
         connections.remove(mcs);
-        connectTo(mcs.getAddress(), mcs.getPort());
+        startConnection(new MyConnectionSocket(mcs.getAddress(), mcs.getPort()));
     }
 
-    public void connectTo(InetAddress address, int port) {
-        if (!running) return;
-        MyConnectionSocket conn = new MyConnectionSocket(address, port);
-        conn.registerListener(connectionSocketListener);
-        connections.add(conn);
-        conn.start();
-    }
-
-    public void connectTo(Socket socket) {
-        if (!running) return;
-        MyConnectionSocket conn = new MyConnectionSocket(socket);
-        conn.registerListener(connectionSocketListener);
-        connections.add(conn);
-        conn.start();
-    }
 
     private final MyServerSocket.ServerListener serverListener = new MyServerSocket.ServerListener() {
         @Override
-        public void onNewServerSocket(MyServerSocket mss, ServerSocket ss) {
-            notifyHandler(newServer, null, mss);
+        public void onServerSocketListening(MyServerSocket mss, ServerSocket ss) {
+            notifyHandler(serverListening, null, mss);
         }
 
         @Override
-        public void onConnected(MyServerSocket mss, Socket socket) {
-            connectTo(socket);
-            notifyHandler(serverConnected, null, mss);
+        public void onServerAcceptedClientSocket(MyServerSocket mss, Socket socket) {
+            startConnection(new MyConnectionSocket(socket));
+            notifyHandler(serverAcceptedClientSocket, null, mss);
         }
 
         @Override
         public void onFinished(MyServerSocket mss) {
-            initializeServer();
             notifyHandler(serverFinished, null, mss);
         }
     };
 
     private final MyConnectionSocket.ConnectionListener connectionSocketListener = new MyConnectionSocket.ConnectionListener() {
         @Override
-        public void onConnected(MyConnectionSocket mcs, Socket socket) {
-            notifyHandler(clientConnected, null, mcs);
+        public void onSocketCreated(MyConnectionSocket mcs, Socket socket) {
+            notifyHandler(clientCreatedSocket, null, mcs);
         }
 
         @Override
@@ -166,7 +156,7 @@ public class MySocketManager {
         handler.sendMessage(msg);
     }
 
-    private final int serverConnected=1, serverFinished=2, newServer=3, sent=4, received=5, clientFinished=6, clientConnected=7;
+    private final int serverAcceptedClientSocket =1, serverFinished=2, serverListening =3, sent=4, received=5, clientFinished=6, clientCreatedSocket =7;
 
     private final Handler handler = new Handler() {
         @Override
@@ -174,10 +164,10 @@ public class MySocketManager {
             MyServerSocket mss;
             MyConnectionSocket mcs;
             switch (msg.arg1) {
-                case serverConnected:
+                case serverAcceptedClientSocket:
                     mss = (MyServerSocket) msg.obj;
                     for (SocketListener l : listeners) {
-                        l.onServerConnected(mss, mss.getAcceptedSocket());
+                        l.onServerAcceptedClientSocket(mss, mss.getAcceptedSocket());
                     }
                     break;
                 case serverFinished:
@@ -186,10 +176,10 @@ public class MySocketManager {
                         l.onServerFinished(mss);
                     }
                     break;
-                case newServer:
+                case serverListening:
                     mss = (MyServerSocket) msg.obj;
                     for (SocketListener l : listeners) {
-                        l.onNewServerSocket(mss, mss.getServerSocket());
+                        l.onServerSocketListening(mss, mss.getServerSocket());
                     }
                     break;
                 case sent:
@@ -210,10 +200,10 @@ public class MySocketManager {
                         l.onClientFinished(mcs);
                     }
                     break;
-                case clientConnected:
+                case clientCreatedSocket:
                     mcs = (MyConnectionSocket) msg.obj;
                     for (SocketListener l : listeners) {
-                        l.onClientConnected(mcs, mcs.getSocket());
+                        l.onClientSocketCreated(mcs, mcs.getSocket());
                     }
                     break;
             }
@@ -225,13 +215,13 @@ public class MySocketManager {
      * Allow other objects to react to events. Called on main thread.
      */
     public static interface SocketListener {
-        void onServerConnected(MyServerSocket mss, Socket socket);
+        void onServerAcceptedClientSocket(MyServerSocket mss, Socket socket);
         void onServerFinished(MyServerSocket mss);
-        void onNewServerSocket(MyServerSocket mss, ServerSocket socket);
+        void onServerSocketListening(MyServerSocket mss, ServerSocket socket);
         void onMessageSent(MyConnectionSocket mcs, String msg);
         void onMessageReceived(MyConnectionSocket mcs, String msg);
         void onClientFinished(MyConnectionSocket mcs);
-        void onClientConnected(MyConnectionSocket mcs, Socket socket);
+        void onClientSocketCreated(MyConnectionSocket mcs, Socket socket);
     }
     // a List of unique listener instances.
     private final List<SocketListener> listeners = new ArrayList<SocketListener>(1);

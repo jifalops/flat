@@ -22,17 +22,11 @@ import android.net.nsd.NsdServiceInfo;
 import android.util.Log;
 
 import com.flat.localization.util.Util;
-import com.flat.nsd.sockets.SocketHandler;
-import com.flat.nsd.sockets.Sockets;
-
-import java.net.ServerSocket;
 
 public class NsdHelper {
     private static final String TAG = NsdHelper.class.getSimpleName();
     private static final String SERVICE_TYPE = "_http._tcp.";
     private static final String SERVICE_PREFIX = "flatloco_";
-
-    public static final int HOST_CONNECTION_LIMIT = 1;
 
     Context mContext;
 
@@ -43,107 +37,26 @@ public class NsdHelper {
 
     private String mServiceName;
     private String mIp;
+    private boolean registered;
 
-    private SocketHandler mSocketHandler;
+    public static interface Callbacks {
+        void onServiceResolved(NsdServiceInfo info);
+    }
+    private final Callbacks mCallbacks;
 
-//    private MySocketManager socketManager;
-
-//    private final MySocketManager.SocketListener socketListener = new MySocketManager.SocketListener() {
-//        @Override
-//        public void onServerConnected(MyServerSocket mss, Socket socket) {
-//            Log.i(TAG, "Server connected to " + Sockets.toString(socket));
-//        }
-//
-//        @Override
-//        public void onServerFinished(MyServerSocket mss) {
-//            Log.v(TAG, "onServerFinished " + Sockets.toString(mss.getServerSocket()));
-//        }
-//
-//        @Override
-//        public void onNewServerSocket(MyServerSocket mss, ServerSocket ss) {
-//            registerService(ss.getLocalPort());
-//            Log.v(TAG, "onNewServerSocket " + Sockets.toString(ss));
-//        }
-//
-//        @Override
-//        public void onMessageSent(MyConnectionSocket mcs, String msg) {
-//            Log.v(TAG, "onMessageSent " + Sockets.toString(mcs.getSocket()));
-//        }
-//
-//        @Override
-//        public void onMessageReceived(MyConnectionSocket mcs, String msg) {
-//            Log.v(TAG, "onMessageReceived " + Sockets.toString(mcs.getSocket()));
-//        }
-//
-//        @Override
-//        public void onClientFinished(MyConnectionSocket mcs) {
-//            Log.v(TAG, "onClientFinished " + Sockets.toString(mcs.getSocket()));
-//        }
-//
-//        @Override
-//        public void onClientConnected(MyConnectionSocket mcs, Socket socket) {
-//            Log.i(TAG, "Client connected to " + Sockets.toString(socket));
-//        }
-//    };
-
-
-    private final SocketHandler.ConnectionListener connectionListener = new SocketHandler.ConnectionListener() {
-        @Override
-        public void onListening(ServerSocket ss) {
-            registerService(ss.getLocalPort());
-        }
-
-        @Override
-        public void onConnected(SocketHandler.SocketConnection conn) {
-            Log.v(TAG, "onConnected " + Sockets.toString(conn.getSocket()));
-        }
-
-        @Override
-        public void onMessageSent(SocketHandler.SocketConnection conn, String msg) {
-            Log.v(TAG, "onMessageSent " + Sockets.toString(conn.getSocket()));
-        }
-
-        @Override
-        public void onMessageReceived(SocketHandler.SocketConnection conn, String msg) {
-            Log.v(TAG, "onMessageReceived " + Sockets.toString(conn.getSocket()));
-        }
-    };
-
-
-    public NsdHelper(Context context) {
+    public NsdHelper(Context context, Callbacks callbacks) {
         mContext = context;
+        mCallbacks = callbacks;
         mNsdManager = (NsdManager) context.getSystemService(Context.NSD_SERVICE);
         mIp = Util.getWifiIp(context);
         if (mIp == null) mIp = "0.0.0.0";
         mServiceName = SERVICE_PREFIX + mIp;
-
-        mSocketHandler = new SocketHandler();
-//        socketManager = MySocketManager.getInstance();
     }
-
-    public SocketHandler getSocketHandler() { return mSocketHandler; }
 
     public void initializeNsd() {
         initializeResolveListener();
         initializeDiscoveryListener();
         initializeRegistrationListener();
-
-        //mNsdManager.init(mContext.getMainLooper(), this);
-        //createServerConnection();
-    }
-
-    public void start() {
-        mSocketHandler.registerListener(connectionListener);
-        mSocketHandler.startServer();
-    }
-    public void stop() {
-        mSocketHandler.stopServer();
-        mSocketHandler.unregisterListener(connectionListener);
-        mNsdManager.unregisterService(mRegistrationListener); // TODO might not be registered yet
-    }
-
-    public void send(String msg) {
-        mSocketHandler.send(msg);
     }
 
     public void initializeDiscoveryListener() {
@@ -156,7 +69,7 @@ public class NsdHelper {
 
             @Override
             public void onDiscoveryStarted(String regType) {
-                Log.d(TAG, "Service discovery started, I am " + mServiceName);
+                Log.d(TAG, "Service discovery started");
             }
 
             @Override
@@ -166,8 +79,7 @@ public class NsdHelper {
                     Log.d(TAG, "Unknown Service Type: " + service.getServiceType());
                 } else if (service.getServiceName().equals(mServiceName)) {
                     Log.d(TAG, "Same machine: " + mServiceName);
-                } else if (service.getServiceName().startsWith(SERVICE_PREFIX)
-                            && mSocketHandler.countConnectionsTo(service.getServiceName()) < HOST_CONNECTION_LIMIT) {
+                } else if (service.getServiceName().startsWith(SERVICE_PREFIX)) {
                     resolveService(service);
                 }
             }
@@ -236,41 +148,11 @@ public class NsdHelper {
                     return;
                 }
 
-                mSocketHandler.addConnection(serviceInfo.getHost(), serviceInfo.getPort());
+                mCallbacks.onServiceResolved(serviceInfo);
             }
         };
     }
 
-
-//    public void retryConnections() {
-//        for (Connection conn : mConnections) {
-//            Log.d(TAG, "Retrying connection to " + getServiceString(conn.clientInfo));
-//            conn.client.connectToServer(conn.clientInfo.getHost(), conn.clientInfo.getPort());
-//        }
-//    }
-//
-//    private void connect(NsdServiceInfo service) {
-//        if (service == null) {
-//            Log.w(TAG, "Resolved null serviceInfo.");
-//            return;
-//        }
-//
-//        for (Connection conn : mConnections) {
-//            if (conn.clientMatches(service)) {
-//                Log.d(TAG, "Connection already in list, " + getServiceString(service));
-//                return;
-//            }
-//        }
-//
-//        Connection conn = new Connection();
-//        conn.clientInfo = service;
-//        conn.client = new ChatConnection(this, mUpdateHandler);
-//
-//        Log.i(TAG, "Connecting to " + getServiceString(service));
-//        conn.client.connectToServer(service.getHost(), service.getPort());
-//        mConnections.add(conn);
-//
-//    }
 
     public void initializeRegistrationListener() {
         if (mRegistrationListener == null) {
@@ -305,7 +187,12 @@ public class NsdHelper {
     }
 
 
-    public void registerService(int port) {
+    private synchronized void doRegisterService(NsdServiceInfo info) throws IllegalArgumentException {
+        mNsdManager.registerService(info, NsdManager.PROTOCOL_DNS_SD, mRegistrationListener);
+        registered = true;
+    }
+
+    public synchronized boolean registerService(int port) {
         Log.i(TAG, "Registering service at " + mIp + ":" + port); // Log.e is red
         NsdServiceInfo serviceInfo  = new NsdServiceInfo();
         serviceInfo.setPort(port);
@@ -313,18 +200,23 @@ public class NsdHelper {
         serviceInfo.setServiceType(SERVICE_TYPE);
 
         try {
-            mNsdManager.registerService(
-                    serviceInfo, NsdManager.PROTOCOL_DNS_SD, mRegistrationListener);
+            doRegisterService(serviceInfo);
         } catch (IllegalArgumentException e) {
             Log.e(TAG, "Failed to register service, " + e.getMessage() + ". Retrying...");
             try {
                 initializeRegistrationListener();
-                mNsdManager.registerService(
-                        serviceInfo, NsdManager.PROTOCOL_DNS_SD, mRegistrationListener);
+                doRegisterService(serviceInfo);
             } catch (IllegalArgumentException e2) {
                 Log.e(TAG, "Failed to register service, " + e2.getMessage());
             }
         }
+        return registered;
+    }
+
+    public synchronized boolean unregisterService() {
+        if (!registered) return false;
+        mNsdManager.unregisterService(mRegistrationListener);
+        return true;
     }
 
     public void discoverServices() { //TODO this doesn't normally fail and probably doesnt need to retry

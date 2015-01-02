@@ -17,143 +17,67 @@
 package com.flat.nsd;
 
 import android.app.Activity;
+import android.net.nsd.NsdServiceInfo;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.EditText;
 import android.widget.TextView;
 
 import com.flat.R;
-import com.flat.nsd.sockets.SocketHandler;
+import com.flat.nsd.sockets.MyConnectionSocket;
+import com.flat.nsd.sockets.MyServerSocket;
+import com.flat.nsd.sockets.MySocketManager;
+import com.flat.nsd.sockets.Sockets;
 
 import java.net.ServerSocket;
+import java.net.Socket;
 
 public class NsdChatActivity extends Activity {
 
     NsdHelper mNsdHelper;
 
     private TextView mStatusView;
-//    private final MySocketManager.SocketListener socketListener = new MySocketManager.SocketListener() {
-//        @Override
-//        public void onServerConnected(MyServerSocket server, Socket socket) {
-//
-//        }
-//
-//        @Override
-//        public void onServerFinished(MyServerSocket server) {
-//
-//        }
-//
-//        @Override
-//        public void onNewServerSocket(MyServerSocket mss, ServerSocket ss) {
-//
-//        }
-//
-//        @Override
-//        public void onMessageSent(MyConnectionSocket socket, String msg) {
-//
-//        }
-//
-//        @Override
-//        public void onMessageReceived(MyConnectionSocket socket, String msg) {
-//            addChatLine(msg);
-//        }
-//
-//        @Override
-//        public void onClientFinished(MyConnectionSocket socket) {
-//
-//        }
-//
-//        @Override
-//        public void onClientConnected(MyConnectionSocket mcs, Socket socket) {
-//            addChatLine(socket.getInetAddress().getHostAddress() + " has joined.");
-//        }
-//    };
 
-    private final SocketHandler.ConnectionListener connectionListener = new SocketHandler.ConnectionListener() {
-        @Override
-        public void onListening(ServerSocket ss) {
-            addChatLine("Listening on port " + ss.getLocalPort());
-        }
+    public static final String TAG = NsdChatActivity.class.getSimpleName();
 
-        @Override
-        public void onConnected(SocketHandler.SocketConnection conn) {
-            addChatLine("Connected to " + conn.getAddress()+":"+conn.getPort());
-        }
+    private MySocketManager socketManager = MySocketManager.getInstance();
 
-        @Override
-        public void onMessageSent(SocketHandler.SocketConnection conn, String msg) {
-            addChatLine("@" + conn.getAddress() + ": " + msg);
-        }
 
-        @Override
-        public void onMessageReceived(SocketHandler.SocketConnection conn, String msg) {
-            addChatLine(conn.getAddress() + ": " + msg);
-        }
-    };
-
-    public static final String TAG = "NsdChat";
-
-    //ChatConnection mRegistrationConnection;
-
-    /** Called when the activity is first created. */
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.nsd_activity);
         mStatusView = (TextView) findViewById(R.id.status);
 
-        mNsdHelper = new NsdHelper(this);
+        mNsdHelper = new NsdHelper(this, nsdCallbacks);
         mNsdHelper.initializeNsd();
-        mNsdHelper.start();
+
+        socketManager.startServer();
     }
 
     @Override
     protected void onDestroy() {
-        mNsdHelper.stop();
+        mNsdHelper.unregisterService();
+        socketManager.stopServer();
+        socketManager.stopConnections();
         super.onDestroy();
     }
 
-
-
-
-    public void clickAdvertise(View v) {
-//        advertise();
-    }
-
-    public void clickDiscover(View v) {
-        mNsdHelper.discoverServices();
-    }
-
-    public void clickConnect(View v) {
-//        NsdServiceInfo service = mNsdHelper.getChosenServiceInfo();
-//        if (service != null) {
-//            Log.d(TAG, "Connecting...");
-//            mConnection.connectToServer(service.getHost(),
-//                    service.getPort());
-//        } else {
-//            Log.d(TAG, "No service to connect to!");
-//        }
-//        mNsdHelper.retryConnections();
-    }
 
     public void clickSend(View v) {
         EditText messageView = (EditText) this.findViewById(R.id.chatInput);
         if (messageView != null) {
             String messageString = messageView.getText().toString();
             if (!messageString.isEmpty()) {
-                mNsdHelper.send(messageString);
+                socketManager.send(messageString);
             }
             messageView.setText("");
         }
     }
 
     public void addChatLine(final String line) {
-        mStatusView.post(new Runnable() {
-            @Override
-            public void run() {
-                mStatusView.append("\n" + line);
-            }
-        });
+        mStatusView.append("\n" + line);
     }
 
     @Override
@@ -161,18 +85,74 @@ public class NsdChatActivity extends Activity {
         if (mNsdHelper != null) {
             mNsdHelper.stopDiscovery();
         }
-        //MySocketManager.getInstance().unregisterListener(socketListener);
-        mNsdHelper.getSocketHandler().unregisterListener(connectionListener);
+        socketManager.unregisterListener(socketListener);
         super.onPause();
     }
     
     @Override
     protected void onResume() {
         super.onResume();
-       // MySocketManager.getInstance().registerListener(socketListener);
-        mNsdHelper.getSocketHandler().registerListener(connectionListener);
+        socketManager.registerListener(socketListener);
         if (mNsdHelper != null) {
             mNsdHelper.discoverServices();
         }
     }
+
+
+
+
+    private final MySocketManager.SocketListener socketListener = new MySocketManager.SocketListener() {
+
+        @Override
+        public void onServerAcceptedClientSocket(MyServerSocket mss, Socket socket) {
+            Log.i(TAG, "Server accepted socket to " + Sockets.toString(socket));
+            addChatLine("Server accepted socket to " + Sockets.toString(socket));
+        }
+
+        @Override
+        public void onServerFinished(MyServerSocket mss) {
+            Log.v(TAG, "Server on port " + mss.getPort() + " closed. It had accepted " + mss.getAcceptCount() + " sockets total.");
+            addChatLine("Server on port " + mss.getPort() + " closed. It had accepted " + mss.getAcceptCount() + " sockets total.");
+        }
+
+        @Override
+        public void onServerSocketListening(MyServerSocket mss, ServerSocket ss) {
+            Log.v(TAG, "Server now listening on port " + ss.getLocalPort());
+            addChatLine("Server now listening on port " + ss.getLocalPort());
+            mNsdHelper.registerService(ss.getLocalPort());
+        }
+
+        @Override
+        public void onMessageSent(MyConnectionSocket mcs, String msg) {
+            Log.v(TAG, "Sent message to " + Sockets.toString(mcs.getSocket()));
+            addChatLine("Sent message to " + Sockets.toString(mcs.getSocket()));
+            addChatLine(msg);
+        }
+
+        @Override
+        public void onMessageReceived(MyConnectionSocket mcs, String msg) {
+            Log.v(TAG, "Received message from " + Sockets.toString(mcs.getSocket()));
+            addChatLine("Received message from " + Sockets.toString(mcs.getSocket()));
+            addChatLine(msg);
+        }
+
+        @Override
+        public void onClientFinished(MyConnectionSocket mcs) {
+            Log.v(TAG, "Client finished: " + Sockets.toString(mcs.getSocket()));
+            addChatLine("Client finished: " + Sockets.toString(mcs.getSocket()));
+        }
+
+        @Override
+        public void onClientSocketCreated(MyConnectionSocket mcs, Socket socket) {
+            Log.v(TAG, "Client socket created for " + Sockets.toString(socket));
+            addChatLine("Client socket created for " + Sockets.toString(socket));
+        }
+    };
+
+    private final NsdHelper.Callbacks nsdCallbacks = new NsdHelper.Callbacks() {
+        @Override
+        public void onServiceResolved(NsdServiceInfo info) {
+            socketManager.startConnection(new MyConnectionSocket(info.getHost(), info.getPort()));
+        }
+    };
 }

@@ -10,32 +10,34 @@ import java.util.List;
 
 /**
  * This class manages listening for an incoming socket connection by using a ServerSocket and
- * serverSocket.accept(). After accepting an incoming socket, the serverSocket is closed, the
- * state changes to connected (calling connection listeners), and then this instance is finished
- * (again calling finished listeners). If serverSocket.accept() fails, finish() will still be called.
- * After a connection is accepted, the instance of this class can be discarded.
+ * serverSocket.accept(). After accepting an incoming socket, onClientSocketAccepted() is called
+ * on the registered listeners. When the end of the thread is reached (from error or by calling stop()),
+ * onFinished() is called on the registered listeners.
  *
  * @author Jacob Phillips (12/2014, jphilli85 at gmail)
  */
-public class MyServerSocket implements SocketController {
+public class MyServerSocket {
     private static final String TAG = MyServerSocket.class.getSimpleName();
 
+    private Socket acceptedSocket;
+    public synchronized Socket getAcceptedSocket() { return acceptedSocket; }
+    public synchronized void setAcceptedSocket(Socket socket) {
+        acceptedSocket = socket;
+        for (ServerListener l : listeners) {
+            l.onServerAcceptedClientSocket(this, socket);
+        }
+    }
 
     private ServerSocket serverSocket;
-    private synchronized void setServerSocket(ServerSocket ss) { 
+    private synchronized void setServerSocket(ServerSocket ss) {
         serverSocket = ss;
+        port = ss.getLocalPort();
         for (ServerListener l : listeners) {
-            l.onNewServerSocket(this, ss);
+            l.onServerSocketListening(this, ss);
         }
     }
     public synchronized ServerSocket getServerSocket() {
         return serverSocket;
-    }
-
-    private Socket acceptedSocket;
-    private synchronized void setAcceptedSocket(Socket s) { acceptedSocket = s; }
-    public synchronized Socket getAcceptedSocket() {
-        return acceptedSocket;
     }
 
     private int port;
@@ -43,86 +45,66 @@ public class MyServerSocket implements SocketController {
     public int getPort() { return port; }
 
 
-    private boolean connected;
-    @Override public synchronized boolean isConnected() { return connected; }
-    private synchronized void setConnected(boolean conn) {
-        connected = conn;
-        if (conn) {
-            for (ServerListener l : listeners) {
-                l.onConnected(this, acceptedSocket);
-            }
-        }
-    }
-
-    private boolean canceled;
-    @Override public synchronized boolean isCanceled() { return canceled; }
-    @Override public synchronized void cancel() {
-        canceled = true;
-        closeServer();
-    }
-
     private boolean finished;
-    @Override public synchronized boolean isFinished() { return finished; }
+    public synchronized boolean isFinished() { return finished; }
     private synchronized void finish() {
         finished = true;
-        //closeServer();
+        stop();
         for (ServerListener l : listeners) {
             l.onFinished(this);
         }
     }
 
-    private boolean closed;
-    /** Closes ServerSocket only, not the accepted Socket */
-    private synchronized void closeServer() {
-        if (!closed && serverSocket != null) {
+    private Thread thread;
+
+    public void start() {
+        stop();
+        thread = new Thread(new ServerThread());
+        thread.start();
+    }
+    public void stop() {
+        if (thread != null) {
+            thread.interrupt();
+            thread = null;
+        }
+        if (serverSocket != null) {
             try {
                 serverSocket.close();
-                closed = true;
-                setConnected(false);
             } catch (IOException e) {
                 Log.e(TAG, "Failed to close server socket.");
             }
         }
     }
 
+    private int acceptCount;
+    public int getAcceptCount() { return acceptCount; }
 
-    private Thread thread;
-    private boolean started;
-    @Override
-    public synchronized void start() {
-        if (!started && !isConnected() && !closed) {
-            if (thread != null) {
-                thread.interrupt();
-            }
-            thread = new Thread(new ServerThread());
-            thread.start();
-            started = true;
-        }
-    }
+    private int acceptLimit = Integer.MAX_VALUE;
+    public void setAcceptLimit(int limit) { acceptLimit = limit; }
+    public int getAcceptLimit() { return acceptLimit; }
+
 
     private class ServerThread implements Runnable {
         @Override
         public void run() {
+            Socket client;
             try {
-                if (!isConnected() && !closed) {
-                    setServerSocket(new ServerSocket(port));
-                    Log.e(TAG, "Server listening on port " + serverSocket.getLocalPort() + ", awaiting connection...");
-                    setAcceptedSocket(serverSocket.accept());
-                    Log.e(TAG, "Server on port " + serverSocket.getLocalPort() + " is accepting connection to " + Sockets.toString(acceptedSocket));
-                    //closeServer();
-                    setConnected(true);
-                }
+                setServerSocket(new ServerSocket(port));
             } catch (IOException e) {
                 Log.e(TAG, "Error creating server socket");
-            } finally {
-                if (!isCanceled()) {
-                    finish();
-                }
             }
+            try {
+                while (acceptCount < acceptLimit && !Thread.currentThread().isInterrupted()) {
+                    client = getServerSocket().accept();
+                    ++acceptCount;
+                    setAcceptedSocket(client);
+                }
+            } catch (IOException e) {
+                Log.w(TAG, "Failed to accept socket on port " + port + " for client #" + (acceptCount + 1));
+            }
+            finish();
         }
     }
-
-
 
 
     /**
@@ -130,11 +112,11 @@ public class MyServerSocket implements SocketController {
      */
     public static interface ServerListener {
         /** called on server thread */
-        void onConnected(MyServerSocket server, Socket socket);
+        void onServerAcceptedClientSocket(MyServerSocket mss, Socket socket);
         /** called on server thread */
-        void onFinished(MyServerSocket server);
+        void onFinished(MyServerSocket mss);
         /** called on server thread */
-        void onNewServerSocket(MyServerSocket mss, ServerSocket ss);
+        void onServerSocketListening(MyServerSocket mss, ServerSocket ss);
     }
     // a List of unique listener instances.
     private final List<ServerListener> listeners = new ArrayList<ServerListener>(1);
@@ -145,10 +127,5 @@ public class MyServerSocket implements SocketController {
     }
     public boolean unregisterListener(ServerListener l) {
         return listeners.remove(l);
-    }
-    public int unregisterListeners() {
-        int size = listeners.size();
-        listeners.clear();
-        return size;
     }
 }

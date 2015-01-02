@@ -7,6 +7,5 @@ public interface SocketController {
     void start();
     void cancel();
     boolean isCanceled();
-    boolean isConnected();
     boolean isFinished();
 }
