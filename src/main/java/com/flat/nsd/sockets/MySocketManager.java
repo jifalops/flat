@@ -41,20 +41,6 @@ public class MySocketManager {
         return count;
     }
 
-    /** Assumes the serviceName contains an IP */
-    public synchronized int countConnectionsTo(String serviceName) {
-        int count = 0;
-        synchronized (connections) {
-            for (MyConnectionSocket mcs : connections) {
-                if (serviceName.contains(mcs.getAddress().getHostAddress())) {
-                    ++count;
-                }
-            }
-        }
-        Log.d(TAG, count + " connections to " + serviceName);
-        return count;
-    }
-
     public synchronized boolean hasAddress(InetAddress address) {
         for (MyConnectionSocket mcs : connections) {
             if (mcs.getAddress().getHostAddress().equals(address.getHostAddress())) {
@@ -80,7 +66,10 @@ public class MySocketManager {
     }
 
     public synchronized boolean startConnection(MyConnectionSocket mcs) {
-        if (hasAddress(mcs.getAddress())) return false;
+        if (hasAddress(mcs.getAddress())) {
+            Log.v(TAG, "Already have connection to " + mcs.getAddress()+":"+mcs.getPort() + ", ignoring.");
+            return false;
+        }
         mcs.registerListener(connectionSocketListener);
         connections.add(mcs);
         mcs.start();

@@ -19,6 +19,7 @@ package com.flat.nsd;
 import android.content.Context;
 import android.net.nsd.NsdManager;
 import android.net.nsd.NsdServiceInfo;
+import android.text.TextUtils;
 import android.util.Log;
 
 import com.flat.localization.util.Util;
@@ -36,11 +37,11 @@ public class NsdHelper {
     NsdManager.RegistrationListener mRegistrationListener;
 
     private String mServiceName;
-    private String mIp;
+    private String mMac;
     private boolean registered;
 
     public static interface Callbacks {
-        void onServiceResolved(NsdServiceInfo info);
+        void onAcceptableServiceResolved(NsdServiceInfo info);
     }
     private final Callbacks mCallbacks;
 
@@ -48,9 +49,9 @@ public class NsdHelper {
         mContext = context;
         mCallbacks = callbacks;
         mNsdManager = (NsdManager) context.getSystemService(Context.NSD_SERVICE);
-        mIp = Util.getWifiIp(context);
-        if (mIp == null) mIp = "0.0.0.0";
-        mServiceName = SERVICE_PREFIX + mIp;
+        mMac = Util.getWifiMac(context);
+        if (TextUtils.isEmpty(mMac)) mMac = "00:00:00:00:00:00";
+        mServiceName = SERVICE_PREFIX + mMac;
     }
 
     public void initializeNsd() {
@@ -143,12 +144,12 @@ public class NsdHelper {
             public void onServiceResolved(NsdServiceInfo serviceInfo) {
                 Log.i(TAG, "Resolve Succeeded for " + getServiceString(serviceInfo));
 
-                if (serviceInfo.getServiceName().contains(mIp)) {
-                    Log.e(TAG, "Same service name. Connection aborted.");
+                if (serviceInfo.getHost().getHostAddress().equals(Util.getWifiIp(mContext))) {
+                    Log.e(TAG, "Same host. Connection aborted.");
                     return;
                 }
 
-                mCallbacks.onServiceResolved(serviceInfo);
+                mCallbacks.onAcceptableServiceResolved(serviceInfo);
             }
         };
     }
@@ -193,7 +194,7 @@ public class NsdHelper {
     }
 
     public synchronized boolean registerService(int port) {
-        Log.i(TAG, "Registering service at " + mIp + ":" + port); // Log.e is red
+        Log.e(TAG, "Registering service at " + Util.getWifiIp(mContext) + ":" + port); // Log.e is red
         NsdServiceInfo serviceInfo  = new NsdServiceInfo();
         serviceInfo.setPort(port);
         serviceInfo.setServiceName(mServiceName);

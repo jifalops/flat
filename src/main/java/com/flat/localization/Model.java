@@ -2,6 +2,7 @@ package com.flat.localization;
 
 import android.util.Pair;
 
+import com.flat.localization.node.Node;
 import com.flat.localization.signal.rangingandprocessing.SignalInterpreter;
 import com.flat.localization.coordinatesystem.LocationAlgorithm;
 import com.flat.localization.signal.Signal;
@@ -135,7 +136,7 @@ public final class Model {
     public Map<String, Pair<Float, Long>> getRangeTable() {
         Map<String, Pair<Float, Long>> rangeTable = new HashMap<String, Pair<Float, Long>>();
         for (Node n : nodes) {
-            rangeTable.put(n.getId(), new Pair<Float, Long>(n.getRange().actual, n.getRange().time));
+            rangeTable.put(n.getId(), new Pair<Float, Long>(n.getRange().rangeOverride, n.getRange().time));
         }
         return rangeTable;
     }

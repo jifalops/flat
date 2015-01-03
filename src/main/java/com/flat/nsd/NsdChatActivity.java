@@ -151,7 +151,7 @@ public class NsdChatActivity extends Activity {
 
     private final NsdHelper.Callbacks nsdCallbacks = new NsdHelper.Callbacks() {
         @Override
-        public void onServiceResolved(NsdServiceInfo info) {
+        public void onAcceptableServiceResolved(NsdServiceInfo info) {
             socketManager.startConnection(new MyConnectionSocket(info.getHost(), info.getPort()));
         }
     };

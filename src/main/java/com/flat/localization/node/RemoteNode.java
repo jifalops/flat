@@ -1,4 +1,4 @@
-package com.flat.localization;
+package com.flat.localization.node;
 
 import android.content.SharedPreferences;
 import android.text.TextUtils;
@@ -16,7 +16,7 @@ import java.util.Map;
 import java.util.Set;
 
 
-public final class Node {
+public final class RemoteNode {
     public static final class Range {
         public float dist = 0;
         public float actual = 0; // when given
@@ -45,7 +45,8 @@ public final class Node {
      * For orientation of angle coordinates, see
      * <a href='http://developer.android.com/guide/topics/sensors/sensors_overview.html#sensors-coords'>http://developer.android.com/guide/topics/sensors/sensors_overview.html#sensors-coords</a>
      */
-    public static final class State {  // TODO use states in the context of a coordinate system or reference frame
+    public static final class State {
+        public ReferenceFrame referenceFrame = new ReferenceFrame();
         public float pos[] = {0,0,0};
         public float angle[] = {0,0,0};
         public String algorithm = "none";
@@ -62,17 +63,9 @@ public final class Node {
         }
     }
 
-//    public static final class RangeTableEntry {
-//        public final String nodeId;
-//        public final float range;
-//        public final long time;
-//        public RangeTableEntry(String nodeId, float range, long time) {
-//            this.nodeId = nodeId;
-//            this.range = range;
-//            this.time = time;
-//        }
-//    }
-
+    public static final class ReferenceFrame {
+        List<RemoteNode>
+    }
 
     private Map<String, Pair<Float, Long>> rangeTable;
     public void setRangeTable(Map<String, Pair<Float, Long>> table) {
@@ -82,12 +75,17 @@ public final class Node {
         return rangeTable;
     }
 
+    public List<ReferenceFrame> getPrioritizedReferenceFrames() {
+        return
+    }
+
 
     private final List<Range> rangePending = new ArrayList<Range>();
     private final List<Range> rangeHistory = new ArrayList<Range>();
     private final List<State> statePending = new ArrayList<State>();
     private final List<State> stateHistory = new ArrayList<State>();
 
+    public static final boolean idIsWifiMac = true;
     private final String id;
     private String name;
     private boolean fixed;
@@ -101,7 +99,7 @@ public final class Node {
         return actualRangeOverride;
     }
 
-    public Node(String id) {
+    public RemoteNode(String id) {
         this.id = id;
         this.name = "Unknown Node";
         fixed = true;
@@ -230,7 +228,7 @@ public final class Node {
     /**
      * Flatten several nodes' current state to a float[][].
      */
-    public static float[][] toPositionArray(Node... nodes) {
+    public static float[][] toPositionArray(RemoteNode... nodes) {
         float[][] n = new float[nodes.length][3];
         for (int i=0; i<nodes.length; ++i) {
             for (int j=0; j<3; ++j) {
@@ -243,7 +241,7 @@ public final class Node {
     /**
      * Flatten several nodes' current ranges to a float[].
      */
-    public static float[] toRangeArray(Node... nodes) {
+    public static float[] toRangeArray(RemoteNode... nodes) {
         float[] r = new float[nodes.length];
         for (int i=0; i<nodes.length; ++i) {
             r[i] = nodes[i].getRange().dist;
@@ -255,10 +253,10 @@ public final class Node {
      * Allow other objects to react to node events.
      */
     public static interface NodeListener {
-        void onRangePending(Node n, Range r);
-        void onStatePending(Node n, State s);
-        void onRangeChanged(Node n, Range r);
-        void onStateChanged(Node n, State s);
+        void onRangePending(RemoteNode n, Range r);
+        void onStatePending(RemoteNode n, State s);
+        void onRangeChanged(RemoteNode n, Range r);
+        void onStateChanged(RemoteNode n, State s);
     }
     private final Set<NodeListener> listeners = new LinkedHashSet<NodeListener>(1);
     public void registerListener(NodeListener l) {

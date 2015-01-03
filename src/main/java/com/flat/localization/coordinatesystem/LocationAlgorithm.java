@@ -1,6 +1,6 @@
 package com.flat.localization.coordinatesystem;
 
-import com.flat.localization.Node;
+import com.flat.localization.node.Node;
 
 import java.util.List;
 

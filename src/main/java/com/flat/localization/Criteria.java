@@ -2,6 +2,7 @@ package com.flat.localization;
 
 import android.util.Log;
 
+import com.flat.localization.node.Node;
 import com.flat.localization.util.Calc;
 
 import java.util.ArrayList;
@@ -111,12 +112,12 @@ public class Criteria {
             return matchAll ||
                     (pr >= rangePendingCountMin && pr <= rangePendingCountMax) ||
                     (ps >= statePendingCountMin && ps <= statePendingCountMax) ||
-                    (n.getRange().dist >= rangeMin && n.getRange().dist <= rangeMax) ||
-                    (n.getRange().actual >= rangeMin && n.getRange().actual <= rangeMax) ||
+                    (n.getRange().range >= rangeMin && n.getRange().range <= rangeMax) ||
+                    (n.getRange().rangeOverride >= rangeMin && n.getRange().rangeOverride <= rangeMax) ||
                     (idMatches != null && idMatches.matcher(n.getId()).matches()) ||
                     (stateAlgMatches != null && stateAlgMatches.matcher(n.getState().algorithm).matches()) ||
                     (rangeSigMatches != null && rangeSigMatches.matcher(n.getRange().signal).matches()) ||
-                    (rangeAlgMatches != null && rangeAlgMatches.matcher(n.getRange().algorithm).matches()) ||
+                    (rangeAlgMatches != null && rangeAlgMatches.matcher(n.getRange().interpreter).matches()) ||
                     (Calc.isLessThanOrEqual(n.getState().pos, posMax) && Calc.isLessThanOrEqual(posMin, n.getState().pos)) ||
                     (Calc.isLessThanOrEqual(n.getState().angle, angleMax) && Calc.isLessThanOrEqual(angleMin, n.getState().angle)) ||
                     (System.currentTimeMillis() - n.getState().time >= stateAgeMin && System.currentTimeMillis() - n.getState().time <= stateAgeMax) ||

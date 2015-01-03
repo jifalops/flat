@@ -22,7 +22,7 @@ import android.widget.TextView;
 
 import com.flat.R;
 import com.flat.localization.Model;
-import com.flat.localization.Node;
+import com.flat.localization.node.Node;
 
 import java.util.List;
 
@@ -135,11 +135,11 @@ public class RangeTableActivity extends Activity {
         private void showRange(TextView tv, Node n) {
             if (tv == null || n == null) return;
             float f;
-            if (n.getRange().actual > 0) {
-                f = n.getRange().actual;
+            if (n.getRange().rangeOverride > 0) {
+                f = n.getRange().rangeOverride;
                 tv.setTextColor(Color.RED);
             } else {
-                f = n.getRange().dist;
+                f = n.getRange().range;
                 if (colors != null) tv.setTextColor(colors);
             }
             tv.setText(round(f) + "m");
@@ -228,7 +228,7 @@ public class RangeTableActivity extends Activity {
                                 LinearLayout.LayoutParams.WRAP_CONTENT);
                         input.setLayoutParams(lp);
 
-                        float f = node.getActualRangeOverride() > 0 ? node.getActualRangeOverride() : node.getRange().dist;
+                        float f = node.getActualRangeOverride() > 0 ? node.getActualRangeOverride() : node.getRange().range;
                         input.setText(round(f) + "");
 
                         b.setView(input);

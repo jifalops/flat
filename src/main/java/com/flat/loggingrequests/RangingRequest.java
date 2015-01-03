@@ -1,7 +1,7 @@
 package com.flat.loggingrequests;
 
 import com.android.volley.Response;
-import com.flat.localization.Node;
+import com.flat.localization.node.Node;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -48,9 +48,9 @@ public final class RangingRequest extends AbstractRequest {
             node_id = src.getId();
             remote_node_id = dst.getId();
             signal = r.signal;
-            algorithm = r.algorithm;
-            estimate = r.dist;
-            actual = r.actual;
+            algorithm = r.interpreter;
+            estimate = r.range;
+            actual = r.rangeOverride;
             node_time = r.time;
         }
     }

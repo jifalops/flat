@@ -13,6 +13,7 @@ import com.flat.app.AppController;
 import com.flat.localization.coordinatesystem.LocationAlgorithm;
 import com.flat.localization.coordinatesystem.MinMax;
 import com.flat.localization.coordinatesystem.Trilateration;
+import com.flat.localization.node.Node;
 import com.flat.localization.signal.AndroidSensor;
 import com.flat.localization.signal.BluetoothBeacon;
 import com.flat.localization.signal.Signal;
@@ -68,7 +69,7 @@ public final class Controller implements Model.ModelListener, Node.NodeListener 
 
 
     private String getKey(Node.Range r) {
-        return r.signal + r.algorithm;
+        return r.signal + r.interpreter;
     }
     private String getKey(Signal sig, Node.State st) {
         return sig.getName() + st.algorithm;
@@ -181,14 +182,14 @@ public final class Controller implements Model.ModelListener, Node.NodeListener 
             public void onChange(Signal signal, int eventType) {
                 Node.Range range = new Node.Range();
                 range.signal = btSignal.getName();
-                range.algorithm = fspl.getName();
+                range.interpreter = fspl.getName();
                 range.time = System.currentTimeMillis();
                 switch (eventType) {
                     case BluetoothBeacon.EVENT_DEVICE_DISCOVERED:
                         BluetoothDevice btdevice = btSignal.getMostRecentDevice();
                         short rssi = btSignal.getScanResults().get(btdevice);
                         // TODO access true frequency
-                        range.dist = fspl.fromDbMhz(rssi, 2400.0f);
+                        range.range = fspl.fromDbMhz(rssi, 2400.0f);
 
                         // TODO using BT mac instead of wifi
                         String mac = btdevice.getAddress();
@@ -224,9 +225,9 @@ public final class Controller implements Model.ModelListener, Node.NodeListener 
                         for (ScanResult sr : wifiSignal.getScanResults()) {
                             Node.Range range = new Node.Range();
                             range.signal = wifiSignal.getName();
-                            range.algorithm = fspl2.getName();
+                            range.interpreter = fspl2.getName();
                             range.time = System.currentTimeMillis(); //sr.timestamp;
-                            range.dist = fspl2.fromDbMhz(sr.level, sr.frequency);
+                            range.range = fspl2.fromDbMhz(sr.level, sr.frequency);
                             if (model.getNode(sr.BSSID) == null) {
                                 model.addNode(new Node(sr.BSSID));
                             }
