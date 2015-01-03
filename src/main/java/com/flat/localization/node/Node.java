@@ -10,7 +10,6 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -40,13 +39,37 @@ public final class Node {
     }
 
     /**
-     *
+     * Each node maintains its own range table, which is a mapping of node IDs to their range and the time ranging occurred.
+     * Before creating a coordinate system, each node must share its range table with the other nodes it has ranges to
+     * (and a data connection to, since the two are independent).
+     */
+    public static final class RangeTable {
+        /** Node ID => {Range, Timestamp} */
+        public final Map<String, Pair<Float, Long>> ranges = new HashMap<String, Pair<Float, Long>>();
+        /** Node ID of owner */
+        public final String ownerId;
+        public RangeTable(String ownerId) { this.ownerId = ownerId; }
+    }
+
+    /**
+     * A coordinate system is a list of nodes with their coordinates in that system. There is also
+     * a list of the relevant ranges that were used to define this coordinate system.
+     */
+    public static final class CoordinateSystem {
+        public static final class DefiningRange {
+            public String node1;
+            public String node2;
+            public float range;
+            public long time;
+        }
+        public final List<DefiningRange> definingRanges = new ArrayList<DefiningRange>();
+        public final Map<String, float[]> coordinates = new HashMap<String, float[]>();
+    }
+
+    /**
+     * A state is the position [x,y,z] and angle (see below) of a node at a specific time. It also
+     * contains the reference frame through which this state was defined ({@link com.flat.localization.node.Node.CoordinateSystem}).
      * <pre>
-     * Position:
-     * 0:       x position
-     * 1:       y position
-     * 2:       z position
-     *
      * Angle:
      * 0:       angle with respect to left-right axis on a vertically held phone.
      * 1:       angle with respect to the up-down axis on a vertically held phone.
@@ -56,8 +79,8 @@ public final class Node {
      * <a href='http://developer.android.com/guide/topics/sensors/sensors_overview.html#sensors-coords'>http://developer.android.com/guide/topics/sensors/sensors_overview.html#sensors-coords</a>
      */
     public static final class State {
-        public RangeTable[] referenceFrame;
-        public float pos[] = {0,0,0};
+        public CoordinateSystem referenceFrame;
+        public float pos[] = {0,0,0};           // TODO put the position of the local node in the coordinate system?
         public float angle[] = {0,0,0};
         public String algorithm = "none";
         public long time = System.currentTimeMillis();
@@ -73,27 +96,10 @@ public final class Node {
         }
     }
 
-    public static final class RangeTable {
-        // Node ID, Range, Timestamp
-        public final Map<String, Pair<Float, Long>> ranges = Collections.synchronizedMap(new HashMap<String, Pair<Float, Long>>());
-        // Node ID of owner
-        public final String id;
-        public RangeTable(String id) { this.id = id; }
-    }
-
-    public List<State> findStates(RangeTable... tables) {
+    public List<State> findStates(List<RangeTable> remoteRangeTables) {
         List<State> states = new ArrayList<State>();
 
         return states;
-    }
-
-
-    private Map<String, Pair<Float, Long>> rangeTable;
-    public void setRangeTable(Map<String, Pair<Float, Long>> table) {
-        rangeTable = table;
-    }
-    public Map<String, Pair<Float, Long>> getRangeTable() {
-        return rangeTable;
     }
 
 
