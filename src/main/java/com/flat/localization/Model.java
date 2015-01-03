@@ -4,7 +4,7 @@ import android.util.Pair;
 
 import com.flat.localization.node.Node;
 import com.flat.localization.signal.rangingandprocessing.SignalInterpreter;
-import com.flat.localization.coordinatesystem.LocationAlgorithm;
+import com.flat.localization.algorithm.LocationAlgorithm;
 import com.flat.localization.signal.Signal;
 
 import java.util.ArrayList;

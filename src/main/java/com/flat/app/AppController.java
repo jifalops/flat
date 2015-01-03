@@ -13,7 +13,7 @@ import com.android.volley.toolbox.Volley;
 import com.flat.localization.Controller;
 import com.flat.localization.Model;
 import com.flat.localization.node.Node;
-import com.flat.localization.coordinatesystem.LocationAlgorithm;
+import com.flat.localization.algorithm.LocationAlgorithm;
 import com.flat.localization.signal.Signal;
 import com.flat.nsd.NsdHelper;
 import com.flat.nsd.sockets.MyConnectionSocket;

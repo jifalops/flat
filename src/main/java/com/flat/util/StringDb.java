@@ -169,7 +169,7 @@ public class StringDb {
             String[] cols;
             boolean first = true;
             for (String row : rows) {
-                cols = colDelim.decode(row.toString());
+                cols = colDelim.decode(row);
                 if (first) {
                     if (headerRow) {
                         forceFields(cols);

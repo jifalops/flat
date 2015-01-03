@@ -1,4 +1,4 @@
-package com.flat.localization.coordinatesystem;
+package com.flat.localization.algorithm;
 
 import com.flat.localization.node.Node;
 

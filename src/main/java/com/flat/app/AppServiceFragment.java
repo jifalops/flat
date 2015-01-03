@@ -13,7 +13,7 @@ import android.widget.TextView;
 import com.flat.R;
 import com.flat.localization.Model;
 import com.flat.localization.node.Node;
-import com.flat.localization.coordinatesystem.LocationAlgorithm;
+import com.flat.localization.algorithm.LocationAlgorithm;
 import com.flat.localization.signal.Signal;
 import com.flat.util.app.PersistentIntentService;
 import com.flat.util.app.PersistentIntentServiceFragment;
