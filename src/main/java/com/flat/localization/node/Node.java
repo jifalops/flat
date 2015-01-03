@@ -96,10 +96,15 @@ public final class Node {
         }
     }
 
-    public List<State> findStates(List<RangeTable> remoteRangeTables) {
-        List<State> states = new ArrayList<State>();
+    /**
+     * Find valid coordinate systems based on a list of range tables. The returned list should be the
+     * minimal set of coordinate systems
+     * TODO nodes will pass their known coordinate systems along with their range table. ... They must choose one coord system to pass (current state)
+     */
+    public List<CoordinateSystem> doSomethingLikeMultilateration(List<RangeTable> knownRangeTablesIncludingMyOwn) {
+        List<CoordinateSystem> frames = new ArrayList<CoordinateSystem>();
 
-        return states;
+        return frames;
     }
 
 
