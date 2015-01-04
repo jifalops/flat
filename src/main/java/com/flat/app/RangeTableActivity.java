@@ -21,8 +21,8 @@ import android.widget.ListView;
 import android.widget.TextView;
 
 import com.flat.R;
-import com.flat.localization.data.Model;
 import com.flat.localization.Node;
+import com.flat.localization.NodeManager;
 
 import java.util.List;
 
@@ -74,13 +74,11 @@ public class RangeTableActivity extends Activity {
 
 
     public static class RangeTableFragment extends ListFragment {
-        Model model;
         ColorStateList colors;
 
         @Override
         public void onCreate(Bundle savedInstanceState) {
             super.onCreate(savedInstanceState);
-            model = Model.getInstance();
             setListAdapter(new RangeTableAdapter());
         }
 
@@ -92,7 +90,7 @@ public class RangeTableActivity extends Activity {
 
         }
 
-        private final Model.ModelListener modelListener = new Model.ModelListener() {
+        private final NodeManager.NodeManagerListener nodeManagerListener = new NodeManager.NodeManagerListener() {
             @Override
             public void onNodeAdded(Node n) {
                 ((BaseAdapter) getListAdapter()).notifyDataSetChanged();
@@ -112,7 +110,7 @@ public class RangeTableActivity extends Activity {
 
             @Override
             public void onRangeChanged(Node n, Node.Range r) {
-                List<Node> nodes = model.getNodesCopy();
+                List<Node> nodes = AppController.getInstance().nodeManager.getNodes(false);
                 for (int i=0; i<nodes.size(); ++i) {
                     if (n == nodes.get(i)) {
                         View container = getViewByPosition(i, getListView());
@@ -151,7 +149,7 @@ public class RangeTableActivity extends Activity {
 
         private class RangeTableAdapter extends ArrayAdapter<Node> {
             public RangeTableAdapter() {
-                super(getActivity(), R.layout.range_table_item, model.getNodesCopy());
+                super(getActivity(), R.layout.range_table_item, AppController.getInstance().nodeManager.getNodes(false));
             }
 
             @Override
@@ -174,7 +172,7 @@ public class RangeTableActivity extends Activity {
 
                 if (colors == null) colors = holder.dist.getTextColors();
 
-                final Node node = model.getNode(position);
+                final Node node = AppController.getInstance().nodeManager.getNode(position);
 
 
                 final SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getActivity());
@@ -255,8 +253,8 @@ public class RangeTableActivity extends Activity {
         @Override
         public void onPause() {
             super.onPause();
-            model.unregisterListener(modelListener);
-            for (Node n : model.getNodesCopy()) {
+            AppController.getInstance().nodeManager.unregisterListener(nodeManagerListener);
+            for (Node n : AppController.getInstance().nodeManager.getNodes(false)) {
                 n.unregisterListener(nodeListener);
             }
         }
@@ -264,8 +262,8 @@ public class RangeTableActivity extends Activity {
         @Override
         public void onResume() {
             super.onResume();
-            model.registerListener(modelListener);
-            for (Node n : model.getNodesCopy()) {
+            AppController.getInstance().nodeManager.registerListener(nodeManagerListener);
+            for (Node n : AppController.getInstance().nodeManager.getNodes(false)) {
                 n.registerListener(nodeListener);
             }
         }

@@ -11,8 +11,8 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import com.flat.R;
-import com.flat.localization.data.Model;
 import com.flat.localization.Node;
+import com.flat.localization.NodeManager;
 import com.flat.localization.algorithm.LocationAlgorithm;
 import com.flat.localization.signal.Signal;
 import com.flat.util.app.PersistentIntentService;
@@ -28,8 +28,6 @@ public class AppServiceFragment extends PersistentIntentServiceFragment {
 
     private ImageView signalDot, algDot, rangeDot;
     private TextView signalSummary, algSummary, rangeSummary;
-
-    Model model;
 
 
     @Override
@@ -65,54 +63,39 @@ public class AppServiceFragment extends PersistentIntentServiceFragment {
     }
 
     private void registerListeners() {
-        for (Signal s : model.getSignals()) {
-            s.registerListener(signalListener);
-        }
-
-        for (LocationAlgorithm la: model.getAlgorithms()) {
-            la.registerListener(algListener);
-        }
-
-        for (Node n : model.getNodesCopy()) {
+        AppController.getInstance().signalManager.registerListener(signalListener);
+        AppController.getInstance().algorithmManager.registerListener(algListener);
+        for (Node n : AppController.getInstance().nodeManager.getNodes(false)) {        // TODO something not right, ranges affect other nodes while state affects the local node
             n.registerListener(nodeListener);
         }
-
-        model.registerListener(modelListener);
-
+        AppController.getInstance().nodeManager.registerListener(nodeManagerListener);
     }
 
     private void unregisterListeners() {
-        for (Signal s : model.getSignals()) {
-            s.unregisterListener(signalListener);
-        }
-
-        for (LocationAlgorithm la: model.getAlgorithms()) {
-            la.unregisterListener(algListener);
-        }
-
-        for (Node n : model.getNodesCopy()) {
+        AppController.getInstance().signalManager.unregisterListener(signalListener);
+        AppController.getInstance().algorithmManager.unregisterListener(algListener);
+        for (Node n : AppController.getInstance().nodeManager.getNodes(false)) {
             n.unregisterListener(nodeListener);
         }
-
-        model.unregisterListener(modelListener);
+        AppController.getInstance().nodeManager.unregisterListener(nodeManagerListener);
     }
 
     private void updateSummaries() {
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getActivity());
 
         int count = 0;
-        for (Signal s : Model.getInstance().getSignals()) {
+        for (Signal s : AppController.getInstance().signalManager.getSignals()) {
             if (prefs.getBoolean(s.getName(), false)) ++count;
         }
         signalSummary.setText(count + " enabled");
 
         count = 0;
-        for (LocationAlgorithm la : Model.getInstance().getAlgorithms()) {
+        for (LocationAlgorithm la : AppController.getInstance().algorithmManager.getAlgorithms()) {
             if (prefs.getBoolean(la.getName(), false)) ++count;
         }
         algSummary.setText(count + " enabled");
 
-        rangeSummary.setText(model.getNodeCount() + " nodes in range (this app instance)");
+        rangeSummary.setText(AppController.getInstance().nodeManager.getNodeCount() + " nodes in range (this app instance)");
     }
 
 
@@ -131,11 +114,11 @@ public class AppServiceFragment extends PersistentIntentServiceFragment {
         }
     };
 
-    private final Model.ModelListener modelListener = new Model.ModelListener() {
+    private final NodeManager.NodeManagerListener nodeManagerListener = new NodeManager.NodeManagerListener() {
         @Override
         public void onNodeAdded(Node n) {
             n.registerListener(nodeListener);
-            rangeSummary.setText(model.getNodeCount() + " nodes in range (this app instance)");
+            rangeSummary.setText(AppController.getInstance().nodeManager.getNodeCount() + " nodes in range (this app instance)");
         }
     };
 
@@ -177,7 +160,6 @@ public class AppServiceFragment extends PersistentIntentServiceFragment {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         showPersistControl(false);
-        model = Model.getInstance();
     }
 
     @Override

@@ -16,17 +16,14 @@ public abstract class PositionAlgorithm implements LocationAlgorithm {
 
     private Set<AlgorithmListener> listeners = new HashSet<AlgorithmListener>(1);
     @Override
-    public void registerListener(AlgorithmListener l) {
-        listeners.add(l);
+    public boolean registerListener(AlgorithmListener l) {
+        if (listeners.contains(l)) return false;
+        return listeners.add(l);
     }
 
     @Override
-    public void unregisterListener(AlgorithmListener l) {
-        if (l == null) {
-            listeners.clear();
-        } else {
-            listeners.remove(l);
-        }
+    public boolean unregisterListener(AlgorithmListener l) {
+        return listeners.remove(l);
     }
 
     @Override

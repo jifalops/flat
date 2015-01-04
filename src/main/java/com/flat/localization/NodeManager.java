@@ -6,9 +6,7 @@ import android.preference.PreferenceManager;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 /**
  * @author Jacob Phillips (01/2015, jphilli85 at gmail)
@@ -18,24 +16,26 @@ public class NodeManager {
     private final SharedPreferences prefs;
 
     /** This is a list of all nodes NOT including the local node */
-    private final Set<Node> nodes = Collections.synchronizedSet(new HashSet<Node>());
+    private final List<Node> nodes = Collections.synchronizedList(new ArrayList<Node>());
     public boolean addNode(Node n) {
-        if (nodes.add(n)) {
-//            n.registerListener(nodeListener);
-            n.readPrefs(prefs);
-            return true;
-        }
-        return false;
+        if (nodes.contains(n)) return false;
+        nodes.add(n);
+//      n.registerListener(nodeListener);
+        n.readPrefs(prefs);
+        return true;
     }
 
     /** @return a new copy of the set of known nodes */
-    public Set<Node> getNodes(boolean includeLocalNode) {
-        Set<Node> nodeSet = new HashSet<Node>(nodes);
-        if (includeLocalNode) nodeSet.add(localNode);
-        return nodeSet;
+    public List<Node> getNodes(boolean includeLocalNode) {
+        List<Node> list = new ArrayList<Node>(nodes);
+        if (includeLocalNode) list.add(localNode);
+        return list;
     }
     public int getNodeCount() {
         return nodes.size();
+    }
+    public Node getNode(int index) {
+        return nodes.get(index);
     }
     public Node getNode(String id) {
         for (Node n : nodes) {

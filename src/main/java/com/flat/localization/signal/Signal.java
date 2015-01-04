@@ -21,8 +21,8 @@ public interface Signal {
     void disable(Context ctx);
     boolean isEnabled();
 
-    void registerListener(SignalListener signalListener);
-    void unregisterListener(SignalListener signalListener);
+    boolean registerListener(SignalListener signalListener);
+    boolean unregisterListener(SignalListener signalListener);
 
     /*
      * Allow other objects to react to signal changes.

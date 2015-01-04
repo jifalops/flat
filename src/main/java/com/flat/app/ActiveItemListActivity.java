@@ -19,7 +19,9 @@ import android.widget.TextView;
 import com.flat.R;
 import com.flat.localization.Node;
 import com.flat.localization.algorithm.LocationAlgorithm;
+import com.flat.localization.algorithm.LocationAlgorithmManager;
 import com.flat.localization.signal.Signal;
+import com.flat.localization.signal.SignalManager;
 import com.flat.localization.signal.interpreters.SignalInterpreter;
 
 import java.util.ArrayList;
@@ -82,19 +84,18 @@ public class ActiveItemListActivity extends Activity {
 
 
     public static class SignalFragment extends ListFragment {
-        Model model;
+        SignalManager manager = AppController.getInstance().signalManager;
 
         @Override
         public void onCreate(Bundle savedInstanceState) {
             super.onCreate(savedInstanceState);
-            model = Model.getInstance();
             setListAdapter(new SignalAdapter());
         }
 
         private final Signal.SignalListener signalListener = new Signal.SignalListener() {
             @Override
             public void onChange(Signal signal, int eventType) {
-                Signal[] signals = model.getSignals();
+                Signal[] signals = manager.getSignals();
                 for (int i=0; i<signals.length; ++i) {
                     if (signal == signals[i]) {
                         View container = getViewByPosition(i, getListView());
@@ -110,7 +111,7 @@ public class ActiveItemListActivity extends Activity {
 
         private class SignalAdapter extends ArrayAdapter<Signal> {
             public SignalAdapter() {
-                super(getActivity(), R.layout.active_item_toggle, model.getSignals());
+                super(getActivity(), R.layout.active_item_toggle, manager.getSignals());
             }
 
             @Override
@@ -131,13 +132,13 @@ public class ActiveItemListActivity extends Activity {
                     holder = (ActiveToggleItemHolder) convertView.getTag();
                 }
 
-                final Signal signal = model.getSignals()[position];
+                final Signal signal = manager.getSignals()[position];
                 //signal.registerListener(signalListener);
 
                 holder.name.setText(signal.getName());
 
                 List<String> processors = new ArrayList<String>();
-                for (SignalInterpreter rp : model.getRangingProcessors(signal)) {
+                for (SignalInterpreter rp : manager.getInterpreters(signal)) {
                     processors.add(rp.getName());
                 }
                 holder.desc.setText(TextUtils.join(", ", processors));
@@ -168,17 +169,13 @@ public class ActiveItemListActivity extends Activity {
         @Override
         public void onPause() {
             super.onPause();
-            for (Signal s : model.getSignals()) {
-                s.unregisterListener(signalListener);
-            }
+            manager.unregisterListener(signalListener);
         }
 
         @Override
         public void onResume() {
             super.onResume();
-            for (Signal s : model.getSignals()) {
-                s.registerListener(signalListener);
-            }
+            manager.registerListener(signalListener);
         }
     }
 
@@ -187,19 +184,18 @@ public class ActiveItemListActivity extends Activity {
 
 
     public static class AlgorithmFragment extends ListFragment {
-        Model model;
+        LocationAlgorithmManager manager = AppController.getInstance().algorithmManager;
 
         @Override
         public void onCreate(Bundle savedInstanceState) {
             super.onCreate(savedInstanceState);
-            model = Model.getInstance();
             setListAdapter(new AlgorithmAdapter());
         }
 
         private final LocationAlgorithm.AlgorithmListener algListener = new LocationAlgorithm.AlgorithmListener() {
             @Override
             public void onApplied(LocationAlgorithm la, Node target, List<Node> references) {
-                LocationAlgorithm[] algs = model.getAlgorithms();
+                LocationAlgorithm[] algs = manager.getAlgorithms();
                 for (int i=0; i<algs.length; ++i) {
                     if (la == algs[i]) {
                         View container = getViewByPosition(i, getListView());
@@ -217,7 +213,7 @@ public class ActiveItemListActivity extends Activity {
 
         private class AlgorithmAdapter extends ArrayAdapter<LocationAlgorithm> {
             public AlgorithmAdapter() {
-                super(getActivity(), R.layout.active_item_toggle, model.getAlgorithms());
+                super(getActivity(), R.layout.active_item_toggle, manager.getAlgorithms());
             }
 
             @Override
@@ -238,7 +234,7 @@ public class ActiveItemListActivity extends Activity {
                     holder = (ActiveToggleItemHolder) convertView.getTag();
                 }
 
-                final LocationAlgorithm alg = model.getAlgorithms()[position];
+                final LocationAlgorithm alg = manager.getAlgorithms()[position];
                 //alg.registerListener(algListener);
 
                 holder.name.setText(alg.getName());
@@ -269,17 +265,13 @@ public class ActiveItemListActivity extends Activity {
         @Override
         public void onPause() {
             super.onPause();
-            for (LocationAlgorithm la : model.getAlgorithms()) {
-                la.unregisterListener(algListener);
-            }
+            manager.unregisterListener(algListener);
         }
 
         @Override
         public void onResume() {
             super.onResume();
-            for (LocationAlgorithm la : model.getAlgorithms()) {
-                la.registerListener(algListener);
-            }
+            manager.registerListener(algListener);
         }
     }
 

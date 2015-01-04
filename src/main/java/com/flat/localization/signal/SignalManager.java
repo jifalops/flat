@@ -10,7 +10,6 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 /**
  * @author Jacob Phillips (01/2015, jphilli85 at gmail)
@@ -50,13 +49,25 @@ public class SignalManager {
     public int getSignalCount() {
         return signals.size();
     }
-    public Set<Signal> getSignals() {
-        return signals.keySet();
+    public Signal[] getSignals() {
+        return signals.keySet().toArray(new Signal[signals.size()]);
     }
     public List<SignalInterpreter> getInterpreters(Signal signal) {
         return signals.get(signal);
     }
     public void addSignal(Signal signal, List<SignalInterpreter> processors) {
         signals.put(signal, processors);
+    }
+
+
+    public void registerListener(Signal.SignalListener l) {
+        for (Signal s : signals.keySet()) {
+            s.registerListener(l);
+        }
+    }
+    public void unregisterListener(Signal.SignalListener l) {
+        for (Signal s : signals.keySet()) {
+            s.unregisterListener(l);
+        }
     }
 }

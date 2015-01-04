@@ -7,7 +7,6 @@ import android.preference.PreferenceManager;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Set;
 
 /**
  * @author Jacob Phillips (01/2015, jphilli85 at gmail)
@@ -52,8 +51,8 @@ public class LocationAlgorithmManager {
         return algorithms.size();
     }
 
-    public Set<LocationAlgorithm> getAlgorithms() {
-        return algorithms.keySet();
+    public LocationAlgorithm[] getAlgorithms() {
+        return algorithms.keySet().toArray(new LocationAlgorithm[algorithms.size()]);
     }
 
     public Criteria.AlgorithmMatchCriteria getCriteria(LocationAlgorithm la) {
@@ -62,5 +61,18 @@ public class LocationAlgorithmManager {
 
     public void addAlgorithm(LocationAlgorithm la, Criteria.AlgorithmMatchCriteria amc) {
         algorithms.put(la, amc);
+    }
+
+
+
+    public void registerListener(LocationAlgorithm.AlgorithmListener l) {
+        for (LocationAlgorithm la : algorithms.keySet()) {
+            la.registerListener(l);
+        }
+    }
+    public void unregisterListener(LocationAlgorithm.AlgorithmListener l) {
+        for (LocationAlgorithm la : algorithms.keySet()) {
+            la.unregisterListener(l);
+        }
     }
 }

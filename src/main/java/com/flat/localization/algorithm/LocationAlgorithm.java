@@ -23,7 +23,7 @@ public interface LocationAlgorithm {
     interface AlgorithmListener {
         void onApplied(LocationAlgorithm la, Node target, List<Node> references);
     }
-    void registerListener(AlgorithmListener l);
-    void unregisterListener(AlgorithmListener l);
+    boolean registerListener(AlgorithmListener l);
+    boolean unregisterListener(AlgorithmListener l);
 //    void notifyListeners(Node target, List<Node> references);
 }

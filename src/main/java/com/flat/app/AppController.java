@@ -89,7 +89,7 @@ public class AppController extends Application {
     }
 
     private void initializeStaticData() {
-        Signals.initialize(signalManager);
+        Signals.initialize(signalManager, nodeManager);
         LocationAlgorithms.initialize(algorithmManager);
     }
 
