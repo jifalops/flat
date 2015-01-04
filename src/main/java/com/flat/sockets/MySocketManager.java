@@ -1,4 +1,4 @@
-package com.flat.nsd.sockets;
+package com.flat.sockets;
 
 import android.os.Bundle;
 import android.os.Handler;

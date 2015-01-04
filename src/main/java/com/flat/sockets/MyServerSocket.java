@@ -1,4 +1,4 @@
-package com.flat.nsd.sockets;
+package com.flat.sockets;
 
 import android.util.Log;
 

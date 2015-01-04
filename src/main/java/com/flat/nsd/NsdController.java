@@ -4,10 +4,10 @@ import android.content.Context;
 import android.net.nsd.NsdServiceInfo;
 import android.util.Log;
 
-import com.flat.nsd.sockets.MyConnectionSocket;
-import com.flat.nsd.sockets.MyServerSocket;
-import com.flat.nsd.sockets.MySocketManager;
-import com.flat.nsd.sockets.Sockets;
+import com.flat.sockets.MyConnectionSocket;
+import com.flat.sockets.MyServerSocket;
+import com.flat.sockets.MySocketManager;
+import com.flat.sockets.Sockets;
 
 import java.net.ServerSocket;
 import java.net.Socket;

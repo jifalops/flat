@@ -2,27 +2,13 @@ package com.flat.app;
 
 import android.app.Application;
 import android.content.SharedPreferences;
-import android.net.nsd.NsdServiceInfo;
 import android.preference.PreferenceManager;
-import android.text.TextUtils;
-import android.util.Log;
 
-import com.android.volley.Request;
-import com.android.volley.RequestQueue;
-import com.android.volley.toolbox.Volley;
-import com.flat.localization.Controller;
-import com.flat.localization.Model;
+import com.flat.data.Controller;
+import com.flat.data.Model;
 import com.flat.localization.node.Node;
 import com.flat.localization.algorithm.LocationAlgorithm;
 import com.flat.localization.signal.Signal;
-import com.flat.nsd.NsdHelper;
-import com.flat.nsd.sockets.MyConnectionSocket;
-import com.flat.nsd.sockets.MyServerSocket;
-import com.flat.nsd.sockets.MySocketManager;
-import com.flat.nsd.sockets.Sockets;
-
-import java.net.ServerSocket;
-import java.net.Socket;
 
 public class AppController extends Application {
 

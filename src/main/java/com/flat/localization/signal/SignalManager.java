@@ -1,5 +1,9 @@
 package com.flat.localization.signal;
 
+import android.content.Context;
+import android.content.SharedPreferences;
+import android.preference.PreferenceManager;
+
 import com.flat.localization.signal.interpreters.SignalInterpreter;
 
 import java.util.Collections;
@@ -15,6 +19,19 @@ public class SignalManager {
 
     /** All Signals and which ranging algorithms they can use */
     private final Map<Signal, List<SignalInterpreter>> signals = Collections.synchronizedMap(new LinkedHashMap<Signal, List<SignalInterpreter>>());
+    private final SharedPreferences prefs;
+
+    public SignalManager(Context context) {
+        prefs = PreferenceManager.getDefaultSharedPreferences(context);
+    }
+
+    public void setEnabledPreference(Signal s, boolean enabled) {
+        prefs.edit().putBoolean(s.getName(), enabled).apply();
+    }
+
+    public boolean getEnabledPreference(Signal s) {
+        return prefs.getBoolean(s.getName(), false);
+    }
 
 
     public int getSignalCount() {

@@ -1,4 +1,4 @@
-package com.flat.localization;
+package com.flat.data;
 
 import android.util.Pair;
 
