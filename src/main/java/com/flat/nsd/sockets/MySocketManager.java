@@ -14,24 +14,16 @@ import java.util.List;
 
 /**
  * The socket manager takes care of the higher level aspects of maintaining client/server sockets
- * such as attempting to retry client connections that fail.
+ * such as attempting to retry client connections that fail. Each instance manages one server and a
+ * list of clients/connections.
  *
  * @author Jacob Phillips (12/2014, jphilli85 at gmail)
  */
 public class MySocketManager {
     private static final String TAG = MySocketManager.class.getSimpleName();
 
-    /*
-     * Simple Singleton
-     */
-    private MySocketManager() {}
-    private static final MySocketManager instance = new MySocketManager();
-    public static MySocketManager getInstance() { return instance; }
-
-
-
     private final List<MyConnectionSocket> connections = Collections.synchronizedList(new ArrayList<MyConnectionSocket>());
-    private MyServerSocket server;
+    private final MyServerSocket server = new MyServerSocket();
 
     public int send(String msg) {
         int count = 0;
@@ -50,19 +42,17 @@ public class MySocketManager {
         return false;
     }
 
-
     public synchronized void startServer() {
-        stopServer();
-        server = new MyServerSocket();
+        startServer(server.getPort());
+    }
+    public synchronized void startServer(int port) {
         server.registerListener(serverListener);
-        server.start();
+        server.start(port);
     }
 
     public synchronized void stopServer() {
-        if (server != null) {
-            server.stop();
-            server.unregisterListener(serverListener);
-        }
+        server.stop();
+        server.unregisterListener(serverListener);
     }
 
     public synchronized boolean startConnection(MyConnectionSocket mcs) {

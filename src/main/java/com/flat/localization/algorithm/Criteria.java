@@ -1,4 +1,4 @@
-package com.flat.localization;
+package com.flat.localization.algorithm;
 
 import android.util.Log;
 

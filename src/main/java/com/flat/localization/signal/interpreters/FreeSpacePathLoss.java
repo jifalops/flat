@@ -1,4 +1,4 @@
-package com.flat.localization.signal.rangingandprocessing;
+package com.flat.localization.signal.interpreters;
 
 /**
  * Created by Jacob Phillips (10/2014)

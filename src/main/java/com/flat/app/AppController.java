@@ -28,7 +28,7 @@ public class AppController extends Application {
 
 	public static final String TAG = AppController.class.getSimpleName();
 
-	private RequestQueue mRequestQueue;
+
 
 	private static AppController sInstance;
     public static synchronized AppController getInstance() {
@@ -43,8 +43,7 @@ public class AppController extends Application {
     private Controller controller;
     private Model model;
 
-    private MySocketManager socketManager;
-    private NsdHelper mNsdHelper;
+
 
 
 	@Override
@@ -56,46 +55,12 @@ public class AppController extends Application {
         model = Model.getInstance();
         model.registerListener(modelListener); // TODO need to unregister?
 
-        mNsdHelper = new NsdHelper(this, nsdCallbacks);
-        socketManager = MySocketManager.getInstance();
+
     }
 
-	public RequestQueue getRequestQueue() {
-		if (mRequestQueue == null) {
-			mRequestQueue = Volley.newRequestQueue(getApplicationContext());
-		}
-		return mRequestQueue;
-	}
 
-	public <T> void addToRequestQueue(Request<T> req, String tag) {
-		// set the default tag if tag is empty
-		req.setTag(TextUtils.isEmpty(tag) ? TAG : tag);
-		getRequestQueue().add(req);
-	}
 
-	public <T> void addToRequestQueue(Request<T> req) {
-		req.setTag(TAG);
-		getRequestQueue().add(req);
-	}
 
-	public void cancelPendingRequests(Object tag) {
-		if (mRequestQueue != null) {
-			mRequestQueue.cancelAll(tag);
-		}
-	}
-
-    public void enableNsd() {
-        mNsdHelper.initializeNsd();
-        socketManager.registerListener(socketListener);
-        socketManager.startServer();
-    }
-
-    public void disableNsd() {
-        socketManager.stopServer();
-        socketManager.stopConnections();
-        mNsdHelper.unregisterService();
-        socketManager.unregisterListener(socketListener);
-    }
 
     public boolean isEnabled() {
         return enabled;
@@ -135,49 +100,5 @@ public class AppController extends Application {
     };
 
 
-    private final MySocketManager.SocketListener socketListener = new MySocketManager.SocketListener() {
 
-        @Override
-        public void onServerAcceptedClientSocket(MyServerSocket mss, Socket socket) {
-            Log.i(TAG, "Server accepted socket to " + Sockets.toString(socket));
-        }
-
-        @Override
-        public void onServerFinished(MyServerSocket mss) {
-            Log.v(TAG, "Server on port " + mss.getPort() + " closed. It had accepted " + mss.getAcceptCount() + " sockets total.");
-        }
-
-        @Override
-        public void onServerSocketListening(MyServerSocket mss, ServerSocket ss) {
-            Log.v(TAG, "Server now listening on port " + ss.getLocalPort());
-            mNsdHelper.registerService(ss.getLocalPort());
-        }
-
-        @Override
-        public void onMessageSent(MyConnectionSocket mcs, String msg) {
-            Log.v(TAG, "Sent message to " + Sockets.toString(mcs.getSocket()));
-        }
-
-        @Override
-        public void onMessageReceived(MyConnectionSocket mcs, String msg) {
-            Log.v(TAG, "Received message from " + Sockets.toString(mcs.getSocket()));
-        }
-
-        @Override
-        public void onClientFinished(MyConnectionSocket mcs) {
-            Log.v(TAG, "Client finished: " + Sockets.toString(mcs.getAddress(), mcs.getPort()));
-        }
-
-        @Override
-        public void onClientSocketCreated(MyConnectionSocket mcs, Socket socket) {
-            Log.v(TAG, "Client socket created for " + Sockets.toString(socket));
-        }
-    };
-
-    private final NsdHelper.Callbacks nsdCallbacks = new NsdHelper.Callbacks() {
-        @Override
-        public void onAcceptableServiceResolved(NsdServiceInfo info) {
-            socketManager.startConnection(new MyConnectionSocket(info.getHost(), info.getPort()));
-        }
-    };
 }

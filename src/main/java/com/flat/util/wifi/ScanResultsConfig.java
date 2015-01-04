@@ -3,7 +3,7 @@ package com.flat.util.wifi;
 import android.content.Context;
 import android.net.wifi.ScanResult;
 
-import com.flat.localization.signal.rangingandprocessing.FreeSpacePathLoss;
+import com.flat.localization.signal.interpreters.FreeSpacePathLoss;
 import com.flat.util.Util;
 
 import java.io.File;

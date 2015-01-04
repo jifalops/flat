@@ -8,7 +8,7 @@ import com.flat.bluetooth.BluetoothConnection;
 import com.flat.bluetooth.BluetoothConnectionManager;
 import com.flat.bluetooth.TimingLog;
 import com.flat.bluetooth.connection.DataPacket;
-import com.flat.localization.signal.rangingandprocessing.RoundTripTime;
+import com.flat.localization.signal.interpreters.RoundTripTime;
 import com.flat.util.app.PersistentIntentService;
 import com.flat.util.io.Connection;
 

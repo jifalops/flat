@@ -1,4 +1,4 @@
-package com.flat.localization.signal.rangingandprocessing;
+package com.flat.localization.signal.interpreters;
 
 /**
  * These process signals into one-dimensional ranges (no direction).

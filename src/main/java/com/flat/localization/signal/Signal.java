@@ -27,7 +27,4 @@ public interface Signal {
     interface SignalListener {
         void onChange(Signal signal, int eventType);
     }
-    void registerListener(SignalListener l);
-    void unregisterListener(SignalListener l);
-    void notifyListeners(int eventType);
 }

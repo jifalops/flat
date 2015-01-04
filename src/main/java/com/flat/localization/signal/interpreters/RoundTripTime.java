@@ -1,4 +1,4 @@
-package com.flat.localization.signal.rangingandprocessing;
+package com.flat.localization.signal.interpreters;
 
 import com.flat.localization.util.Const;
 

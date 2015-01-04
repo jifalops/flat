@@ -27,7 +27,7 @@ public final class Node {
      * interpreting an external signal such as a wifi beacon.
      *
      * {@link com.flat.localization.signal.Signal}
-     * {@link com.flat.localization.signal.rangingandprocessing.SignalInterpreter}
+     * {@link com.flat.localization.signal.interpreters.SignalInterpreter}
      */
     public static final class Range {
         public float range = 0;
@@ -105,6 +105,11 @@ public final class Node {
         List<CoordinateSystem> frames = new ArrayList<CoordinateSystem>();
 
         return frames;
+    }
+
+    public CoordinateSystem findBestCoordinateSystem(List<CoordinateSystem> coords) {
+
+        return null;
     }
 
 

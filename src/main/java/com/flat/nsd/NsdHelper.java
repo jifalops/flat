@@ -19,15 +19,16 @@ package com.flat.nsd;
 import android.content.Context;
 import android.net.nsd.NsdManager;
 import android.net.nsd.NsdServiceInfo;
-import android.text.TextUtils;
 import android.util.Log;
 
 import com.flat.localization.util.Util;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class NsdHelper {
     private static final String TAG = NsdHelper.class.getSimpleName();
-    private static final String SERVICE_TYPE = "_http._tcp.";
-    private static final String SERVICE_PREFIX = "flatloco_";
+    public static final String SERVICE_TYPE = "_http._tcp.";
 
     Context mContext;
 
@@ -37,21 +38,18 @@ public class NsdHelper {
     NsdManager.RegistrationListener mRegistrationListener;
 
     private String mServiceName;
-    private String mMac;
     private boolean registered;
 
-    public static interface Callbacks {
-        void onAcceptableServiceResolved(NsdServiceInfo info);
+    public static interface NsdServiceFilter {
+        boolean isAcceptableService(NsdServiceInfo info);
     }
-    private final Callbacks mCallbacks;
+    private final NsdServiceFilter mFilter;
 
-    public NsdHelper(Context context, Callbacks callbacks) {
+    public NsdHelper(Context context, String serviceName, NsdServiceFilter filter) {
         mContext = context;
-        mCallbacks = callbacks;
+        mFilter = filter;
         mNsdManager = (NsdManager) context.getSystemService(Context.NSD_SERVICE);
-        mMac = Util.getWifiMac(context);
-        if (TextUtils.isEmpty(mMac)) mMac = "00:00:00:00:00:00";
-        mServiceName = SERVICE_PREFIX + mMac;
+        mServiceName = serviceName;
     }
 
     public void initializeNsd() {
@@ -80,7 +78,7 @@ public class NsdHelper {
                     Log.d(TAG, "Unknown Service Type: " + service.getServiceType());
                 } else if (service.getServiceName().equals(mServiceName)) {
                     Log.d(TAG, "Same machine: " + mServiceName);
-                } else if (service.getServiceName().startsWith(SERVICE_PREFIX)) {
+                } else if (mFilter.isAcceptableService(service)) {
                     resolveService(service);
                 }
             }
@@ -88,7 +86,6 @@ public class NsdHelper {
             @Override
             public void onServiceLost(NsdServiceInfo service) {
                 Log.e(TAG, "service lost " + service);
-                // TODO remove connection in socketmanager
             }
             
             @Override
@@ -149,7 +146,9 @@ public class NsdHelper {
                     return;
                 }
 
-                mCallbacks.onAcceptableServiceResolved(serviceInfo);
+                for (NsdHelperListener l : listeners) {
+                    l.onAcceptableServiceResolved(serviceInfo);
+                }
             }
         };
     }
@@ -167,6 +166,9 @@ public class NsdHelper {
             public void onServiceRegistered(NsdServiceInfo nsdServiceInfo) {
                 mServiceName = nsdServiceInfo.getServiceName();
                 Log.e(TAG, "Registered service " + nsdServiceInfo.getServiceName());
+                for (NsdHelperListener l : listeners) {
+                    l.onServiceRegistered(nsdServiceInfo);
+                }
             }
 
             @Override
@@ -254,5 +256,23 @@ public class NsdHelper {
             return service.getHost().getHostAddress() + ":" + service.getPort();
         } catch (NullPointerException ignored) {}
         return null;
+    }
+
+
+
+    /**
+     * Allow other objects to react to events. Called on main thread.
+     */
+    public static interface NsdHelperListener {
+        void onServiceRegistered(NsdServiceInfo info);
+        void onAcceptableServiceResolved(NsdServiceInfo info);
+    }
+    private final List<NsdHelperListener> listeners = new ArrayList<NsdHelperListener>(1);
+    public boolean registerListener(NsdHelperListener l) {
+        if (listeners.contains(l)) return false;
+        return listeners.add(l);
+    }
+    public boolean unregisterListener(NsdHelperListener l) {
+        return listeners.remove(l);
     }
 }

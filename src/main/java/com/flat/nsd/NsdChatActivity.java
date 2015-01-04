@@ -41,7 +41,7 @@ public class NsdChatActivity extends Activity {
 
     public static final String TAG = NsdChatActivity.class.getSimpleName();
 
-    private MySocketManager socketManager = MySocketManager.getInstance();
+    private final MySocketManager socketManager = new MySocketManager();
 
 
     @Override

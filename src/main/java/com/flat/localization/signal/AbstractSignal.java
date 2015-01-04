@@ -1,11 +1,10 @@
 package com.flat.localization.signal;
 
 
-import java.util.HashSet;
-import java.util.Set;
+import java.util.ArrayList;
+import java.util.List;
 
 public abstract class AbstractSignal implements Signal {
-    private final Set<SignalListener> listeners = new HashSet<SignalListener>(1);
     private final String name;
     private int count = 0;
 
@@ -18,30 +17,26 @@ public abstract class AbstractSignal implements Signal {
         return name;
     }
 
-    @Override
-    public final void registerListener(SignalListener l) {
-        listeners.add(l);
-    }
-
-    @Override
-    public final void unregisterListener(SignalListener l) {
-        if (l == null) {
-            listeners.clear();
-        } else {
-            listeners.remove(l);
-        }
-    }
-
-    @Override
     public final int getChangeCount() {
         return count;
     }
-
-    @Override
     public final void notifyListeners(int eventType) {
         ++count;
         for (SignalListener l : listeners) {
             l.onChange(this, eventType);
         }
+    }
+
+
+    /**
+     * Allow other objects to react to events.
+     */
+    private final List<SignalListener> listeners = new ArrayList<SignalListener>(1);
+    public boolean registerListener(SignalListener l) {
+        if (listeners.contains(l)) return false;
+        return listeners.add(l);
+    }
+    public boolean unregisterListener(SignalListener l) {
+        return listeners.remove(l);
     }
 }

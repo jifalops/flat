@@ -40,9 +40,6 @@ public class MyServerSocket {
         return serverSocket;
     }
 
-    private int port;
-    public void setPort(int p) { port = p; }
-    public int getPort() { return port; }
 
 
     private boolean finished;
@@ -55,10 +52,18 @@ public class MyServerSocket {
         }
     }
 
+    private int port;
+    public int getPort() { return port; }
+
     private Thread thread;
 
+
     public void start() {
+        start(port);
+    }
+    public void start(int port) {
         stop();
+        this.port = port;
         thread = new Thread(new ServerThread());
         thread.start();
     }

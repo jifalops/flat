@@ -2,8 +2,9 @@ package com.flat.localization;
 
 import android.util.Pair;
 
+import com.flat.localization.algorithm.Criteria;
 import com.flat.localization.node.Node;
-import com.flat.localization.signal.rangingandprocessing.SignalInterpreter;
+import com.flat.localization.signal.interpreters.SignalInterpreter;
 import com.flat.localization.algorithm.LocationAlgorithm;
 import com.flat.localization.signal.Signal;
 
