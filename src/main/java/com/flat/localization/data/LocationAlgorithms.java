@@ -1,8 +1,7 @@
-package com.flat.data;
-
-import android.location.LocationManager;
+package com.flat.localization.data;
 
 import com.flat.localization.algorithm.Criteria;
+import com.flat.localization.algorithm.LocationAlgorithmManager;
 import com.flat.localization.algorithm.MinMax;
 import com.flat.localization.algorithm.Trilateration;
 
@@ -10,7 +9,7 @@ import com.flat.localization.algorithm.Trilateration;
  * @author Jacob Phillips (01/2015, jphilli85 at gmail)
  */
 public class LocationAlgorithms {
-    public static void initialize(LocationManager manager) {
+    public static void initialize(LocationAlgorithmManager manager) {
 /*
          * ===================
          * Location Algorithms
@@ -30,7 +29,7 @@ public class LocationAlgorithms {
         nmc.rangePendingCountMin = 1;
         nmc.rangePendingCountMax = Integer.MAX_VALUE;
         criteria.nodeRequirements.add(nmc);
-        model.addAlgorithm(minmax, criteria);
+        manager.addAlgorithm(minmax, criteria);
 
 
 
@@ -58,6 +57,6 @@ public class LocationAlgorithms {
         nmc.posMax = new float[] {Float.MAX_VALUE, Float.MAX_VALUE, Float.MAX_VALUE};
         criteria.nodeListRequirements.add(nmc);
 
-        model.addAlgorithm(trilat, criteria);
+        manager.addAlgorithm(trilat, criteria);
     }
 }

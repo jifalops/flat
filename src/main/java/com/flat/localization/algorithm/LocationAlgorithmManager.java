@@ -33,6 +33,20 @@ public class LocationAlgorithmManager {
         return prefs.getBoolean(la.getName(), false);
     }
 
+    public void enable() {
+        for (LocationAlgorithm la : algorithms.keySet()) {
+            if (getEnabledPreference(la)) {
+                la.setEnabled(true);
+            }
+        }
+    }
+
+    public void disable() {
+        for (LocationAlgorithm la : algorithms.keySet()) {
+            la.setEnabled(false);
+        }
+    }
+
 
     public int getAlgorithmCount() {
         return algorithms.size();

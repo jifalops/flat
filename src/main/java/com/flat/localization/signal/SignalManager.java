@@ -33,6 +33,19 @@ public class SignalManager {
         return prefs.getBoolean(s.getName(), false);
     }
 
+    public void enable(Context ctx) {
+        for (Signal s : signals.keySet()) {
+            if (getEnabledPreference(s)) {
+                s.enable(ctx);
+            }
+        }
+    }
+
+    public void disable(Context ctx) {
+        for (Signal s : signals.keySet()) {
+            s.disable(ctx);
+        }
+    }
 
     public int getSignalCount() {
         return signals.size();

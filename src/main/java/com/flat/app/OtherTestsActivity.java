@@ -8,7 +8,7 @@ import android.os.Bundle;
 import android.widget.Toast;
 
 import com.flat.R;
-import com.flat.nsd.NsdChatActivity;
+import com.flat.nsd.NsdTestingActivity;
 import com.flat.sensors.RotationVectorDemo;
 import com.flat.util.wifi.ScanResultsFragment;
 
@@ -102,7 +102,7 @@ public class OtherTestsActivity extends Activity implements OtherTestsFragment.C
         }
 
         if (item == OtherTestsData.NETWORK_SERVICE_DISCOVERY) {
-            startActivity(new Intent(this, NsdChatActivity.class));
+            startActivity(new Intent(this, NsdTestingActivity.class));
             return;
         }
 

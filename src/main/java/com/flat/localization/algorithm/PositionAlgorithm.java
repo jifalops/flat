@@ -1,6 +1,6 @@
 package com.flat.localization.algorithm;
 
-import com.flat.localization.node.Node;
+import com.flat.localization.Node;
 
 import java.util.HashSet;
 import java.util.List;

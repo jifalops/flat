@@ -21,8 +21,8 @@ import android.widget.ListView;
 import android.widget.TextView;
 
 import com.flat.R;
-import com.flat.data.Model;
-import com.flat.localization.node.Node;
+import com.flat.localization.data.Model;
+import com.flat.localization.Node;
 
 import java.util.List;
 

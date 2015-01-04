@@ -1,4 +1,4 @@
-package com.flat.localization.node;
+package com.flat.localization;
 
 import android.content.SharedPreferences;
 import android.text.TextUtils;
@@ -68,7 +68,7 @@ public final class Node {
 
     /**
      * A state is the position [x,y,z] and angle (see below) of a node at a specific time. It also
-     * contains the reference frame through which this state was defined ({@link com.flat.localization.node.Node.CoordinateSystem}).
+     * contains the reference frame through which this state was defined ({@link Node.CoordinateSystem}).
      * <pre>
      * Angle:
      * 0:       angle with respect to left-right axis on a vertically held phone.

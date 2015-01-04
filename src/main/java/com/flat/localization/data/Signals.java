@@ -1,10 +1,12 @@
-package com.flat.data;
+package com.flat.localization.data;
 
 import android.bluetooth.BluetoothDevice;
 import android.hardware.Sensor;
 import android.net.wifi.ScanResult;
+import android.os.Bundle;
 
-import com.flat.localization.node.Node;
+import com.flat.localization.Node;
+import com.flat.localization.NodeManager;
 import com.flat.localization.signal.AndroidSensor;
 import com.flat.localization.signal.BluetoothBeacon;
 import com.flat.localization.signal.Signal;
@@ -24,7 +26,8 @@ import java.util.List;
  * @author Jacob Phillips (01/2015, jphilli85 at gmail)
  */
 public class Signals {
-    public static void initialize(SignalManager manager) {
+    private static final Bundle extras = new Bundle();
+    public static void initialize(SignalManager signalManager, final NodeManager nodeManager) {
         /*
          * ===========================
          * Signal Processing (ranging)
@@ -43,7 +46,7 @@ public class Signals {
         final LinearAcceleration la = new LinearAcceleration();
         signalProcessors = new ArrayList<SignalInterpreter>(1);
         signalProcessors.add(la);
-        model.addSignal(accelSignal, signalProcessors);
+        signalManager.addSignal(accelSignal, signalProcessors);
 
         // signal change listener
         accelSignal.registerListener(new Signal.SignalListener() {
@@ -63,8 +66,8 @@ public class Signals {
                         extras.putLong(key, state.time);
                         state.pos = la.integrate(accelSignal.getValues(), diff);
                         // incorporate current position into new state
-                        state.pos = Calc.vectorSum(me.getState().pos, state.pos);
-                        me.addPending(state);
+                        state.pos = Calc.vectorSum(nodeManager.getLocalNode().getState().pos, state.pos);
+                        nodeManager.getLocalNode().addPending(state);
                         break;
                     case AndroidSensor.EVENT_ACCURACY_CHANGE:
 
@@ -83,7 +86,7 @@ public class Signals {
         final RotationVector rv = new RotationVector();
         signalProcessors = new ArrayList<SignalInterpreter>(1);
         signalProcessors.add(rv);
-        model.addSignal(rotSignal, signalProcessors);
+        signalManager.addSignal(rotSignal, signalProcessors);
 
         // signal change listener
         rotSignal.registerListener(new Signal.SignalListener() {
@@ -99,7 +102,7 @@ public class Signals {
                         Conv.rad2deg(angle);
                         state.angle = angle;
 
-                        me.addPending(state);
+                        nodeManager.getLocalNode().addPending(state);
                         break;
                     case AndroidSensor.EVENT_ACCURACY_CHANGE:
 
@@ -120,7 +123,7 @@ public class Signals {
         final FreeSpacePathLoss fspl = new FreeSpacePathLoss();
         signalProcessors = new ArrayList<SignalInterpreter>(1);
         signalProcessors.add(fspl);
-        model.addSignal(btSignal, signalProcessors);
+        signalManager.addSignal(btSignal, signalProcessors);
 
         // signal change listener
         btSignal.registerListener(new Signal.SignalListener() {
@@ -139,10 +142,10 @@ public class Signals {
 
                         // TODO using BT mac instead of wifi
                         String mac = btdevice.getAddress();
-                        if (model.getNode(mac) == null) {
-                            model.addNode(new Node(mac));
+                        if (nodeManager.getNode(mac) == null) {
+                            nodeManager.addNode(new Node(mac));
                         }
-                        model.getNode(mac).addPending(range);
+                        nodeManager.getNode(mac).addPending(range);
                         break;
                 }
             }
@@ -160,7 +163,7 @@ public class Signals {
         final FreeSpacePathLoss fspl2 = new FreeSpacePathLoss();
         signalProcessors = new ArrayList<SignalInterpreter>(1);
         signalProcessors.add(fspl2);
-        model.addSignal(wifiSignal, signalProcessors);
+        signalManager.addSignal(wifiSignal, signalProcessors);
 
         // signal change listener
         wifiSignal.registerListener(new Signal.SignalListener() {
@@ -174,10 +177,10 @@ public class Signals {
                             range.interpreter = fspl2.getName();
                             range.time = System.currentTimeMillis(); //sr.timestamp;
                             range.range = fspl2.fromDbMhz(sr.level, sr.frequency);
-                            if (model.getNode(sr.BSSID) == null) {
-                                model.addNode(new Node(sr.BSSID));
+                            if (nodeManager.getNode(sr.BSSID) == null) {
+                                nodeManager.addNode(new Node(sr.BSSID));
                             }
-                            model.getNode(sr.BSSID).addPending(range);
+                            nodeManager.getNode(sr.BSSID).addPending(range);
                         }
                         break;
                 }
@@ -185,10 +188,10 @@ public class Signals {
         });
     }
 
-    private String getKey(Node.Range r) {
+    private static String getKey(Node.Range r) {
         return r.signal + r.interpreter;
     }
-    private String getKey(Signal sig, Node.State st) {
+    private static String getKey(Signal sig, Node.State st) {
         return sig.getName() + st.algorithm;
     }
 }

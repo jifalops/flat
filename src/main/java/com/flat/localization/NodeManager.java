@@ -1,4 +1,8 @@
-package com.flat.localization.node;
+package com.flat.localization;
+
+import android.content.Context;
+import android.content.SharedPreferences;
+import android.preference.PreferenceManager;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -11,17 +15,24 @@ import java.util.Set;
  */
 public class NodeManager {
 
-    /** This is a list of all nodes including the local node */
+    private final SharedPreferences prefs;
+
+    /** This is a list of all nodes NOT including the local node */
     private final Set<Node> nodes = Collections.synchronizedSet(new HashSet<Node>());
     public boolean addNode(Node n) {
         if (nodes.add(n)) {
 //            n.registerListener(nodeListener);
+            n.readPrefs(prefs);
             return true;
         }
         return false;
     }
-    public Set<Node> getNodesCopy() {
-        return new HashSet<Node>(nodes);
+
+    /** @return a new copy of the set of known nodes */
+    public Set<Node> getNodes(boolean includeLocalNode) {
+        Set<Node> nodeSet = new HashSet<Node>(nodes);
+        if (includeLocalNode) nodeSet.add(localNode);
+        return nodeSet;
     }
     public int getNodeCount() {
         return nodes.size();
@@ -35,11 +46,12 @@ public class NodeManager {
 
 
 
-    private Node localNode;
+    private final Node localNode;
     public Node getLocalNode() { return localNode; }
-    public boolean setLocalNode(Node n) {
-        localNode = n;
-        return addNode(n);
+
+    public NodeManager(Context ctx, Node localNode) {
+        prefs = PreferenceManager.getDefaultSharedPreferences(ctx);
+        this.localNode = localNode;
     }
 
 

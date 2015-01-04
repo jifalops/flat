@@ -25,6 +25,7 @@ import android.widget.EditText;
 import android.widget.TextView;
 
 import com.flat.R;
+import com.flat.app.AppController;
 import com.flat.sockets.MyConnectionSocket;
 import com.flat.sockets.MyServerSocket;
 import com.flat.sockets.MySocketManager;
@@ -33,13 +34,13 @@ import com.flat.sockets.Sockets;
 import java.net.ServerSocket;
 import java.net.Socket;
 
-public class NsdChatActivity extends Activity {
+public class NsdTestingActivity extends Activity {
 
     NsdHelper mNsdHelper;
 
     private TextView mStatusView;
 
-    public static final String TAG = NsdChatActivity.class.getSimpleName();
+    public static final String TAG = NsdTestingActivity.class.getSimpleName();
 
     private final MySocketManager socketManager = new MySocketManager();
 
@@ -50,7 +51,12 @@ public class NsdChatActivity extends Activity {
         setContentView(R.layout.nsd_activity);
         mStatusView = (TextView) findViewById(R.id.status);
 
-        mNsdHelper = new NsdHelper(this, nsdCallbacks);
+        mNsdHelper = new NsdHelper(this, AppController.NSD_SERVICE_PREFIX + AppController.getInstance().id, new NsdHelper.NsdServiceFilter() {
+            @Override
+            public boolean isAcceptableService(NsdServiceInfo info) {
+                return info.getServiceName().startsWith(AppController.NSD_SERVICE_PREFIX);
+            }
+        });
         mNsdHelper.initializeNsd();
 
         socketManager.startServer();
@@ -84,6 +90,7 @@ public class NsdChatActivity extends Activity {
     protected void onPause() {
         if (mNsdHelper != null) {
             mNsdHelper.stopDiscovery();
+            mNsdHelper.unregisterListener(nsdListener);
         }
         socketManager.unregisterListener(socketListener);
         super.onPause();
@@ -94,6 +101,7 @@ public class NsdChatActivity extends Activity {
         super.onResume();
         socketManager.registerListener(socketListener);
         if (mNsdHelper != null) {
+            mNsdHelper.registerListener(nsdListener);
             mNsdHelper.discoverServices();
         }
     }
@@ -149,7 +157,12 @@ public class NsdChatActivity extends Activity {
         }
     };
 
-    private final NsdHelper.Callbacks nsdCallbacks = new NsdHelper.Callbacks() {
+    private final NsdHelper.NsdHelperListener nsdListener = new NsdHelper.NsdHelperListener() {
+        @Override
+        public void onServiceRegistered(NsdServiceInfo info) {
+
+        }
+
         @Override
         public void onAcceptableServiceResolved(NsdServiceInfo info) {
             socketManager.startConnection(new MyConnectionSocket(info.getHost(), info.getPort()));

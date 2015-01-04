@@ -1,7 +1,7 @@
 package com.flat.loggingrequests;
 
 import com.android.volley.Response;
-import com.flat.localization.node.Node;
+import com.flat.localization.Node;
 
 import java.util.HashMap;
 import java.util.Map;
