@@ -74,7 +74,7 @@ public class RangeTableActivity extends Activity {
 
 
     public static class RangeTableFragment extends ListFragment {
-        ColorStateList colors;
+        ColorStateList defaultColor;
 
         @Override
         public void onCreate(Bundle savedInstanceState) {
@@ -87,13 +87,13 @@ public class RangeTableActivity extends Activity {
             super.onActivityCreated(savedInstanceState);
 //            setListAdapter(null);
 //            getListView().addHeaderView(getActivity().getLayoutInflater().inflate(R.layout.range_table_header, null));
-
         }
 
         private final NodeManager.NodeManagerListener nodeManagerListener = new NodeManager.NodeManagerListener() {
             @Override
             public void onNodeAdded(Node n) {
                 ((BaseAdapter) getListAdapter()).notifyDataSetChanged();
+                getListView().invalidate();
             }
         };
 
@@ -138,7 +138,7 @@ public class RangeTableActivity extends Activity {
                 tv.setTextColor(Color.RED);
             } else {
                 f = n.getRange().range;
-                if (colors != null) tv.setTextColor(colors);
+                if (defaultColor != null) tv.setTextColor(defaultColor);
             }
             tv.setText(round(f) + "m");
         }
@@ -170,7 +170,7 @@ public class RangeTableActivity extends Activity {
                     holder = (Holder) convertView.getTag();
                 }
 
-                if (colors == null) colors = holder.dist.getTextColors();
+                if (defaultColor == null) defaultColor = holder.dist.getTextColors();
 
                 final Node node = AppController.getInstance().nodeManager.getNode(position);
 
@@ -205,6 +205,7 @@ public class RangeTableActivity extends Activity {
                             public void onClick(DialogInterface dialog, int which) {
                                 if (input.length() > 0) {
                                     holder.title.setText(input.getText());
+                                    node.setName(input.getText().toString());
                                     node.savePrefs(prefs);
                                 }
                             }

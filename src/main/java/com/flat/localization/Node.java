@@ -11,10 +11,8 @@ import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 /**
  * Nodes are the main objects to be manipulated in the localization system and they are
@@ -122,7 +120,6 @@ public final class Node {
     private final String id;
     private String name;
     private boolean fixed;
-    private boolean ignore;
     private float actualRangeOverride;
 
     public synchronized void setActualRangeOverride(float range) {
@@ -153,9 +150,6 @@ public final class Node {
 
     public synchronized boolean isFixed() { return fixed; }
     public synchronized void setFixed(boolean fixed) { this.fixed = fixed; }
-
-    public synchronized boolean shouldIgnore() { return ignore; }
-    public synchronized void setIgnore(boolean ignore) { this.ignore = ignore; }
 
 
     public synchronized void addPending(Range r) {
@@ -241,9 +235,8 @@ public final class Node {
         JSONObject json = new JSONObject();
         try {
             json.put("name", getName());
-            json.put("ignore", shouldIgnore());
         } catch (JSONException ignored) {}
-        prefs.edit().putString(json.toString(), "").commit();
+        prefs.edit().putString(getId(), json.toString()).apply();
     }
 
     public synchronized void readPrefs(SharedPreferences prefs) {
@@ -253,7 +246,6 @@ public final class Node {
             if (!TextUtils.isEmpty(json.getString("name"))) {
                 setName(json.getString("name"));
             }
-            setIgnore(json.getBoolean("ignore"));
         } catch (JSONException ignored) {}
     }
 
@@ -291,15 +283,12 @@ public final class Node {
         void onRangeChanged(Node n, Range r);
         void onStateChanged(Node n, State s);
     }
-    private final Set<NodeListener> listeners = new LinkedHashSet<NodeListener>(1);
-    public void registerListener(NodeListener l) {
-        listeners.add(l);
+    private final List<NodeListener> listeners = new ArrayList<NodeListener>(1);
+    public boolean registerListener(NodeListener l) {
+        if (listeners.contains(l)) return false;
+        return listeners.add(l);
     }
-    public void unregisterListener(NodeListener l) {
-        if (l == null) {
-            listeners.clear();
-        } else {
-            listeners.remove(l);
-        }
+    public boolean unregisterListener(NodeListener l) {
+        return listeners.remove(l);
     }
 }

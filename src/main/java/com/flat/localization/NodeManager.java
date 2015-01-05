@@ -22,6 +22,9 @@ public class NodeManager {
         nodes.add(n);
 //      n.registerListener(nodeListener);
         n.readPrefs(prefs);
+        for (NodeManagerListener l : listeners) {
+            l.onNodeAdded(n);
+        }
         return true;
     }
 
@@ -53,6 +56,7 @@ public class NodeManager {
         prefs = PreferenceManager.getDefaultSharedPreferences(ctx);
         this.localNode = localNode;
     }
+
 
 
     /**

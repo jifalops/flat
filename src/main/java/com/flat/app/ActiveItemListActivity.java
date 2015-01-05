@@ -162,6 +162,8 @@ public class ActiveItemListActivity extends Activity {
                     }
                 });
 
+                holder.count.setText(signal.getChangeCount());
+
                 return convertView;
             }
         }
@@ -257,6 +259,8 @@ public class ActiveItemListActivity extends Activity {
                         }
                     }
                 });
+
+                holder.count.setText(alg.getUseCount());
 
                 return convertView;
             }

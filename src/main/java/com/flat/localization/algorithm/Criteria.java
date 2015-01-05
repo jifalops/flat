@@ -106,7 +106,7 @@ public class Criteria {
         /**
          * True if any of the above match. For min/max values, a match is when the value is in [min, max].
          */
-        boolean matches(Node n) {
+        public boolean matches(Node n) {
             int pr = n.getRangePendingSize();
             int ps = n.getStatePendingSize();
             return matchAll ||

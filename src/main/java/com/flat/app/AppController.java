@@ -56,15 +56,10 @@ public class AppController extends Application {
 	public void onCreate() {
 		super.onCreate();
 		sInstance = this;
-//        prefs = PreferenceManager.getDefaultSharedPreferences(this);
-//        controller = Controller.getInstance(this); // will populate the model.
-//        model = Model.getInstance();
-//        model.registerListener(modelListener);
 
         acquireIdentifier();
         initializeManagersAndControllers();
         initializeStaticData();
-
     }
 
     private void acquireIdentifier() {
