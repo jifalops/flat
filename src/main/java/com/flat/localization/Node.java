@@ -64,7 +64,7 @@ public final class Node {
      */
     public static final class CoordinateSystem {
         public final TreeMap<String, RangeTable> definingRanges = new TreeMap<String, RangeTable>();
-        public final TreeMap<String, float[]> coordinates = new TreeMap<String, float[]>();
+        public final TreeMap<String, float[]> coords = new TreeMap<String, float[]>();
     }
 
     /**
@@ -98,28 +98,23 @@ public final class Node {
     }
 
     /**
-     * Find valid coordinate systems based on a list of range tables. The returned list should be the
-     * minimal set of coordinate systems
-     * TODO nodes will pass their known coordinate systems along with their range table. ... They must choose one coord system to pass (current state)
-     * TODO keep range tables sorted by owner id
+     * Find the best coordinate system based on a list of range tables.
      */
-    public List<CoordinateSystem> doSomethingLikeMultilateration(TreeMap<String, RangeTable> knownRangeTablesIncludingMyOwn) {
-        List<CoordinateSystem> frames = new ArrayList<CoordinateSystem>();
+    public CoordinateSystem findCoordinateSystem(TreeMap<String, RangeTable> knownRangeTablesIncludingMyOwn) {
 
         // Find coordinate system with the most nodes
         String mostNodesId;
         int nodeCount = 0;
         for (Map.Entry<String, RangeTable> entry : knownRangeTablesIncludingMyOwn.entrySet()) {
-            if (entry.getValue().ownerReferenceFrame.coordinates.size() > nodeCount) {
-                nodeCount = entry.getValue().ownerReferenceFrame.coordinates.size();
+            if (entry.getValue().ownerReferenceFrame.coords.size() > nodeCount) {
+                nodeCount = entry.getValue().ownerReferenceFrame.coords.size();
                 mostNodesId = entry.getKey();
             }
         }
 
-        // If there are < 3 nodes in the coordinate system, a new coordinate system must be created.
-        if (nodeCount < 3) {
+        // If there are < 4 nodes in the coordinate system, a new coordinate system must be created.
+        if (nodeCount < 4) {
             long startTime = System.nanoTime();
-            CoordinateSystem cs;
 
             // The complete list of common nodes
             TreeMap<String, TreeMap<String, Set<String>>> allCommonNodes = new TreeMap<String, TreeMap<String, Set<String>>>();
@@ -140,7 +135,7 @@ public final class Node {
                     // Note this will not include the two nodes represented by table and nextTable because
                     // they only contain a reference to each other, not themselves. (actually, table contains
                     // a reference to nextTable, but nextTable need not contain a reference to table, but the
-                    // relationship still holds true.
+                    // conclusion still holds true.)
                     common = new HashSet<String>(table.getValue().ranges.keySet());
                     common.retainAll(nextTable.getValue().ranges.keySet());
                     commonNodes.put(nextTable.getKey(), common);
@@ -148,7 +143,7 @@ public final class Node {
 
                 allCommonNodes.put(table.getKey(), commonNodes);
             }
-            Log.i(TAG, "Finding all common nodes took " + (System.nanoTime() - startTime) / 1E6f + "ms");
+            Log.d(TAG, "Finding all common nodes took " + (System.nanoTime() - startTime) / 1E6f + "ms");
 
             // Now, we look for the largest number of nodes that can be localized by recursively counting
             // common nodes from other common nodes. Yep. Why? Because if C is common to A and B, then by extension,
@@ -168,7 +163,7 @@ public final class Node {
                 }
                 directlyLocalizable.put(outer.getKey(), directSet);
             }
-            Log.i(TAG, "Finding map of directly localizable nodes took " + (System.nanoTime() - startTime) / 1E6f + "ms");
+            Log.d(TAG, "Finding map of directly localizable nodes took " + (System.nanoTime() - startTime) / 1E6f + "ms");
 
 
             // Now we have a map of all the nodes directly localizable under a given node. Combining this map
@@ -196,7 +191,7 @@ public final class Node {
             // What's this? A complete list of nodes localizable under any given node? I'll believe it when I see it.
 
             // Find the biggest
-            String winnerKey;
+            String winnerKey = "";
             int biggest = 0;
             for (Map.Entry<String, TreeSet<String>> nodeFun : localizable.entrySet()) {
                 if (nodeFun.getValue().size() > biggest) {
@@ -204,20 +199,82 @@ public final class Node {
                     biggest = nodeFun.getValue().size();
                 }
             }
+            TreeSet<String> nodes = localizable.get(winnerKey);
+            Log.i(TAG, nodes.size() + " nodes will be localized under " + winnerKey);
 
             // So we have chosen the nodes that will be used to construct a coordinate system.
             // Why wait to complete this fun process? Because I'm hungry and getting cranky and I need to go watch something stupid on TV. That's why.
-            
+
+            CoordinateSystem cs = new CoordinateSystem();
+            cs.coords.put(winnerKey, new float[] {0, 0, 0});
+
+            // Step 1. Get the necessary ranges between nodes.
+            startTime = System.nanoTime();
+            boolean first = true;
+            for (String s : nodes) {
+                if (first) {
+                    first = false;
+                    float x = findRangeBetween(winnerKey, s, knownRangeTablesIncludingMyOwn);
+                    cs.coords.put(s, new float[] {x, 0, 0});
+                }
+
+            }
+            Log.d(TAG, "Building coordinate system from node set took " + (System.nanoTime() - startTime) / 1E6f + "ms");
         }
 
 
         return frames;
     }
 
-    public CoordinateSystem findBestCoordinateSystem(List<CoordinateSystem> coords) {
+    public float findRangeBetween(String node1, String node2, TreeMap<String, RangeTable> tables) {
+        float range = 0;
 
-        return null;
+        for (Map.Entry<String, RangeTable> table : tables.entrySet()) {
+            if (node1.equals(table.getKey())) {
+                SimpleRange sr = table.getValue().ranges.get(node2);
+                if (sr != null) {
+                    if (range > 0) {
+                        if (range != sr.range) {
+                            // return the lesser of the two.
+                            return range < sr.range ? range : sr.range;
+                        }
+                    } else {
+                        range = sr.range;
+                    }
+                }
+            } else if (node2.equals(table.getKey())) {
+                SimpleRange sr = table.getValue().ranges.get(node1);
+                if (sr != null) {
+                    if (range > 0) {
+                        if (range != sr.range) {
+                            // return the lesser of the two.
+                            return range < sr.range ? range : sr.range;
+                        }
+                    } else {
+                        range = sr.range;
+                    }
+                }
+            }
+        }
+
+        return range;
     }
+
+
+    private boolean areLinear(float range1, float range2, float range3) {
+        float give = 0.05f;
+        float min1 = range2 + range3 - (range2*range3*give);
+        float max1 = range2 + range3 + (range2*range3*give);
+        float min2 = range1 + range3 - (range1*range3*give);
+        float max2 = range1 + range3 + (range1*range3*give);
+        float min3 = range1 + range2 - (range1*range2*give);
+        float max3 = range1 + range2 + (range1*range2*give);
+        return (range1 >= min1 && range1 <= max1) || (range2 >= min2 && range2 <= max2) || (range3 >= min3 && range3 <= max3);
+    }
+
+
+
+
 
 
     private final List<Range> rangePending = new ArrayList<Range>();
@@ -240,7 +297,7 @@ public final class Node {
 
     public Node(String id) {
         this.id = id;
-        this.name = "Unknown Node";
+        this.name = id;
         fixed = true;
         rangeHistory.add(new Range());
         stateHistory.add(new State());

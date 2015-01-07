@@ -21,6 +21,15 @@ public final class Trilateration extends PositionAlgorithm {
         return pos;
     }
 
+    /** p1=[0,0,0], p2=[x,0,0]. p1 is not actually used in the formula. */
+    public static float[] trilaterate(float[] p1, float r1, float[] p2, float r2, float[] p3, float r3) {
+        float[] pos = new float[3];
+        pos[0] = calcX(r1, r2, p2[0]);
+        pos[1] = calcY(r1, r3, p3[0], p3[1], pos[0]);
+        pos[2] = calcZ(r1, pos[0], pos[1]);
+        return pos;
+    }
+
     /**
      * Calculate the X coordinate for a node's position using information
      * about anchor nodes.
@@ -56,6 +65,6 @@ public final class Trilateration extends PositionAlgorithm {
      * @param y The nodes Y coordinate. See calcY(double,double,double).
      */
     public static float calcZ(float r1, float x, float y) {
-        return (float)Math.sqrt(r1 * r1 - x * x - y * y);
+        return (float)Math.sqrt(r1*r1 - x*x - y*y);
     }
 }
