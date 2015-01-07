@@ -115,11 +115,9 @@ public class AppController extends Application {
     private final NodeManager.NodeManagerListener nodeManagerListener = new NodeManager.NodeManagerListener() {
         @Override
         public void onNodeAdded(Node n) {
-            n.registerListener(nodeListener);
-        }
-    };
 
-    private final Node.NodeListener nodeListener = new Node.NodeListener() {
+        }
+
         @Override
         public void onRangePending(Node n, Node.Range r) {
             n.update(r);

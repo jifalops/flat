@@ -106,10 +106,6 @@ public class OtherTestsActivity extends Activity implements OtherTestsFragment.C
             return;
         }
 
-        if (item == OtherTestsData.LOGGING) {
-            startActivity(new Intent(this, ActiveItemListActivity.class));
-            return;
-        }
 
         if (isDualPane()) {
             // We can display everything in-place with fragments, so update
@@ -136,7 +132,7 @@ public class OtherTestsActivity extends Activity implements OtherTestsFragment.C
             // Otherwise we need to launch a new activity to display
             // the dialog fragment with selected text.
             Intent intent = new Intent();
-            intent.setClass(this, DetailsActivity.class);
+            intent.setClass(this, OtherDetailsActivity.class);
             intent.putExtra(OtherTestsData.KEY_ITEM, mCurrentItem);
             startActivity(intent);
         }

@@ -27,28 +27,37 @@
         android:theme="@style/AppTheme" >
         <activity
             android:name=".app.OtherTestsActivity"
-            android:label="@string/app_name">
+            android:parentActivityName=".app.OtherTestsActivity"
+            android:label="Testing Area">
 
         </activity>
         <activity
-            android:name="com.flat.app.DetailsActivity"
-            android:uiOptions="splitActionBarWhenNarrow">
+            android:name=".app.OtherDetailsActivity"
+            android:uiOptions="splitActionBarWhenNarrow"
+            android:parentActivityName=".app.OtherTestsActivity">
 
         </activity>
-        <activity android:name="com.flat.sensors.RotationVectorDemo">
+        <activity android:name="com.flat.sensors.RotationVectorDemo"
+            android:parentActivityName=".app.OtherTestsActivity">
 
         </activity>
         <activity android:name=".nsd.NsdTestingActivity"
+            android:parentActivityName=".app.OtherTestsActivity"
             android:label="NSD Tester">
 
         </activity>
-        <activity android:name=".app.ActiveItemListActivity">
+        <activity android:name=".app.ActiveItemListActivity"
+            android:parentActivityName=".app.MainActivity">
 
         </activity>
-        <activity android:name=".app.PrefsActivity">
+        <activity android:name=".app.PrefsActivity"
+            android:label="Settings"
+            android:parentActivityName=".app.MainActivity">
 
         </activity>
-        <activity android:name=".app.RangeTableActivity">
+        <activity android:name=".app.RangeTableActivity"
+            android:label="Ranges"
+            android:parentActivityName=".app.MainActivity">
 
         </activity>
         <activity android:name=".app.MainActivity"

@@ -65,18 +65,12 @@ public class AppServiceFragment extends PersistentIntentServiceFragment {
     private void registerListeners() {
         AppController.getInstance().signalManager.registerListener(signalListener);
         AppController.getInstance().algorithmManager.registerListener(algListener);
-        for (Node n : AppController.getInstance().nodeManager.getNodes(false)) {        // TODO something not right, ranges affect other nodes while state affects the local node
-            n.registerListener(nodeListener);
-        }
         AppController.getInstance().nodeManager.registerListener(nodeManagerListener);
     }
 
     private void unregisterListeners() {
         AppController.getInstance().signalManager.unregisterListener(signalListener);
         AppController.getInstance().algorithmManager.unregisterListener(algListener);
-        for (Node n : AppController.getInstance().nodeManager.getNodes(false)) {
-            n.unregisterListener(nodeListener);
-        }
         AppController.getInstance().nodeManager.unregisterListener(nodeManagerListener);
     }
 
@@ -117,12 +111,9 @@ public class AppServiceFragment extends PersistentIntentServiceFragment {
     private final NodeManager.NodeManagerListener nodeManagerListener = new NodeManager.NodeManagerListener() {
         @Override
         public void onNodeAdded(Node n) {
-            n.registerListener(nodeListener);
             rangeSummary.setText(AppController.getInstance().nodeManager.getNodeCount() + " nodes in range (this app instance)");
         }
-    };
 
-    private final Node.NodeListener nodeListener = new Node.NodeListener() {
         @Override
         public void onRangePending(Node n, Node.Range r) {
 

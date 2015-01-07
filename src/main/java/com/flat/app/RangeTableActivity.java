@@ -92,12 +92,11 @@ public class RangeTableActivity extends Activity {
         private final NodeManager.NodeManagerListener nodeManagerListener = new NodeManager.NodeManagerListener() {
             @Override
             public void onNodeAdded(Node n) {
+                // TODO still doesnt redraw the list
                 ((BaseAdapter) getListAdapter()).notifyDataSetChanged();
                 getListView().invalidate();
             }
-        };
 
-        private final Node.NodeListener nodeListener = new Node.NodeListener() {
             @Override
             public void onRangePending(Node n, Node.Range r) {
 
@@ -184,6 +183,8 @@ public class RangeTableActivity extends Activity {
                 holder.summary.setText(node.getId());
                 showRange(holder.dist, node);
 
+                holder.count.setText(node.getRangeHistorySize() + "");
+
                 convertView.setOnClickListener(new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
@@ -255,18 +256,12 @@ public class RangeTableActivity extends Activity {
         public void onPause() {
             super.onPause();
             AppController.getInstance().nodeManager.unregisterListener(nodeManagerListener);
-            for (Node n : AppController.getInstance().nodeManager.getNodes(false)) {
-                n.unregisterListener(nodeListener);
-            }
         }
 
         @Override
         public void onResume() {
             super.onResume();
             AppController.getInstance().nodeManager.registerListener(nodeManagerListener);
-            for (Node n : AppController.getInstance().nodeManager.getNodes(false)) {
-                n.registerListener(nodeListener);
-            }
         }
 
     }

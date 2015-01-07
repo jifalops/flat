@@ -151,7 +151,7 @@ public class ActiveItemListActivity extends Activity {
                     @Override
                     public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
 
-                        sharedPrefs.edit().putBoolean(signal.getName(), isChecked).commit();
+                        sharedPrefs.edit().putBoolean(signal.getName(), isChecked).apply();
                         if (isChecked) {
                             if (AppController.getInstance().isEnabled()) {
                                 signal.enable(getActivity());
@@ -162,7 +162,7 @@ public class ActiveItemListActivity extends Activity {
                     }
                 });
 
-                holder.count.setText(signal.getChangeCount());
+                holder.count.setText(signal.getChangeCount() + "");
 
                 return convertView;
             }
@@ -248,7 +248,7 @@ public class ActiveItemListActivity extends Activity {
                 holder.enabled.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
                     @Override
                     public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                        sharedPrefs.edit().putBoolean(alg.getName(), isChecked).commit();
+                        sharedPrefs.edit().putBoolean(alg.getName(), isChecked).apply();
 
                         if (isChecked) {
                             if (AppController.getInstance().isEnabled()) {
@@ -260,7 +260,7 @@ public class ActiveItemListActivity extends Activity {
                     }
                 });
 
-                holder.count.setText(alg.getUseCount());
+                holder.count.setText(alg.getUseCount() + "");
 
                 return convertView;
             }
@@ -278,55 +278,4 @@ public class ActiveItemListActivity extends Activity {
             manager.registerListener(algListener);
         }
     }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-//    private static final Node.NodeListener nodeListener = new Node.NodeListener() {
-//        @Override
-//        public void onRangePending(Node n, Node.Range r) {
-//
-//        }
-//
-//        @Override
-//        public void onStatePending(Node n, Node.State s) {
-//
-//        }
-//
-//        @Override
-//        public void onRangeChanged(Node n, Node.Range r) {
-//
-//        }
-//
-//        @Override
-//        public void onStateChanged(Node n, Node.State s) {
-//
-//        }
-//    };
-//
-//    private static final Model.ModelListener modelListener = new Model.ModelListener() {
-//        @Override
-//        public void onNodeAdded(Node n) {
-//            Log.i(TAG, "Node Added: " + n.getId());
-//        }
-//    };
-
-
-
-
-
 }

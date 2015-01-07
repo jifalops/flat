@@ -2,7 +2,7 @@ package com.flat.localization;
 
 import android.content.SharedPreferences;
 import android.text.TextUtils;
-import android.util.Pair;
+import android.util.Log;
 
 import com.flat.util.Util;
 
@@ -10,16 +10,19 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
+import java.util.TreeSet;
 
 /**
  * Nodes are the main objects to be manipulated in the localization system and they are
  * designed here to facilitate being localized.
  */
 public final class Node {
-
+    private static final String TAG = Node.class.getSimpleName();
     /**
      * Ranging provides the primary input to the localization system. A range is created by
      * interpreting an external signal such as a wifi beacon.
@@ -36,6 +39,11 @@ public final class Node {
         @Override public String toString() { return String.format("%.2fm (overridden to %.2fm)", range, rangeOverride); }
     }
 
+    public static final class SimpleRange {
+        public float range;
+        public long time;
+    }
+
     /**
      * Each node maintains its own range table, which is a mapping of node IDs to their range and the time ranging occurred.
      * Before creating a coordinate system, each node must share its range table with the other nodes it has ranges to
@@ -43,25 +51,20 @@ public final class Node {
      */
     public static final class RangeTable {
         /** Node ID => {Range, Timestamp} */
-        public final Map<String, Pair<Float, Long>> ranges = new HashMap<String, Pair<Float, Long>>();
-        /** Node ID of owner */
-        public final String ownerId;
-        public RangeTable(String ownerId) { this.ownerId = ownerId; }
+        public final TreeMap<String, SimpleRange> ranges = new TreeMap<String, SimpleRange>();
+        public CoordinateSystem ownerReferenceFrame;
     }
+
+    // TODO belongs elsewhere
+    TreeSet<String> connectedNodes = new TreeSet<String>();
 
     /**
      * A coordinate system is a list of nodes with their coordinates in that system. There is also
      * a list of the relevant ranges that were used to define this coordinate system.
      */
     public static final class CoordinateSystem {
-        public static final class DefiningRange {
-            public String node1;
-            public String node2;
-            public float range;
-            public long time;
-        }
-        public final List<DefiningRange> definingRanges = new ArrayList<DefiningRange>();
-        public final Map<String, float[]> coordinates = new HashMap<String, float[]>();
+        public final TreeMap<String, RangeTable> definingRanges = new TreeMap<String, RangeTable>();
+        public final TreeMap<String, float[]> coordinates = new TreeMap<String, float[]>();
     }
 
     /**
@@ -98,9 +101,115 @@ public final class Node {
      * Find valid coordinate systems based on a list of range tables. The returned list should be the
      * minimal set of coordinate systems
      * TODO nodes will pass their known coordinate systems along with their range table. ... They must choose one coord system to pass (current state)
+     * TODO keep range tables sorted by owner id
      */
-    public List<CoordinateSystem> doSomethingLikeMultilateration(List<RangeTable> knownRangeTablesIncludingMyOwn) {
+    public List<CoordinateSystem> doSomethingLikeMultilateration(TreeMap<String, RangeTable> knownRangeTablesIncludingMyOwn) {
         List<CoordinateSystem> frames = new ArrayList<CoordinateSystem>();
+
+        // Find coordinate system with the most nodes
+        String mostNodesId;
+        int nodeCount = 0;
+        for (Map.Entry<String, RangeTable> entry : knownRangeTablesIncludingMyOwn.entrySet()) {
+            if (entry.getValue().ownerReferenceFrame.coordinates.size() > nodeCount) {
+                nodeCount = entry.getValue().ownerReferenceFrame.coordinates.size();
+                mostNodesId = entry.getKey();
+            }
+        }
+
+        // If there are < 3 nodes in the coordinate system, a new coordinate system must be created.
+        if (nodeCount < 3) {
+            long startTime = System.nanoTime();
+            CoordinateSystem cs;
+
+            // The complete list of common nodes
+            TreeMap<String, TreeMap<String, Set<String>>> allCommonNodes = new TreeMap<String, TreeMap<String, Set<String>>>();
+
+            // A map of common nodes from the point of view of a single node (A has common nodes with B, A has common nodes with C, etc.)
+            TreeMap<String, Set<String>> commonNodes;
+            Set<String> common;
+
+            // Iterate through each range table, except the last
+            for (Map.Entry<String, RangeTable> table : knownRangeTablesIncludingMyOwn.subMap(
+                        knownRangeTablesIncludingMyOwn.firstKey(), true, knownRangeTablesIncludingMyOwn.lastKey(), false).entrySet()) {
+                commonNodes = new TreeMap<String, Set<String>>();
+
+                // Iterate through the other range tables that are after the current one.
+                for (Map.Entry<String, RangeTable> nextTable : knownRangeTablesIncludingMyOwn.subMap(
+                        table.getKey(), false, knownRangeTablesIncludingMyOwn.lastKey(), true).entrySet()) {
+
+                    // Note this will not include the two nodes represented by table and nextTable because
+                    // they only contain a reference to each other, not themselves. (actually, table contains
+                    // a reference to nextTable, but nextTable need not contain a reference to table, but the
+                    // relationship still holds true.
+                    common = new HashSet<String>(table.getValue().ranges.keySet());
+                    common.retainAll(nextTable.getValue().ranges.keySet());
+                    commonNodes.put(nextTable.getKey(), common);
+                }
+
+                allCommonNodes.put(table.getKey(), commonNodes);
+            }
+            Log.i(TAG, "Finding all common nodes took " + (System.nanoTime() - startTime) / 1E6f + "ms");
+
+            // Now, we look for the largest number of nodes that can be localized by recursively counting
+            // common nodes from other common nodes. Yep. Why? Because if C is common to A and B, then by extension,
+            // any nodes common to B and C can also be localized under A. Then if D is common to any two nodes localizable
+            // under A, D is also localizable. So on and so forth. Fuck my life.
+            startTime = System.nanoTime();
+            TreeMap<String, TreeSet<String>> directlyLocalizable = new TreeMap<String, TreeSet<String>>();
+            TreeSet<String> directSet;
+            for (Map.Entry<String, TreeMap<String, Set<String>>> outer : allCommonNodes.entrySet()) {
+                directSet = new TreeSet<String>();
+                for (Map.Entry<String, Set<String>> inner : outer.getValue().entrySet()) {
+                    if (inner.getValue().size() > 0) {
+                        // If there is a common node for inner and outer, inner can be localized by outer.
+                        directSet.add(inner.getKey());
+                    }
+                    directSet.addAll(inner.getValue());
+                }
+                directlyLocalizable.put(outer.getKey(), directSet);
+            }
+            Log.i(TAG, "Finding map of directly localizable nodes took " + (System.nanoTime() - startTime) / 1E6f + "ms");
+
+
+            // Now we have a map of all the nodes directly localizable under a given node. Combining this map
+            // will give us the full list of nodes localizable under any given node.
+            TreeMap<String, TreeSet<String>> localizable = new TreeMap<String, TreeSet<String>>();
+            TreeSet<String> localNodes;
+            for (Map.Entry<String, TreeSet<String>> outer : directlyLocalizable.entrySet()) {
+                localNodes = new TreeSet<String>(outer.getValue());
+                for (String node : outer.getValue()) {
+                    TreeSet<String> tmp = directlyLocalizable.get(node);
+                    if (tmp != null) {
+                        localNodes.addAll(tmp);
+                    }
+                }
+                localizable.put(outer.getKey(), localNodes);
+            }
+
+            // Lets say D was directly localizable under A, but B and C were not. However, C was directly
+            // localizable under D, and B was directly localizable under C, meaning all are localizable under A.
+            // The above loop fails to see this connection, and running it again would only fix this example problem
+            // and not its more general description.
+            // UPDATE: I think it does solve this problem but I am leaving it here because I'm not sure that it does and my brain hurts.
+
+
+            // What's this? A complete list of nodes localizable under any given node? I'll believe it when I see it.
+
+            // Find the biggest
+            String winnerKey;
+            int biggest = 0;
+            for (Map.Entry<String, TreeSet<String>> nodeFun : localizable.entrySet()) {
+                if (nodeFun.getValue().size() > biggest) {
+                    winnerKey = nodeFun.getKey();
+                    biggest = nodeFun.getValue().size();
+                }
+            }
+
+            // So we have chosen the nodes that will be used to construct a coordinate system.
+            // Why wait to complete this fun process? Because I'm hungry and getting cranky and I need to go watch something stupid on TV. That's why.
+            
+        }
+
 
         return frames;
     }

@@ -7,14 +7,15 @@ import android.os.Bundle;
 
 import com.flat.util.wifi.ScanResultsFragment;
 
-public class DetailsActivity extends Activity implements BluetoothFragment.BluetoothFragmentListener, ScanResultsFragment.Callback, MovementSensorFragment.Callback {
+public class OtherDetailsActivity extends Activity implements BluetoothFragment.BluetoothFragmentListener, ScanResultsFragment.Callback, MovementSensorFragment.Callback {
 	private Fragment mDetailsFragment;
 
     private int mCurrentItem = OtherTestsData.DEFAULT;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
-		super.onCreate(savedInstanceState);		
+		super.onCreate(savedInstanceState);
+        getActionBar().setDisplayHomeAsUpEnabled(true);
 		Configuration config = getResources().getConfiguration();
 		if ((config.screenLayout & Configuration.SCREENLAYOUT_SIZE_MASK)
 						> Configuration.SCREENLAYOUT_SIZE_LARGE) {

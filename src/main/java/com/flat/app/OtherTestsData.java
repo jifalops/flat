@@ -20,9 +20,8 @@ public class OtherTestsData {
     public static final int WIFI = 2;
     public static final int MOVEMENT_SENSOR = 3;
     public static final int NETWORK_SERVICE_DISCOVERY = 4;
-    public static final int LOGGING = 5;
 
-    public static final int DEFAULT = LOGGING;
+    public static final int DEFAULT = ROTATION_VECTOR_DEMO;
 
     public static final String KEY_ITEM = OtherTestsData.class.getName() + ".ITEM";
 

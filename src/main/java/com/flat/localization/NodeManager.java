@@ -20,8 +20,8 @@ public class NodeManager {
     public boolean addNode(Node n) {
         if (nodes.contains(n)) return false;
         nodes.add(n);
-//      n.registerListener(nodeListener);
         n.readPrefs(prefs);
+        n.registerListener(nodeListener);
         for (NodeManagerListener l : listeners) {
             l.onNodeAdded(n);
         }
@@ -58,11 +58,41 @@ public class NodeManager {
     }
 
 
+    private final Node.NodeListener nodeListener = new Node.NodeListener() {
+        @Override
+        public void onRangePending(Node n, Node.Range r) {
+            for (NodeManagerListener l : listeners) {
+                l.onRangePending(n, r);
+            }
+        }
+
+        @Override
+        public void onStatePending(Node n, Node.State s) {
+            for (NodeManagerListener l : listeners) {
+                l.onStatePending(n, s);
+            }
+        }
+
+        @Override
+        public void onRangeChanged(Node n, Node.Range r) {
+            for (NodeManagerListener l : listeners) {
+                l.onRangeChanged(n, r);
+            }
+        }
+
+        @Override
+        public void onStateChanged(Node n, Node.State s) {
+            for (NodeManagerListener l : listeners) {
+                l.onStateChanged(n, s);
+            }
+        }
+    };
+
 
     /**
      * Allow other objects to react to node events.
      */
-    public static interface NodeManagerListener {
+    public static interface NodeManagerListener extends Node.NodeListener {
         void onNodeAdded(Node n);
     }
     private final List<NodeManagerListener> listeners = new ArrayList<NodeManagerListener>(1);
