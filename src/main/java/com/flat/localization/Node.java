@@ -4,6 +4,7 @@ import android.content.SharedPreferences;
 import android.text.TextUtils;
 import android.util.Log;
 
+import com.flat.localization.util.Calc;
 import com.flat.util.Util;
 
 import org.json.JSONException;
@@ -11,6 +12,7 @@ import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -112,8 +114,8 @@ public final class Node {
             }
         }
 
-        // If there are < 4 nodes in the coordinate system, a new coordinate system must be created.
-        if (nodeCount < 4) {
+        // If there arent enough nodes in the coordinate system, a new coordinate system must be created.
+        if (nodeCount < 3) {
             long startTime = System.nanoTime();
 
             // The complete list of common nodes
@@ -148,18 +150,36 @@ public final class Node {
             // Now, we look for the largest number of nodes that can be localized by recursively counting
             // common nodes from other common nodes. Yep. Why? Because if C is common to A and B, then by extension,
             // any nodes common to B and C can also be localized under A. Then if D is common to any two nodes localizable
-            // under A, D is also localizable. So on and so forth. Fuck my life.
+            // under A, D is also localizable. So on and so forth.
+
+            // TODO "Directly localizable" nodes here use groups of 3 nodes, which will restrict localization to give 2 values for the y coordinate (x, +-y)
             startTime = System.nanoTime();
             TreeMap<String, TreeSet<String>> directlyLocalizable = new TreeMap<String, TreeSet<String>>();
             TreeSet<String> directSet;
             for (Map.Entry<String, TreeMap<String, Set<String>>> outer : allCommonNodes.entrySet()) {
                 directSet = new TreeSet<String>();
                 for (Map.Entry<String, Set<String>> inner : outer.getValue().entrySet()) {
-                    if (inner.getValue().size() > 0) {
-                        // If there is a common node for inner and outer, inner can be localized by outer.
+                    float innerToOuter = findRangeBetween(inner.getKey(), outer.getKey(), knownRangeTablesIncludingMyOwn);
+                    boolean hasMatch = false;
+
+                    // filter linear relationships.
+                    for (String s : inner.getValue()) {
+                        // range1: current node to inner
+                        // range2: current node to outer
+                        // range3: inner to outer
+                        float r1 = findRangeBetween(s, inner.getKey(), knownRangeTablesIncludingMyOwn);
+                        float r2 = findRangeBetween(s, outer.getKey(), knownRangeTablesIncludingMyOwn);
+                        if (!areLinear(r1, r2, innerToOuter)) {
+                            directSet.add(s);
+                            hasMatch = true;
+                        }
+                    }
+
+                    if (hasMatch) {
+                        // If there is at least one common node for inner and outer, inner can be localized by outer.
                         directSet.add(inner.getKey());
                     }
-                    directSet.addAll(inner.getValue());
+
                 }
                 directlyLocalizable.put(outer.getKey(), directSet);
             }
@@ -168,24 +188,43 @@ public final class Node {
 
             // Now we have a map of all the nodes directly localizable under a given node. Combining this map
             // will give us the full list of nodes localizable under any given node.
-            TreeMap<String, TreeSet<String>> localizable = new TreeMap<String, TreeSet<String>>();
-            TreeSet<String> localNodes;
+
+            // The list of strings is the path of directly localizable nodes taken to get to the inner node from the outer node.
+            TreeMap<String, TreeMap<String, List<String>>> localizable = new TreeMap<String, TreeMap<String, List<String>>>();
+            TreeMap<String, List<String>> localNodes;
+            List<String> path;
             for (Map.Entry<String, TreeSet<String>> outer : directlyLocalizable.entrySet()) {
-                localNodes = new TreeSet<String>(outer.getValue());
+
+
+                // start with the directly localizable nodes
+                localNodes = new TreeMap<String, List<String>>();
+
+                // for every directly localizable node in "outer"
                 for (String node : outer.getValue()) {
+
+                    // all directly localizable nodes are localizable and no path is needed
+                    localNodes.put(node, new ArrayList<String>());
+
+                    // Add all the nodes that are directly localizable under this node, keeping the
+                    // path of nodes followed for later use.
                     TreeSet<String> tmp = directlyLocalizable.get(node);
                     if (tmp != null) {
-                        localNodes.addAll(tmp);
+                        for (String s : tmp) {
+                            path = new ArrayList<String>();
+                            path.add(node); // TODO a list is not needed since it will always have 0 or 1 elements
+                            localNodes.put(s, path);
+                        }
                     }
                 }
-                localizable.put(outer.getKey(), localNodes);
+                localizable.put(outer.getKey(), localNodes); // NOTE: these only include 1 hop (neighboring) and 2 hop nodes.
             }
 
-            // Lets say D was directly localizable under A, but B and C were not. However, C was directly
-            // localizable under D, and B was directly localizable under C, meaning all are localizable under A.
-            // The above loop fails to see this connection, and running it again would only fix this example problem
-            // and not its more general description.
-            // UPDATE: I think it does solve this problem but I am leaving it here because I'm not sure that it does and my brain hurts.
+            // Node -> list of localizable nodes and any inbetween nodes.
+            //          list 0: node that can be localized in 1 hop (neighbor)
+            //          list 1: node that can be localized in 2 hops
+            //          ...
+            TreeMap<String, List<TreeMap<String, String[]>>> loco;
+            
 
 
             // What's this? A complete list of nodes localizable under any given node? I'll believe it when I see it.
@@ -199,11 +238,12 @@ public final class Node {
                     biggest = nodeFun.getValue().size();
                 }
             }
-            TreeSet<String> nodes = localizable.get(winnerKey);
-            Log.i(TAG, nodes.size() + " nodes will be localized under " + winnerKey);
 
             // So we have chosen the nodes that will be used to construct a coordinate system.
-            // Why wait to complete this fun process? Because I'm hungry and getting cranky and I need to go watch something stupid on TV. That's why.
+
+
+            TreeSet<String> nodes = localizable.get(winnerKey);
+            Log.i(TAG, nodes.size() + " nodes will be localized under " + winnerKey);
 
             CoordinateSystem cs = new CoordinateSystem();
             cs.coords.put(winnerKey, new float[] {0, 0, 0});
@@ -218,12 +258,37 @@ public final class Node {
                     cs.coords.put(s, new float[] {x, 0, 0});
                 }
 
+
             }
             Log.d(TAG, "Building coordinate system from node set took " + (System.nanoTime() - startTime) / 1E6f + "ms");
         }
 
 
-        return frames;
+        return cs;
+    }
+
+    public static final class LocalizableNodes {
+        public Map<String, String[]> path;
+
+    }
+
+
+    private float[] makeCoords(float[] p1, float r1, float[] p2, float r2) {
+        float[] pos = new float[3];
+
+        // following http://www.ms.uky.edu/~lee/ma502/pythag/cos.htm
+        // a = r1, b = r2, c = r3
+
+        float r3 = (float) Calc.linearDistance(p1, p2);
+
+        // angle opposite of side r1. (b^2 + c^2 - a^2)/2bc
+        float cosA = (r2*r2 + r3*r3 - r1*r1) / (2 * r2 * r3);
+        pos[0] = r2 * cosA;
+
+        // pythagorean to get y. y^2 = b^2 - x^2.
+        pos[1] = (float) Math.sqrt(r2*r2 - pos[0]*pos[0]);
+
+        return pos;
     }
 
     public float findRangeBetween(String node1, String node2, TreeMap<String, RangeTable> tables) {
@@ -262,13 +327,14 @@ public final class Node {
 
 
     private boolean areLinear(float range1, float range2, float range3) {
-        float give = 0.05f;
-        float min1 = range2 + range3 - (range2*range3*give);
-        float max1 = range2 + range3 + (range2*range3*give);
-        float min2 = range1 + range3 - (range1*range3*give);
-        float max2 = range1 + range3 + (range1*range3*give);
-        float min3 = range1 + range2 - (range1*range2*give);
-        float max3 = range1 + range2 + (range1*range2*give);
+        if (range1 < 1 || range2 < 1 || range3 < 1) return true;
+        float give = 0.1f;
+        float min1 = range2 + range3 - (range2+range3)*give;
+        float max1 = range2 + range3 + (range2+range3)*give;
+        float min2 = range1 + range3 - (range1+range3)*give;
+        float max2 = range1 + range3 + (range1+range3)*give;
+        float min3 = range1 + range2 - (range1+range2)*give;
+        float max3 = range1 + range2 + (range1+range2)*give;
         return (range1 >= min1 && range1 <= max1) || (range2 >= min2 && range2 <= max2) || (range3 >= min3 && range3 <= max3);
     }
 
