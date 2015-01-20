@@ -2,9 +2,7 @@ package com.flat.localization;
 
 import android.content.SharedPreferences;
 import android.text.TextUtils;
-import android.util.Log;
 
-import com.flat.localization.util.Calc;
 import com.flat.util.Util;
 
 import org.json.JSONException;
@@ -12,9 +10,6 @@ import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
-import java.util.TreeSet;
 
 /**
  * Nodes are the main objects to be manipulated in the localization system and they are
@@ -46,7 +41,7 @@ public final class Node {
 
 
     // TODO belongs elsewhere
-    NodeSet connectedNodes = new NodeSet();
+    CoordinateSystem.NodeSet connectedNodes = new CoordinateSystem.NodeSet();
 
 
     /**
@@ -78,20 +73,6 @@ public final class Node {
                     x,y,z, angle[0], angle[1], angle[2]);
         }
     }
-
-    /**
-     * Find the best coordinate system based on a list of range tables.
-     */
-    public CoordinateSystem findCoordinateSystem(RangeTableList rangeTables) {
-
-
-    }
-
-
-
-
-
-
 
 
     private final List<Range> rangePending = new ArrayList<Range>();

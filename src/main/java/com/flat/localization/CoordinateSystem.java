@@ -188,7 +188,7 @@ public class CoordinateSystem extends TreeMap<String, float[]> {
                     if (directSet != null) {
                         for (String innerNode : directSet) {
                             // make sure this node isn't already in the list somewhere
-                            if (!neighbors.containsKey(innerNode) && !neighborsNeighbors.containsKey(innerNode) && !innerNode.equals(outer.getKey())) {
+                            if (!neighbors.containsKey(innerNode) && !neighborsNeighbors.containsKey(innerNode) && !innerNode.equals(outer.getKey())) { // TODO outer or outernode or both?
                                 neighborsNeighbors.put(innerNode, new String[]{outerNode});
                             }
                         }
@@ -238,21 +238,21 @@ public class CoordinateSystem extends TreeMap<String, float[]> {
 
 
             // First localize all the nodes common to the first two.
-            startTime = System.nanoTime();
-            for (String node : allCommonNodes.get(root.id).get(root2)) {
-                putCoords(node, root.id, root2);
-
-                // Localize nodes common to the root node and the current node
-                for (String n1 : allCommonNodes.get(root.id).get(node)) {
-                    putCoords(n1, root.id, node);
-                }
-
-                // Localize nodes common to the second root node and the current node
-                for (String n2 : allCommonNodes.get(root2).get(node)) {
-                    putCoords(n2, root2, node);
-                }
-            }
-            Log.d(TAG, "Initial localization using first two roots took " + (System.nanoTime() - startTime) / 1E6f + "ms");
+//            startTime = System.nanoTime();
+//            for (String node : allCommonNodes.get(root.id).get(root2)) {
+//                putCoords(node, root.id, root2);
+//
+//                // Localize nodes common to the root node and the current node
+//                for (String n1 : allCommonNodes.get(root.id).get(node)) {
+//                    putCoords(n1, root.id, node);
+//                }
+//
+//                // Localize nodes common to the second root node and the current node
+//                for (String n2 : allCommonNodes.get(root2).get(node)) {
+//                    putCoords(n2, root2, node);
+//                }
+//            }
+//            Log.d(TAG, "Initial localization using first two roots took " + (System.nanoTime() - startTime) / 1E6f + "ms");
 
 
 
@@ -273,8 +273,9 @@ public class CoordinateSystem extends TreeMap<String, float[]> {
                     if (path == null) {
                         // Working with the root's directly localizable nodes. Note these will all be completed first.
                         for (String targetNode : root.commonNodeMap.get(node)) {
-                            if (root.get(0).containsKey(targetNode))
-                            putCoords(targetNode, root.id, node);
+                            if (!targetNode.equals(node) && pathMap.containsKey(targetNode)) {
+                                putCoords(targetNode, root.id, node);
+                            }
                         }
                     } else {
                         // Working with neighbors' neighbors (or beyond, if that's ever added)
@@ -297,7 +298,7 @@ public class CoordinateSystem extends TreeMap<String, float[]> {
                                 }
                             }
 
-                            // Add the
+
                             if (nodeSet != null) {
                                 for (String targetNode : nodeSet) {
                                     putCoords(targetNode, node, middleNode);
@@ -318,10 +319,41 @@ public class CoordinateSystem extends TreeMap<String, float[]> {
 
 
     private float[] putCoords(String targetNode, String referenceNode1, String referenceNode2) {
-        if (containsKey(targetNode)) return null;
+        if (containsKey(targetNode)) {
+            Log.e(TAG, "Target node already in coordinate system: " + targetNode);
+            return null;
+        }
+
+        if (targetNode.equals(referenceNode1) || targetNode.equals(referenceNode2) || referenceNode1.equals(referenceNode2)) {
+            Log.e(TAG, "Aborting attempt to make coordinates where the target or references are the same node");
+            return null;
+        }
+
         float r1 = findRangeBetween(targetNode, referenceNode1);
         float r2 = findRangeBetween(targetNode, referenceNode2);
-        float[] coords = makeCoords(get(referenceNode1), r1, get(referenceNode2), r2);
+        float[] p1 = get(referenceNode1);
+        float[] p2 = get(referenceNode2);
+
+        if (r1 == 0) {
+            Log.e(TAG, "No range between target " + targetNode + " and reference node 1: " + referenceNode1);
+        }
+        if (r2 == 0) {
+            Log.e(TAG, "No range between target " + targetNode + " and reference node 2:" + referenceNode2);
+        }
+        if (p1 == null) {
+            Log.e(TAG, "No coordinates known for reference node 1: " + referenceNode1);
+        }
+        if (p2 == null) {
+            Log.e(TAG, "No coordinates known for reference node 2: " + referenceNode2);
+        }
+
+
+        if (r1 == 0 || r2 == 0 || p1 == null || p2 == null) {
+            Log.i(TAG, "Aborting coordinate system creation.");
+            return null;
+        }
+
+        float[] coords = makeCoords(p1, r1, p2, r2);
         put(targetNode, coords);
         return coords;
     }
