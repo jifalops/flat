@@ -19,13 +19,13 @@ public class NodeManager {
     private final List<Node> nodes = Collections.synchronizedList(new ArrayList<Node>());
     public boolean addNode(Node n) {
         if (nodes.contains(n)) return false;
-        nodes.add(n);
+        boolean added = nodes.add(n);
         n.readPrefs(prefs);
         n.registerListener(nodeListener);
         for (NodeManagerListener l : listeners) {
             l.onNodeAdded(n);
         }
-        return true;
+        return added;
     }
 
     /** @return a new copy of the set of known nodes */

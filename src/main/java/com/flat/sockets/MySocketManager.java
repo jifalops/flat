@@ -33,6 +33,8 @@ public class MySocketManager {
         return count;
     }
 
+    public List<MyConnectionSocket> getConnections() { return connections; }
+
     public synchronized boolean hasAddress(InetAddress address) {
         for (MyConnectionSocket mcs : connections) {
             if (mcs.getAddress().getHostAddress().equals(address.getHostAddress())) {
@@ -126,7 +128,7 @@ public class MySocketManager {
         handler.sendMessage(msg);
     }
 
-    private final int serverAcceptedClientSocket =1, serverFinished=2, serverListening =3, sent=4, received=5, clientFinished=6, clientCreatedSocket =7;
+    private final int serverAcceptedClientSocket=1, serverFinished=2, serverListening=3, sent=4, received=5, clientFinished=6, clientCreatedSocket=7;
 
     private final Handler handler = new Handler() {
         @Override

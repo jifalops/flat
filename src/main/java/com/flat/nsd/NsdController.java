@@ -74,10 +74,10 @@ public class NsdController {
         @Override
         public void onServerSocketListening(MyServerSocket mss, ServerSocket ss) {
             Log.v(TAG, "Server now listening on port " + ss.getLocalPort());
-            nsdHelper.registerService(ss.getLocalPort());
             for (NsdContollerListener l : listeners) {
                 l.onServerSocketListening(mss, ss);
             }
+            nsdHelper.registerService(ss.getLocalPort());
         }
 
         @Override
@@ -123,10 +123,10 @@ public class NsdController {
 
         @Override
         public void onAcceptableServiceResolved(NsdServiceInfo info) {
-            socketManager.startConnection(new MyConnectionSocket(info.getHost(), info.getPort()));
             for (NsdContollerListener l : listeners) {
                 l.onAcceptableServiceResolved(info);
             }
+            socketManager.startConnection(new MyConnectionSocket(info.getHost(), info.getPort()));
         }
     };
 

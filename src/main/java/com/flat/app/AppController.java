@@ -20,11 +20,17 @@ import com.flat.loggingrequests.RangingRequest;
 import com.flat.loggingrequests.VolleyController;
 import com.flat.nsd.NsdController;
 import com.flat.nsd.NsdHelper;
+import com.flat.sockets.MyConnectionSocket;
+import com.flat.sockets.MyServerSocket;
 
 import org.json.JSONObject;
 
+import java.net.ServerSocket;
+import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Timer;
+import java.util.TimerTask;
 
 public class AppController extends Application {
 
@@ -40,6 +46,7 @@ public class AppController extends Application {
 
     // Main power switch in AppServiceFragment
     private boolean enabled;
+    private Timer timer;
 
 //    private SharedPreferences prefs;
 
@@ -63,7 +70,7 @@ public class AppController extends Application {
     }
 
     private void acquireIdentifier() {
-        // TODO check if wifi is on and connected
+        // TODO check if wifi is on
         id = Util.getWifiMac(this);
     }
 
@@ -79,6 +86,7 @@ public class AppController extends Application {
                 return info.getServiceName().startsWith(NSD_SERVICE_PREFIX);
             }
         });
+        nsdController.registerListener(nsdContollerListener);
 
         volleyController = new VolleyController(this);
     }
@@ -99,10 +107,21 @@ public class AppController extends Application {
     public void setEnabled(boolean enabled) {
         this.enabled = enabled;
 
+        if (timer != null) {
+            timer.cancel();
+        }
+
         if (enabled) {
             nsdController.enableNsd();
-            signalManager.enable(this);
-            algorithmManager.enable();
+            //signalManager.enable(this);
+            //algorithmManager.enable();
+            timer = new Timer();
+            timer.schedule(new TimerTask() {
+                @Override
+                public void run() {
+                    checkConnections();
+                }
+            }, 0, 5000);
         } else {
             nsdController.disableNsd();
             signalManager.disable(this);
@@ -110,7 +129,21 @@ public class AppController extends Application {
         }
     }
 
+    private void checkConnections() {
+        if (nsdController.getSocketManager().getConnections().size() >= 3) {
+            setBeaconMode(true);
+        }
+    }
 
+    private void getMacAddressesOfConnectedNodes() {
+        
+    }
+
+    private void setBeaconMode(boolean enable) {
+        if (enable) {
+
+        }
+    }
 
     private final NodeManager.NodeManagerListener nodeManagerListener = new NodeManager.NodeManagerListener() {
         @Override
@@ -155,6 +188,59 @@ public class AppController extends Application {
         }
     };
 
+
+
+    private final NsdController.NsdContollerListener nsdContollerListener = new NsdController.NsdContollerListener() {
+
+        @Override
+        public void onServiceRegistered(NsdServiceInfo info) {
+
+        }
+
+        @Override
+        public void onAcceptableServiceResolved(NsdServiceInfo info) {
+
+        }
+
+        @Override
+        public void onServerAcceptedClientSocket(MyServerSocket mss, Socket socket) {
+
+        }
+
+        @Override
+        public void onServerFinished(MyServerSocket mss) {
+
+        }
+
+        @Override
+        public void onServerSocketListening(MyServerSocket mss, ServerSocket socket) {
+
+        }
+
+        @Override
+        public void onMessageSent(MyConnectionSocket mcs, String msg) {
+
+        }
+
+        @Override
+        public void onMessageReceived(MyConnectionSocket mcs, String msg) {
+
+        }
+
+        @Override
+        public void onClientFinished(MyConnectionSocket mcs) {
+
+        }
+
+        @Override
+        public void onClientSocketCreated(MyConnectionSocket mcs, Socket socket) {
+
+        }
+    };
+
+
+
+
     private void applyLocationAlgorithms() {
         /*
          * When a range has been obtained by processing a signal (except the internal sensors),
@@ -178,4 +264,6 @@ public class AppController extends Application {
             nodeManager.getLocalNode().addPending(s);
         }
     }
+
+
 }
