@@ -129,6 +129,15 @@ public class AppController extends Application {
         }
     }
 
+    // TODO
+    // Once the local node has shared it's mac with 2 other devices and has the macs of those same 2 devices,
+    // It (they) may switch to beacon mode and perform ranging. When the ranges have been collected,
+    // they will swtich back to NSD mode and share their range tables and perform localization.
+    // If beacon mode (wifi AP) could be enabled without disconnecting from the current network, that'd be great.
+
+
+
+
     private void checkConnections() {
         if (nsdController.getSocketManager().getConnections().size() >= 3) {
             setBeaconMode(true);
@@ -136,7 +145,7 @@ public class AppController extends Application {
     }
 
     private void getMacAddressesOfConnectedNodes() {
-        
+
     }
 
     private void setBeaconMode(boolean enable) {

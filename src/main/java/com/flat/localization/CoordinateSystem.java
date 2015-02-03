@@ -26,8 +26,8 @@ public class CoordinateSystem extends TreeMap<String, float[]> {
      * (and a data connection to, since the two are independent).
      */
     public static final class RangeTable extends TreeMap<String, SimpleRange> {
-        public final Map<String, float[]> coords;
-        public RangeTable(Map<String, float[]> coords) { this.coords = coords; }
+        public final TreeMap<String, float[]> coords;
+        public RangeTable(TreeMap<String, float[]> coords) { this.coords = coords; }
     }
     public static final class RangeTableList extends TreeMap<String, RangeTable> {}
 
