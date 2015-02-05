@@ -3,6 +3,7 @@ package com.flat.localization;
 import android.content.SharedPreferences;
 import android.text.TextUtils;
 
+import com.flat.sockets.MyConnectionSocket;
 import com.flat.util.Util;
 
 import org.json.JSONException;
@@ -84,6 +85,7 @@ public final class Node {
     private final String id;
     private String name;
     private boolean fixed;
+    private MyConnectionSocket connection;
     private float actualRangeOverride;
 
     public synchronized void setActualRangeOverride(float range) {
@@ -111,6 +113,14 @@ public final class Node {
             this.name = name;
         }
     }
+
+    public synchronized void setDataConnection(MyConnectionSocket mcs) {
+        connection = mcs;
+    }
+    public synchronized MyConnectionSocket getDataConnection() {
+        return connection;
+    }
+
 
     public synchronized boolean isFixed() { return fixed; }
     public synchronized void setFixed(boolean fixed) { this.fixed = fixed; }
@@ -213,6 +223,10 @@ public final class Node {
         } catch (JSONException ignored) {}
     }
 
+    @Override
+    public String toString() {
+        return id;
+    }
 
     /**
      * Flatten several nodes' current state to a float[][].

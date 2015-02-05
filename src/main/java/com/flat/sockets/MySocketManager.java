@@ -13,9 +13,8 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * The socket manager takes care of the higher level aspects of maintaining client/server sockets
- * such as attempting to retry client connections that fail. Each instance manages one server and a
- * list of clients/connections.
+ * The socket manager contains a list of connections (clients), and a single listening server socket.
+ * It also uses a Handler to transfer server/connection events from their respective threads to the main application thread.
  *
  * @author Jacob Phillips (12/2014, jphilli85 at gmail)
  */
@@ -28,7 +27,17 @@ public class MySocketManager {
     public int send(String msg) {
         int count = 0;
         for (MyConnectionSocket mcs : connections) {
-            if (mcs.send(msg)) ++count;                 // TODO could use one shared sending thread
+            if (mcs.send(msg)) ++count;                 // TODO *could* use one shared sending thread
+        }
+        return count;
+    }
+
+    public int send(InetAddress address, String msg) {
+        int count = 0;
+        for (MyConnectionSocket mcs : connections) {
+            if (mcs.getAddress().getHostAddress().equals(address.getHostAddress())) {
+                if (mcs.send(msg)) ++count;
+            }
         }
         return count;
     }

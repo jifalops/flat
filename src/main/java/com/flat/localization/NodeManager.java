@@ -4,6 +4,8 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.preference.PreferenceManager;
 
+import com.flat.sockets.MyConnectionSocket;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -28,7 +30,7 @@ public class NodeManager {
         return added;
     }
 
-    /** @return a new copy of the set of known nodes */
+    /** @return a new copy of the set of known nodes, with the local node at the end if included. */
     public List<Node> getNodes(boolean includeLocalNode) {
         List<Node> list = new ArrayList<Node>(nodes);
         if (includeLocalNode) list.add(localNode);
@@ -47,7 +49,14 @@ public class NodeManager {
         return null;
     }
 
-
+    public Node findNodeByConnection(MyConnectionSocket mcs) {
+        for (Node n : nodes) {
+            if (n.getDataConnection() == mcs) {
+                return n;
+            }
+        }
+        return null;
+    }
 
     private final Node localNode;
     public Node getLocalNode() { return localNode; }

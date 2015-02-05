@@ -15,6 +15,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
+ * The NSD controller registers a discoverable service on the device's local network using sockets.
+ * See {@link com.flat.sockets.MySocketManager}.
+ * It also initiates reconnecting.
+ *
  * @author Jacob Phillips (01/2015, jphilli85 at gmail)
  */
 public class NsdController {
@@ -42,9 +46,12 @@ public class NsdController {
 
         socketManager.registerListener(socketListener);
         socketManager.startServer();
+
+        nsdHelper.discoverServices();
     }
 
     public void disableNsd() {
+        nsdHelper.stopDiscovery();
         socketManager.stopServer();
         socketManager.stopConnections();
         nsdHelper.unregisterService();

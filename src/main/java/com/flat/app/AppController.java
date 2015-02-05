@@ -8,6 +8,7 @@ import com.android.volley.Response;
 import com.android.volley.VolleyError;
 import com.flat.localization.Node;
 import com.flat.localization.NodeManager;
+import com.flat.localization.NodeMessage;
 import com.flat.localization.algorithm.Criteria;
 import com.flat.localization.algorithm.LocationAlgorithm;
 import com.flat.localization.algorithm.LocationAlgorithmManager;
@@ -23,6 +24,7 @@ import com.flat.nsd.NsdHelper;
 import com.flat.sockets.MyConnectionSocket;
 import com.flat.sockets.MyServerSocket;
 
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.net.ServerSocket;
@@ -139,17 +141,15 @@ public class AppController extends Application {
 
 
     private void checkConnections() {
-        if (nsdController.getSocketManager().getConnections().size() >= 3) {
+        if (nsdController.getSocketManager().getConnections().size() >= 2) {
             setBeaconMode(true);
         }
     }
 
-    private void getMacAddressesOfConnectedNodes() {
-
-    }
-
-    private void setBeaconMode(boolean enable) {
-        if (enable) {
+    private void setBeaconMode(boolean enabled) {
+        if (enabled) {
+            
+        } else {
 
         }
     }
@@ -213,7 +213,7 @@ public class AppController extends Application {
 
         @Override
         public void onServerAcceptedClientSocket(MyServerSocket mss, Socket socket) {
-
+            sendNodeId(socket);
         }
 
         @Override
@@ -233,21 +233,53 @@ public class AppController extends Application {
 
         @Override
         public void onMessageReceived(MyConnectionSocket mcs, String msg) {
-
+            try {
+                handleReceivedMessage(mcs, NodeMessage.from(msg));
+            } catch (JSONException e) {
+                Log.e(TAG, "JSON exception converting received message.", e);
+            }
         }
 
         @Override
         public void onClientFinished(MyConnectionSocket mcs) {
-
+            Log.v(TAG, "lost connection to " + mcs.getAddress().getHostAddress());
+            Node n = nodeManager.findNodeByConnection(mcs);
+            if (n != null) n.setDataConnection(null);
         }
 
         @Override
         public void onClientSocketCreated(MyConnectionSocket mcs, Socket socket) {
-
+            sendNodeId(socket);
         }
     };
 
+    private void sendNodeId(Socket socket) {
+        try {
+            nsdController.getSocketManager().send(socket.getInetAddress(), new NodeMessage(id).toString());
+        } catch (JSONException e) {
+            Log.e(TAG, "JSON exception while sending node id.", e);
+        }
+    }
 
+    private void handleReceivedMessage(MyConnectionSocket mcs, NodeMessage nm) {
+        switch (nm.type) {
+            case NodeMessage.TYPE_ID:
+                Log.v(TAG, "received node ID from " + nm.fromId + "@" + mcs.getAddress().getHostAddress());
+                Node n = nodeManager.getNode(nm.fromId);
+                if (n == null) {
+                    n = new Node(nm.fromId);
+                    nodeManager.addNode(n);
+                }
+                n.setDataConnection(mcs);
+                break;
+            case NodeMessage.TYPE_RANGE_TABLE:
+                Log.v(TAG, "received range table from " + nm.fromId + "@" + mcs.getAddress().getHostAddress());
+                break;
+            case NodeMessage.TYPE_COORDINATE_SYSTEM:
+                Log.v(TAG, "received coordinate system from " + nm.fromId + "@" + mcs.getAddress().getHostAddress());
+                break;
+        }
+    }
 
 
     private void applyLocationAlgorithms() {
