@@ -46,28 +46,33 @@ public class CoordinateSystem extends TreeMap<String, float[]> {
     }
 
 
+    public CoordinateSystem(RangeTableList rangeTables) {
+        this.rangeTables = rangeTables;
+        updateCoordinates();
+    }
 
     private LocalizationRoot root;
     public synchronized LocalizationRoot getRoot() { return root; }
 
 
 
-    private RangeTableList rangeTables;
+    private final RangeTableList rangeTables;
     public synchronized RangeTableList getRangeTables() { return rangeTables; }
-    public synchronized void setRangeTables(RangeTableList tables) { rangeTables = tables; }
 
 
 
 
-    public synchronized void updateCoordinates() {
-// Find coordinate system with the most nodes
+    private synchronized void updateCoordinates() {
+        // Find coordinate system with the most nodes
         String winnerNode = null;
         int nodeCount = 0;
         for (String node : rangeTables.keySet()) {
-            if (rangeTables.get(node).coords.size() > nodeCount) {
-                nodeCount = rangeTables.get(node).coords.size();
-                winnerNode = node;
-            }
+            try {
+                if (rangeTables.get(node).coords.size() > nodeCount) {
+                    nodeCount = rangeTables.get(node).coords.size();
+                    winnerNode = node;
+                }
+            } catch (NullPointerException ignored) {}
         }
 
         // If there arent enough nodes in the coordinate system, a new coordinate system must be created.

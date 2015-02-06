@@ -58,6 +58,46 @@ public class NodeManager {
         return null;
     }
 
+    public Node[] getConnectedNodes() {
+        List<Node> connected = new ArrayList<Node>();
+        for (Node n : nodes) {
+            if (n.getDataConnection() != null) connected.add(n);
+        }
+        return connected.toArray(new Node[connected.size()]);
+    }
+
+    public int countConnectedNodes() {
+        int count = 0;
+        for (Node n : nodes) {
+            if (n.getDataConnection() != null) ++count;
+        }
+        return count;
+    }
+
+    public CoordinateSystem.RangeTable getLocalRangeTable() {
+        CoordinateSystem.RangeTable table = new CoordinateSystem.RangeTable(localNode.getState().referenceFrame);
+        for (Node n : nodes) {
+            if (n.getRange().range > 0) {
+                CoordinateSystem.SimpleRange r = new CoordinateSystem.SimpleRange();
+                r.range = n.getRange().range;
+                r.time = n.getRange().time;
+                table.put(n.getId(), r);
+            }
+        }
+        return table;
+    }
+
+    public CoordinateSystem.RangeTableList getRangeTableList() {
+        CoordinateSystem.RangeTableList list = new CoordinateSystem.RangeTableList();
+        list.put(localNode.getId(), getLocalRangeTable());
+        for (Node n : nodes) {
+            if (n.getRangeTable() != null) {
+                list.put(n.getId(), n.getRangeTable());
+            }
+        }
+        return list;
+    }
+
     private final Node localNode;
     public Node getLocalNode() { return localNode; }
 

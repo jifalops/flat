@@ -10,12 +10,12 @@ import com.android.volley.toolbox.Volley;
 /**
  * @author Jacob Phillips (01/2015, jphilli85 at gmail)
  */
-public class VolleyController {
-    private static final String TAG = VolleyController.class.getSimpleName();
+public class VolleyManager {
+    private static final String TAG = VolleyManager.class.getSimpleName();
 
     private final RequestQueue queue;
 
-    public VolleyController(Context context) {
+    public VolleyManager(Context context) {
         queue = Volley.newRequestQueue(context.getApplicationContext());
     }
 

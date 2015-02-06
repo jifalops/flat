@@ -34,16 +34,11 @@ public final class Node {
         @Override public String toString() { return String.format("%.2fm (overridden to %.2fm)", range, rangeOverride); }
     }
 
-
-
-
-
-
-
-
-    // TODO belongs elsewhere
-    CoordinateSystem.NodeSet connectedNodes = new CoordinateSystem.NodeSet();
-
+    private CoordinateSystem.RangeTable rangeTable;
+    public CoordinateSystem.RangeTable getRangeTable() { return rangeTable; }
+    public void setRangeTable(CoordinateSystem.RangeTable table) {
+        rangeTable = table;
+    }
 
     /**
      * A state is the position [x,y,z] and angle (see below) of a node at a specific time. It also

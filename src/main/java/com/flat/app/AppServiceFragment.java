@@ -42,7 +42,6 @@ public class AppServiceFragment extends PersistentIntentServiceFragment {
 
     @Override
     protected void onServiceEnabled(boolean enabled) {
-        if (!isBound()) return;
         setPersistent(enabled);
         AppController.getInstance().setEnabled(enabled);
     }
@@ -151,6 +150,10 @@ public class AppServiceFragment extends PersistentIntentServiceFragment {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         showPersistControl(false);
+
+
+        onServiceEnabled(true);
+
     }
 
     @Override

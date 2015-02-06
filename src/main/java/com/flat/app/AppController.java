@@ -1,11 +1,14 @@
 package com.flat.app;
 
 import android.app.Application;
+import android.content.Context;
 import android.net.nsd.NsdServiceInfo;
+import android.net.wifi.WifiManager;
 import android.util.Log;
 
 import com.android.volley.Response;
 import com.android.volley.VolleyError;
+import com.flat.localization.CoordinateSystem;
 import com.flat.localization.Node;
 import com.flat.localization.NodeManager;
 import com.flat.localization.NodeMessage;
@@ -18,7 +21,7 @@ import com.flat.localization.signal.SignalManager;
 import com.flat.localization.util.Util;
 import com.flat.loggingrequests.CustomRequest;
 import com.flat.loggingrequests.RangingRequest;
-import com.flat.loggingrequests.VolleyController;
+import com.flat.loggingrequests.VolleyManager;
 import com.flat.nsd.NsdController;
 import com.flat.nsd.NsdHelper;
 import com.flat.sockets.MyConnectionSocket;
@@ -39,7 +42,7 @@ public class AppController extends Application {
 	public static final String TAG = AppController.class.getSimpleName();
 
     public static final String NSD_SERVICE_PREFIX = "flatloco_";
-
+    public static final String WIFI_BEACON_SSID_PREFIX = "flatloco_";
 
 	private static AppController sInstance;
     public static synchronized AppController getInstance() {
@@ -48,16 +51,19 @@ public class AppController extends Application {
 
     // Main power switch in AppServiceFragment
     private boolean enabled;
-    private Timer timer;
+    private Timer beaconTimer;
+    private Timer nsdTimer;
 
 //    private SharedPreferences prefs;
 
-    // TODO these probably shouldn't be public
+    // TODO bad etiquette
     public NodeManager nodeManager;
     public SignalManager signalManager;
     public LocationAlgorithmManager algorithmManager;
     public NsdController nsdController;
-    public VolleyController volleyController;
+    public VolleyManager volleyManager;
+    public WifiApManager beaconController;
+    public WifiManager wifiManager;
 
     public String id;
 
@@ -81,6 +87,7 @@ public class AppController extends Application {
         nodeManager.registerListener(nodeManagerListener);
 
         signalManager = new SignalManager(this);
+//        signalManager.registerListener(signalListener);
         algorithmManager = new LocationAlgorithmManager(this);
         nsdController = new NsdController(this, NSD_SERVICE_PREFIX + id, new NsdHelper.NsdServiceFilter() {
             @Override
@@ -90,7 +97,14 @@ public class AppController extends Application {
         });
         nsdController.registerListener(nsdContollerListener);
 
-        volleyController = new VolleyController(this);
+        volleyManager = new VolleyManager(this);
+
+        try {
+            beaconController = new WifiApManager(this);
+        } catch (NoSuchMethodException e) {
+            Log.e(TAG, "Unable to initialize beaconController.", e);
+        }
+        wifiManager = (WifiManager) getSystemService(Context.WIFI_SERVICE);
     }
 
     private void initializeStaticData() {
@@ -109,27 +123,81 @@ public class AppController extends Application {
     public void setEnabled(boolean enabled) {
         this.enabled = enabled;
 
-        if (timer != null) {
-            timer.cancel();
-        }
+        setBeaconTimerEnabled(enabled);
 
         if (enabled) {
             nsdController.enableNsd();
+            // TODO why did i comment these out?
             //signalManager.enable(this);
             //algorithmManager.enable();
-            timer = new Timer();
-            timer.schedule(new TimerTask() {
-                @Override
-                public void run() {
-                    checkConnections();
-                }
-            }, 0, 5000);
         } else {
+            setNsdTimerEnabled(false);
             nsdController.disableNsd();
             signalManager.disable(this);
             algorithmManager.disable();
         }
     }
+
+    private void setBeaconTimerEnabled(boolean enabled) {
+        if (beaconTimer != null) {
+            beaconTimer.cancel();
+            beaconTimer = null;
+        }
+        if (enabled) {
+            beaconTimer = new Timer();
+            beaconTimer.schedule(new TimerTask() {
+                @Override
+                public void run() {
+                    if (hasEnoughInfoForBeaconMode()) {
+                        nsdController.disableNsd();
+                        setBeaconMode(true);
+
+                        setBeaconTimerEnabled(false);
+                        setNsdTimerEnabled(true);
+                    }
+                }
+            }, 0, (int) (10000 + Math.random() * 10000)); // repeat every 10-20 seconds
+        }
+    }
+    private void setNsdTimerEnabled(boolean enabled) {
+        if (nsdTimer != null) {
+            nsdTimer.cancel();
+            nsdTimer = null;
+        }
+        if (enabled) {
+            nsdTimer = new Timer();
+            nsdTimer.schedule(new TimerTask() {
+                @Override
+                public void run() {
+                    setBeaconMode(false);
+                    if (isEnabled()) nsdController.enableNsd();
+
+                    setNsdTimerEnabled(false);
+                    setBeaconTimerEnabled(true);
+                }
+            }, (int) (10000 + Math.random() * 10000)); // stop after 10-20 seconds
+        }
+    }
+
+//    private final Signal.SignalListener signalListener = new Signal.SignalListener() {
+//        @Override
+//        public void onChange(Signal signal, int eventType) {
+//            if (signal instanceof WifiBeacon) {
+//                processScanResults(((WifiBeacon) signal).getScanResults());
+//            }
+//        }
+//    };
+//
+//    private void processScanResults(List<ScanResult> beacons) {
+//        for (ScanResult sr : beacons) {
+//            if (sr.SSID.startsWith(WIFI_BEACON_SSID_PREFIX)) {
+//                Node n = nodeManager.getNode(sr.BSSID);
+//                if (n != null) {
+//                    n.
+//                }
+//            }
+//        }
+//    }
 
     // TODO
     // Once the local node has shared it's mac with 2 other devices and has the macs of those same 2 devices,
@@ -138,20 +206,26 @@ public class AppController extends Application {
     // If beacon mode (wifi AP) could be enabled without disconnecting from the current network, that'd be great.
 
 
-
-
-    private void checkConnections() {
-        if (nsdController.getSocketManager().getConnections().size() >= 2) {
-            setBeaconMode(true);
-        }
+    private boolean hasEnoughInfoForBeaconMode() {
+        return  nsdController.getSocketManager().getConnections().size() >= 2
+                && nodeManager.countConnectedNodes() >= 2;
     }
 
     private void setBeaconMode(boolean enabled) {
+        beaconController.setWifiApState(beaconController.getWifiApConfiguration(), enabled);
         if (enabled) {
-            
+//            signalManager.getSignals()
         } else {
-
+            //wifiManager.setWifiEnabled(true);
         }
+    }
+
+    private boolean hasEnoughInfoToExchangeRangeTables() {
+        int count = 0;
+        for (Node n : nodeManager.getConnectedNodes()) {
+            if (n.getRangeHistorySize() > 0) ++count;
+        }
+        return count >= 2;
     }
 
     private final NodeManager.NodeManagerListener nodeManagerListener = new NodeManager.NodeManagerListener() {
@@ -188,7 +262,7 @@ public class AppController extends Application {
             });
 
             // add the request object to the queue to be executed
-            volleyController.addToRequestQueue(req);
+            volleyManager.addToRequestQueue(req);
         }
 
         @Override
@@ -213,7 +287,7 @@ public class AppController extends Application {
 
         @Override
         public void onServerAcceptedClientSocket(MyServerSocket mss, Socket socket) {
-            sendNodeId(socket);
+            handleNewConnection(socket);
         }
 
         @Override
@@ -249,7 +323,7 @@ public class AppController extends Application {
 
         @Override
         public void onClientSocketCreated(MyConnectionSocket mcs, Socket socket) {
-            sendNodeId(socket);
+            handleNewConnection(socket);
         }
     };
 
@@ -261,22 +335,59 @@ public class AppController extends Application {
         }
     }
 
+    private void sendLocalRangeTable(Socket socket) {
+        if (nodeManager.getLocalRangeTable() == null) return;
+
+        try {
+            nsdController.getSocketManager().send(socket.getInetAddress(), new NodeMessage(id, nodeManager.getLocalRangeTable()).toString());
+        } catch (JSONException e) {
+            Log.e(TAG, "JSON exception while sending range table.", e);
+        }
+    }
+
+    private void handleNewConnection(Socket socket) {
+        sendNodeId(socket);
+        sendLocalRangeTable(socket);
+    }
+
+    private void sendCoordinateSystem(MyConnectionSocket mcs) {
+        CoordinateSystem coords = nodeManager.getLocalNode().getState().referenceFrame;
+        if (coords == null) {
+            coords = new CoordinateSystem(nodeManager.getRangeTableList());
+        }
+        if (coords.size() >= 3) {
+            try {
+                mcs.send(new NodeMessage(id, coords).toString());
+            } catch (JSONException e) {
+                Log.e(TAG, "JSON exception while sending coordinate system.", e);
+            }
+        }
+    }
+
     private void handleReceivedMessage(MyConnectionSocket mcs, NodeMessage nm) {
+        Node n = nodeManager.getNode(nm.fromId);
+        if (n == null) {
+            n = new Node(nm.fromId);
+            nodeManager.addNode(n);
+        } else if (n.getDataConnection() != null) {
+            Log.d(TAG, "Node " + n.getId() + " already has data connection (closed=" + mcs.getSocket().isClosed() + ", finished=" + mcs.isFinished() + ").");
+        }
+        n.setDataConnection(mcs);
+
         switch (nm.type) {
             case NodeMessage.TYPE_ID:
                 Log.v(TAG, "received node ID from " + nm.fromId + "@" + mcs.getAddress().getHostAddress());
-                Node n = nodeManager.getNode(nm.fromId);
-                if (n == null) {
-                    n = new Node(nm.fromId);
-                    nodeManager.addNode(n);
-                }
-                n.setDataConnection(mcs);
                 break;
             case NodeMessage.TYPE_RANGE_TABLE:
                 Log.v(TAG, "received range table from " + nm.fromId + "@" + mcs.getAddress().getHostAddress());
+                n.setRangeTable(nm.rangeTable);
+                sendCoordinateSystem(mcs);
                 break;
             case NodeMessage.TYPE_COORDINATE_SYSTEM:
                 Log.v(TAG, "received coordinate system from " + nm.fromId + "@" + mcs.getAddress().getHostAddress());
+                Node.State state = new Node.State();
+                state.referenceFrame = nm.coordinateSystem;
+                n.update(state);
                 break;
         }
     }
