@@ -63,16 +63,17 @@ public class CoordinateSystem extends TreeMap<String, float[]> {
 
 
     private synchronized void updateCoordinates() {
+        if (rangeTables == null) return;
+
         // Find coordinate system with the most nodes
         String winnerNode = null;
         int nodeCount = 0;
         for (String node : rangeTables.keySet()) {
-            try {
-                if (rangeTables.get(node).coords.size() > nodeCount) {
-                    nodeCount = rangeTables.get(node).coords.size();
-                    winnerNode = node;
-                }
-            } catch (NullPointerException ignored) {}
+            RangeTable table = rangeTables.get(node);
+            if (table != null && table.coords != null && table.coords.size() > nodeCount) {
+                nodeCount = table.coords.size();
+                winnerNode = node;
+            }
         }
 
         // If there arent enough nodes in the coordinate system, a new coordinate system must be created.
@@ -220,7 +221,9 @@ public class CoordinateSystem extends TreeMap<String, float[]> {
             root.addAll(localizableNodes.get(winnerNode));
             root.commonNodeMap = allCommonNodes.get(winnerNode);
 
-
+            if (root.size() < 2) {
+                return;
+            }
 
             // So we have chosen the nodes that will be used to construct a coordinate system.
             Log.i(TAG, root.get(0).size() + " neighbors and " + root.get(1).size() + " neighbors' neighbors will be localized under " + root.id);

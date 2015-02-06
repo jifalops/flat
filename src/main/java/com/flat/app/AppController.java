@@ -5,6 +5,7 @@ import android.content.Context;
 import android.net.nsd.NsdServiceInfo;
 import android.net.wifi.WifiManager;
 import android.util.Log;
+import android.widget.Toast;
 
 import com.android.volley.Response;
 import com.android.volley.VolleyError;
@@ -152,7 +153,8 @@ public class AppController extends Application {
                         nsdController.disableNsd();
                         setBeaconMode(true);
 
-                        setBeaconTimerEnabled(false);
+                        beaconTimer.cancel();
+                        beaconTimer = null;
                         setNsdTimerEnabled(true);
                     }
                 }
@@ -172,7 +174,8 @@ public class AppController extends Application {
                     setBeaconMode(false);
                     if (isEnabled()) nsdController.enableNsd();
 
-                    setNsdTimerEnabled(false);
+                    nsdTimer.cancel();
+                    nsdTimer = null;
                     setBeaconTimerEnabled(true);
                 }
             }, (int) (10000 + Math.random() * 10000)); // stop after 10-20 seconds
@@ -212,11 +215,14 @@ public class AppController extends Application {
     }
 
     private void setBeaconMode(boolean enabled) {
+//        Toast.makeText(this, "Setting beacon mode: " + enabled, Toast.LENGTH_SHORT).show();
+        Log.d(TAG, "Setting beacon mode: " + enabled);
+        beaconController.setWifiApSsid(WIFI_BEACON_SSID_PREFIX + id);
         beaconController.setWifiApState(beaconController.getWifiApConfiguration(), enabled);
         if (enabled) {
 //            signalManager.getSignals()
         } else {
-            //wifiManager.setWifiEnabled(true);
+            wifiManager.setWifiEnabled(true);
         }
     }
 
@@ -336,16 +342,19 @@ public class AppController extends Application {
     }
 
     private void sendLocalRangeTable(Socket socket) {
-        if (nodeManager.getLocalRangeTable() == null) return;
+        CoordinateSystem.RangeTable table = nodeManager.getLocalRangeTable();
+        if (table == null || table.size() < 2) return;
 
         try {
-            nsdController.getSocketManager().send(socket.getInetAddress(), new NodeMessage(id, nodeManager.getLocalRangeTable()).toString());
+            nsdController.getSocketManager().send(socket.getInetAddress(), new NodeMessage(id, table).toString());
         } catch (JSONException e) {
             Log.e(TAG, "JSON exception while sending range table.", e);
         }
     }
 
     private void handleNewConnection(Socket socket) {
+        Toast.makeText(this, "New connection to: " + socket.getInetAddress().getHostAddress(), Toast.LENGTH_SHORT).show();
+        Log.d(TAG, "Total connections: " + nsdController.getSocketManager().getConnections().size());
         sendNodeId(socket);
         sendLocalRangeTable(socket);
     }
@@ -377,6 +386,7 @@ public class AppController extends Application {
         switch (nm.type) {
             case NodeMessage.TYPE_ID:
                 Log.v(TAG, "received node ID from " + nm.fromId + "@" + mcs.getAddress().getHostAddress());
+                Log.d(TAG, "Total nodes with data connections: " + nodeManager.countConnectedNodes());
                 break;
             case NodeMessage.TYPE_RANGE_TABLE:
                 Log.v(TAG, "received range table from " + nm.fromId + "@" + mcs.getAddress().getHostAddress());

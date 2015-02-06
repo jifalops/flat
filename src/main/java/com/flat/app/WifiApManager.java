@@ -52,4 +52,13 @@ public final class WifiApManager {
             return WIFI_AP_STATE_FAILED;
         }
     }
+
+    public boolean setWifiApSsid(String ssid) {
+        WifiConfiguration config = getWifiApConfiguration();
+        if (config != null) {
+            config.SSID = ssid;
+            return true;
+        }
+        return false;
+    }
 }

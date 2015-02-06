@@ -28,11 +28,16 @@ public class AppServiceFragment extends PersistentIntentServiceFragment {
 
     private ImageView signalDot, algDot, rangeDot;
     private TextView signalSummary, algSummary, rangeSummary;
-
+    private boolean shouldEnableService;
 
     @Override
     public void onServiceConnected(PersistentIntentService service) {
         mService = (AppService) service;
+        if (shouldEnableService) {
+            service.setEnabled(true);
+            onServiceEnabled(true);
+            shouldEnableService = false;
+        }
     }
 
     @Override
@@ -150,10 +155,7 @@ public class AppServiceFragment extends PersistentIntentServiceFragment {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         showPersistControl(false);
-
-
-        onServiceEnabled(true);
-
+        shouldEnableService = true;
     }
 
     @Override

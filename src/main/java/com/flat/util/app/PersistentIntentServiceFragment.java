@@ -54,6 +54,7 @@ public abstract class PersistentIntentServiceFragment extends Fragment {
         super.onResume();
         if (isBound()) {
             bindServiceControls(mService);
+
         }
     }
 

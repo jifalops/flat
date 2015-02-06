@@ -127,7 +127,7 @@ public class NodeMessage {
                 break;
             case TYPE_COORDINATE_SYSTEM:
                 JSONArray coordsSys = nm.msg.getJSONArray(KEY_COORDINATE_SYSTEM);
-                nm.coordinateSystem = new CoordinateSystem();
+                nm.coordinateSystem = new CoordinateSystem(null);
                 for (int i = 0; i < coordsSys.length(); ++i) {
                     JSONArray json = coordsSys.getJSONArray(i);
                     nm.coordinateSystem.put(json.getString(0), new float[] {
