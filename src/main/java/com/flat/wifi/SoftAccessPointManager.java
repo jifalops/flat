@@ -8,60 +8,102 @@ import android.util.Log;
 import java.lang.reflect.Method;
 
 /**
-* @author Jacob Phillips (02/2015, jphilli85 at gmail)
+* This is based off of a response on Stack Overflow.
 */
 public final class SoftAccessPointManager {
-    private static final int WIFI_AP_STATE_FAILED = 4;
-    private final WifiManager mWifiManager;
-    private final String TAG = "Wifi Access Manager";
+    private static final String TAG = SoftAccessPointManager.class.getSimpleName();
+    private static final int WIFI_AP_STATE_FAILED = 14; // from WifiManager code
+
+
+
+    private WifiManager mWifiManager;
     private Method wifiControlMethod;
     private Method wifiApConfigurationMethod;
     private Method wifiApState;
+    private boolean softApEnabled;
 
-    public SoftAccessPointManager(Context context) throws SecurityException, NoSuchMethodException {
-//        context = Preconditions.checkNotNull(context);
+    // Singleton
+    private static SoftAccessPointManager instance;
+    public static SoftAccessPointManager getInstance(Context ctx) throws NoSuchMethodException {
+        if (instance == null) instance = new SoftAccessPointManager(ctx);
+        return instance;
+    }
+    private SoftAccessPointManager(Context context) throws NoSuchMethodException {
         mWifiManager = (WifiManager) context.getSystemService(Context.WIFI_SERVICE);
-        wifiControlMethod = mWifiManager.getClass().getMethod("setWifiApEnabled", WifiConfiguration.class,boolean.class);
-        wifiApConfigurationMethod = mWifiManager.getClass().getMethod("getWifiApConfiguration",null);
+
+        wifiControlMethod = mWifiManager.getClass().getMethod("setWifiApEnabled", WifiConfiguration.class, boolean.class);
+        wifiApConfigurationMethod = mWifiManager.getClass().getMethod("getWifiApConfiguration", null);
         wifiApState = mWifiManager.getClass().getMethod("getWifiApState");
     }
-    public boolean setWifiApState(WifiConfiguration config, boolean enabled) {
-//        config = Preconditions.checkNotNull(config);
+
+
+    public WifiConfiguration getConfig() {
         try {
-            if (enabled) {
-                mWifiManager.setWifiEnabled(!enabled);
-            }
-            return (Boolean) wifiControlMethod.invoke(mWifiManager, config, enabled);
+            return (WifiConfiguration) wifiApConfigurationMethod.invoke(mWifiManager, null);
         } catch (Exception e) {
-            Log.e(TAG, "", e);
-            return false;
-        }
-    }
-    public WifiConfiguration getWifiApConfiguration()
-    {
-        try{
-            return (WifiConfiguration)wifiApConfigurationMethod.invoke(mWifiManager, null);
-        }
-        catch(Exception e)
-        {
             return null;
         }
     }
-    public int getWifiApState() {
+
+    public int getState() {
         try {
-            return (Integer)wifiApState.invoke(mWifiManager);
+            return (Integer) wifiApState.invoke(mWifiManager);
         } catch (Exception e) {
-            Log.e(TAG, "", e);
+            Log.e(TAG, "Error getting soft AP state (int)", e);
             return WIFI_AP_STATE_FAILED;
         }
     }
 
-    public boolean setWifiApSsid(String ssid) {
-        WifiConfiguration config = getWifiApConfiguration();
+    public boolean setSsid(String ssid) {
+        WifiConfiguration config = getConfig();
         if (config != null) {
             config.SSID = ssid;
             return true;
         }
         return false;
+    }
+
+    public String getSsid() {
+        WifiConfiguration config = getConfig();
+        return config == null ? null : config.SSID;
+    }
+
+    public String getBssid() {
+        WifiConfiguration config = getConfig();
+        return config == null ? null : config.BSSID;
+    }
+
+    public boolean setSsidHidden(boolean hidden) {
+        WifiConfiguration config = getConfig();
+        if (config != null) {
+            config.hiddenSSID = hidden;
+            return true;
+        }
+        return false;
+    }
+
+    public boolean isSsidHidden() {
+        WifiConfiguration config = getConfig();
+        return config != null && config.hiddenSSID;
+    }
+
+    public boolean setEnabled(boolean enabled) {
+        return setEnabled(enabled, null);
+    }
+
+    public boolean setEnabled(boolean enabled, WifiConfiguration config) {
+        if (config == null) config = getConfig();
+
+        if (enabled) mWifiManager.setWifiEnabled(false);
+        try { softApEnabled = (Boolean) wifiControlMethod.invoke(mWifiManager, config, enabled); }
+        catch (Exception e) {
+            Log.e(TAG, "Error setting soft AP state.", e);
+        }
+        if (!enabled) mWifiManager.setWifiEnabled(true);
+        return softApEnabled;
+    }
+
+    public boolean isEnabled() {
+        return softApEnabled;
     }
 }

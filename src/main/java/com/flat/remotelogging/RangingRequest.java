@@ -1,7 +1,8 @@
 package com.flat.remotelogging;
 
 import com.android.volley.Response;
-import com.flat.localization.Node;
+import com.flat.localization.node.Node;
+import com.flat.localization.node.NodeRange;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -14,7 +15,7 @@ public final class RangingRequest extends AbstractRequest {
 
     static final String URL = "http://10.1.1.11/flat/logging_service.php";
 
-    public static Map<String, String> makeRequest(Node.Range range, Node src, Node dst) {
+    public static Map<String, String> makeRequest(NodeRange range, Node src, Node dst) {
         RangeParams params = new RangeParams(range, src, dst);
         Map<String, String> p = new HashMap<String, String>();
         p.put("request", params.request);
@@ -44,7 +45,7 @@ public final class RangingRequest extends AbstractRequest {
         public float actual;
         public long node_time;
 
-        public RangeParams(Node.Range r, Node src, Node dst) {
+        public RangeParams(NodeRange r, Node src, Node dst) {
             node_id = src.getId();
             remote_node_id = dst.getId();
             signal = r.signal;

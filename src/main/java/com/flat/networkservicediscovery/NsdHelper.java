@@ -21,7 +21,7 @@ import android.net.nsd.NsdManager;
 import android.net.nsd.NsdServiceInfo;
 import android.util.Log;
 
-import com.flat.wifi.WifiHelper;
+import com.flat.wifi.MyWifiManager;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -141,7 +141,7 @@ public class NsdHelper {
             public void onServiceResolved(NsdServiceInfo serviceInfo) {
                 Log.i(TAG, "Resolve Succeeded for " + getServiceString(serviceInfo));
 
-                if (serviceInfo.getHost().getHostAddress().equals(WifiHelper.getIpAddress(mContext))) {
+                if (serviceInfo.getHost().getHostAddress().equals(MyWifiManager.getIpAddress(mContext))) {
                     Log.e(TAG, "Same host. Connection aborted.");
                     return;
                 }
@@ -196,7 +196,7 @@ public class NsdHelper {
     }
 
     public synchronized boolean registerService(int port) {
-        Log.e(TAG, "Registering service at " + WifiHelper.getIpAddress(mContext) + ":" + port); // Log.e is red
+        Log.e(TAG, "Registering service at " + MyWifiManager.getIpAddress(mContext) + ":" + port); // Log.e is red
         NsdServiceInfo serviceInfo  = new NsdServiceInfo();
         serviceInfo.setPort(port);
         serviceInfo.setServiceName(mServiceName);

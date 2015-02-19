@@ -5,7 +5,7 @@ import android.content.Intent;
 import android.util.Log;
 
 import com.flat.bluetoothtimeofflight.connection.DataPacket;
-import com.flat.localization.signal.interpreters.RoundTripTime;
+import com.flat.localization.signals.interpreters.RoundTripTime;
 import com.flat.util.PersistentIntentService;
 import com.flat.bluetoothtimeofflight.io.Connection;
 

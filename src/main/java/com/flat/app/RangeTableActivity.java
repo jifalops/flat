@@ -21,8 +21,10 @@ import android.widget.ListView;
 import android.widget.TextView;
 
 import com.flat.R;
-import com.flat.localization.Node;
+import com.flat.localization.node.Node;
 import com.flat.localization.NodeManager;
+import com.flat.localization.node.NodeRange;
+import com.flat.localization.node.NodeState;
 
 import java.util.List;
 
@@ -98,17 +100,17 @@ public class RangeTableActivity extends Activity {
             }
 
             @Override
-            public void onRangePending(Node n, Node.Range r) {
+            public void onRangePending(Node n, NodeRange r) {
 
             }
 
             @Override
-            public void onStatePending(Node n, Node.State s) {
+            public void onStatePending(Node n, NodeState s) {
 
             }
 
             @Override
-            public void onRangeChanged(Node n, Node.Range r) {
+            public void onRangeChanged(Node n, NodeRange r) {
                 List<Node> nodes = AppController.getInstance().nodeManager.getNodes(false);
                 for (int i=0; i<nodes.size(); ++i) {
                     if (n == nodes.get(i)) {
@@ -124,7 +126,7 @@ public class RangeTableActivity extends Activity {
             }
 
             @Override
-            public void onStateChanged(Node n, Node.State s) {
+            public void onStateChanged(Node n, NodeState s) {
 
             }
         };

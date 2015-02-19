@@ -11,10 +11,12 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import com.flat.R;
-import com.flat.localization.Node;
+import com.flat.localization.node.Node;
 import com.flat.localization.NodeManager;
-import com.flat.localization.algorithm.Algorithm;
-import com.flat.localization.signal.Signal;
+import com.flat.localization.algorithms.Algorithm;
+import com.flat.localization.node.NodeRange;
+import com.flat.localization.node.NodeState;
+import com.flat.localization.signals.Signal;
 import com.flat.util.PersistentIntentService;
 import com.flat.util.PersistentIntentServiceFragment;
 
@@ -119,22 +121,22 @@ public class MainFragment extends PersistentIntentServiceFragment {
         }
 
         @Override
-        public void onRangePending(Node n, Node.Range r) {
+        public void onRangePending(Node n, NodeRange r) {
 
         }
 
         @Override
-        public void onStatePending(Node n, Node.State s) {
+        public void onStatePending(Node n, NodeState s) {
 
         }
 
         @Override
-        public void onRangeChanged(Node n, Node.Range r) {
+        public void onRangeChanged(Node n, NodeRange r) {
             blink(rangeDot);
         }
 
         @Override
-        public void onStateChanged(Node n, Node.State s) {
+        public void onStateChanged(Node n, NodeState s) {
 
         }
     };

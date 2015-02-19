@@ -2,8 +2,11 @@ package com.flat.localization;
 
 import android.content.Context;
 import android.content.SharedPreferences;
-import android.preference.PreferenceManager;
 
+import com.flat.localization.node.Node;
+import com.flat.localization.node.NodeRange;
+import com.flat.localization.node.NodeState;
+import com.flat.localization.node.RemoteNode;
 import com.flat.sockets.MyConnectionSocket;
 
 import java.util.ArrayList;
@@ -14,12 +17,24 @@ import java.util.List;
  * @author Jacob Phillips (01/2015, jphilli85 at gmail)
  */
 public class NodeManager {
+    private static final String TAG = NodeManager.class.getSimpleName();
+    private static final String PREFS_FILE = "nodeman";
+
+    private final Node localNode;
+    public Node getLocalNode() { return localNode; }
+
+    private final List<RemoteNode> nodes = Collections.synchronizedList(new ArrayList<RemoteNode>());
+    public List<RemoteNode> getNodes() { return nodes; }
 
     private final SharedPreferences prefs;
 
-    /** This is a list of all nodes NOT including the local node */
-    private final List<Node> nodes = Collections.synchronizedList(new ArrayList<Node>());
-    public boolean addNode(Node n) {
+    public NodeManager(Context ctx, Node localNode) {
+        prefs = ctx.getSharedPreferences(PREFS_FILE, Context.MODE_PRIVATE);
+        this.localNode = localNode;
+    }
+
+
+    public boolean addNode(RemoteNode n) {
         if (nodes.contains(n)) return false;
         boolean added = nodes.add(n);
         n.readPrefs(prefs);
@@ -30,27 +45,22 @@ public class NodeManager {
         return added;
     }
 
-    /** @return a new copy of the set of known nodes, with the local node at the end if included. */
-    public List<Node> getNodes(boolean includeLocalNode) {
-        List<Node> list = new ArrayList<Node>(nodes);
-        if (includeLocalNode) list.add(localNode);
-        return list;
-    }
+
     public int getNodeCount() {
         return nodes.size();
     }
-    public Node getNode(int index) {
+    public RemoteNode getNode(int index) {
         return nodes.get(index);
     }
-    public Node getNode(String id) {
-        for (Node n : nodes) {
+    public RemoteNode getNode(String id) {
+        for (RemoteNode n : nodes) {
             if (n.getId().equals(id)) return n;
         }
         return null;
     }
 
-    public Node findNodeByConnection(MyConnectionSocket mcs) {
-        for (Node n : nodes) {
+    public RemoteNode findNodeByConnection(MyConnectionSocket mcs) {
+        for (RemoteNode n : nodes) {
             if (n.getDataConnection() == mcs) {
                 return n;
             }
@@ -58,17 +68,17 @@ public class NodeManager {
         return null;
     }
 
-    public Node[] getConnectedNodes() {
-        List<Node> connected = new ArrayList<Node>();
-        for (Node n : nodes) {
+    public RemoteNode[] getConnectedNodes() {
+        List<RemoteNode> connected = new ArrayList<RemoteNode>();
+        for (RemoteNode n : nodes) {
             if (n.getDataConnection() != null) connected.add(n);
         }
-        return connected.toArray(new Node[connected.size()]);
+        return connected.toArray(new RemoteNode[connected.size()]);
     }
 
     public int countConnectedNodes() {
         int count = 0;
-        for (Node n : nodes) {
+        for (RemoteNode n : nodes) {
             if (n.getDataConnection() != null) ++count;
         }
         return count;
@@ -76,7 +86,7 @@ public class NodeManager {
 
     public CoordinateSystem.RangeTable getLocalRangeTable() {
         CoordinateSystem.RangeTable table = new CoordinateSystem.RangeTable(localNode.getState().referenceFrame);
-        for (Node n : nodes) {
+        for (RemoteNode n : nodes) {
             if (n.getRange().range > 0) {
                 CoordinateSystem.SimpleRange r = new CoordinateSystem.SimpleRange();
                 r.range = n.getRange().range;
@@ -98,39 +108,35 @@ public class NodeManager {
         return list;
     }
 
-    private final Node localNode;
-    public Node getLocalNode() { return localNode; }
-
-    public NodeManager(Context ctx, Node localNode) {
-        prefs = PreferenceManager.getDefaultSharedPreferences(ctx);
-        this.localNode = localNode;
-    }
 
 
-    private final Node.NodeListener nodeListener = new Node.NodeListener() {
+
+
+
+    private final RemoteNode.RemoteNodeListener nodeListener = new RemoteNode.RemoteNodeListener() {
         @Override
-        public void onRangePending(Node n, Node.Range r) {
+        public void onRangePending(RemoteNode n, NodeRange r) {
             for (NodeManagerListener l : listeners) {
                 l.onRangePending(n, r);
             }
         }
 
         @Override
-        public void onStatePending(Node n, Node.State s) {
+        public void onStatePending(Node n, NodeState s) {
             for (NodeManagerListener l : listeners) {
                 l.onStatePending(n, s);
             }
         }
 
         @Override
-        public void onRangeChanged(Node n, Node.Range r) {
+        public void onRangeChanged(RemoteNode n, NodeRange r) {
             for (NodeManagerListener l : listeners) {
                 l.onRangeChanged(n, r);
             }
         }
 
         @Override
-        public void onStateChanged(Node n, Node.State s) {
+        public void onStateChanged(Node n, NodeState s) {
             for (NodeManagerListener l : listeners) {
                 l.onStateChanged(n, s);
             }
@@ -141,8 +147,8 @@ public class NodeManager {
     /**
      * Allow other objects to react to node events.
      */
-    public static interface NodeManagerListener extends Node.NodeListener {
-        void onNodeAdded(Node n);
+    public static interface NodeManagerListener extends RemoteNode.RemoteNodeListener {
+        void onNodeAdded(RemoteNode n);
     }
     private final List<NodeManagerListener> listeners = new ArrayList<NodeManagerListener>(1);
     public boolean registerListener(NodeManagerListener l) {

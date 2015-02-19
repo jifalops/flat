@@ -17,12 +17,12 @@ import android.widget.Switch;
 import android.widget.TextView;
 
 import com.flat.R;
-import com.flat.localization.Node;
-import com.flat.localization.algorithm.Algorithm;
-import com.flat.localization.algorithm.AlgorithmManager;
-import com.flat.localization.signal.Signal;
-import com.flat.localization.signal.SignalManager;
-import com.flat.localization.signal.interpreters.SignalInterpreter;
+import com.flat.localization.node.Node;
+import com.flat.localization.algorithms.Algorithm;
+import com.flat.localization.AlgorithmManager;
+import com.flat.localization.signals.Signal;
+import com.flat.localization.SignalManager;
+import com.flat.localization.signals.interpreters.SignalInterpreter;
 
 import java.util.ArrayList;
 import java.util.List;
