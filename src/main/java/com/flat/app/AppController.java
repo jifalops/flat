@@ -13,18 +13,19 @@ import com.flat.localization.CoordinateSystem;
 import com.flat.localization.Node;
 import com.flat.localization.NodeManager;
 import com.flat.localization.NodeMessage;
-import com.flat.localization.algorithm.Criteria;
-import com.flat.localization.algorithm.LocationAlgorithm;
-import com.flat.localization.algorithm.LocationAlgorithmManager;
-import com.flat.localization.data.LocationAlgorithms;
-import com.flat.localization.data.Signals;
+import com.flat.wifi.SoftAccessPointManager;
+import com.flat.localization.algorithm.AlgorithmMatchCriteria;
+import com.flat.localization.algorithm.Algorithm;
+import com.flat.localization.algorithm.AlgorithmManager;
+import com.flat.localization.algorithm.AlgorithmManagerStaticData;
+import com.flat.localization.signal.SignalManagerStaticData;
 import com.flat.localization.signal.SignalManager;
-import com.flat.localization.util.Util;
-import com.flat.loggingrequests.CustomRequest;
-import com.flat.loggingrequests.RangingRequest;
-import com.flat.loggingrequests.VolleyManager;
-import com.flat.nsd.NsdController;
-import com.flat.nsd.NsdHelper;
+import com.flat.wifi.WifiHelper;
+import com.flat.remotelogging.CustomRequest;
+import com.flat.remotelogging.RangingRequest;
+import com.flat.remotelogging.VolleyManager;
+import com.flat.networkservicediscovery.NsdController;
+import com.flat.networkservicediscovery.NsdHelper;
 import com.flat.sockets.MyConnectionSocket;
 import com.flat.sockets.MyServerSocket;
 
@@ -60,10 +61,10 @@ public class AppController extends Application {
     // TODO bad etiquette
     public NodeManager nodeManager;
     public SignalManager signalManager;
-    public LocationAlgorithmManager algorithmManager;
+    public AlgorithmManager algorithmManager;
     public NsdController nsdController;
     public VolleyManager volleyManager;
-    public WifiApManager beaconController;
+    public SoftAccessPointManager beaconController;
     public WifiManager wifiManager;
 
     public String id;
@@ -80,7 +81,7 @@ public class AppController extends Application {
 
     private void acquireIdentifier() {
         // TODO check if wifi is on
-        id = Util.getWifiMac(this);
+        id = WifiHelper.getMacAddress(this);
     }
 
     private void initializeManagersAndControllers() {
@@ -89,7 +90,7 @@ public class AppController extends Application {
 
         signalManager = new SignalManager(this);
 //        signalManager.registerListener(signalListener);
-        algorithmManager = new LocationAlgorithmManager(this);
+        algorithmManager = new AlgorithmManager(this);
         nsdController = new NsdController(this, NSD_SERVICE_PREFIX + id, new NsdHelper.NsdServiceFilter() {
             @Override
             public boolean isAcceptableService(NsdServiceInfo info) {
@@ -101,7 +102,7 @@ public class AppController extends Application {
         volleyManager = new VolleyManager(this);
 
         try {
-            beaconController = new WifiApManager(this);
+            beaconController = new SoftAccessPointManager(this);
         } catch (NoSuchMethodException e) {
             Log.e(TAG, "Unable to initialize beaconController.", e);
         }
@@ -109,8 +110,8 @@ public class AppController extends Application {
     }
 
     private void initializeStaticData() {
-        Signals.initialize(signalManager, nodeManager);
-        LocationAlgorithms.initialize(algorithmManager);
+        SignalManagerStaticData.initialize(signalManager, nodeManager);
+        AlgorithmManagerStaticData.initialize(algorithmManager);
     }
 
 
@@ -142,7 +143,7 @@ public class AppController extends Application {
     private void setBeaconTimerEnabled(boolean enabled) {
         if (beaconTimer != null) {
             beaconTimer.cancel();
-            beaconTimer = null;
+            beaconTimer = null; // null check used in class
         }
         if (enabled) {
             beaconTimer = new Timer();
@@ -411,9 +412,9 @@ public class AppController extends Application {
          */
         List<Node.State> states = new ArrayList<Node.State>();
         List<Node> nodes = new ArrayList<Node>(nodeManager.getNodes(false));
-        Criteria.AlgorithmMatchCriteria criteria;
+        AlgorithmMatchCriteria criteria;
 
-        for (LocationAlgorithm la : algorithmManager.getAlgorithms()) {
+        for (Algorithm la : algorithmManager.getAlgorithms()) {
             if (!la.isEnabled()) continue;
             criteria = algorithmManager.getCriteria(la);
 

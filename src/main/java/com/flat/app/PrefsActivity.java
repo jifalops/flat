@@ -8,7 +8,7 @@ import android.preference.PreferenceFragment;
 import android.preference.PreferenceManager;
 
 import com.flat.R;
-import com.flat.loggingrequests.AbstractRequest;
+import com.flat.remotelogging.AbstractRequest;
 
 /**
  * @author Jacob Phillips (12/2014, jphilli85 at gmail)

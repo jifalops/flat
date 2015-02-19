@@ -26,27 +26,27 @@
         android:label="@string/app_name"
         android:theme="@style/AppTheme" >
         <activity
-            android:name=".app.OtherTestsActivity"
-            android:parentActivityName=".app.OtherTestsActivity"
+            android:name=".app.testing.OtherTestsActivity"
+            android:parentActivityName=".app.testing.OtherTestsActivity"
             android:label="Testing Area">
 
         </activity>
         <activity
-            android:name=".app.OtherDetailsActivity"
+            android:name=".app.testing.OtherDetailsActivity"
             android:uiOptions="splitActionBarWhenNarrow"
-            android:parentActivityName=".app.OtherTestsActivity">
+            android:parentActivityName=".app.testing.OtherTestsActivity">
 
         </activity>
-        <activity android:name="com.flat.sensors.RotationVectorDemo"
-            android:parentActivityName=".app.OtherTestsActivity">
+        <activity android:name=".app.testing.RotationVectorDemo"
+            android:parentActivityName=".app.testing.OtherTestsActivity">
 
         </activity>
-        <activity android:name=".nsd.NsdTestingActivity"
-            android:parentActivityName=".app.OtherTestsActivity"
+        <activity android:name=".networkservicediscovery.NsdTestingActivity"
+            android:parentActivityName=".app.testing.OtherTestsActivity"
             android:label="NSD Tester">
 
         </activity>
-        <activity android:name=".app.ActiveItemListActivity"
+        <activity android:name=".app.BlinkingListActivity"
             android:parentActivityName=".app.MainActivity">
 
         </activity>
@@ -68,9 +68,9 @@
             </intent-filter>
         </activity>
         <service android:name="com.flat.app.AppService"/>
-        <service android:name="com.flat.app.BluetoothConnectionService"/>
-        <service android:name="com.flat.sensors.MovementSensorService"/>
-        <service android:name="com.flat.util.wifi.ScanResultsService"/>
+        <service android:name=".bluetoothtimeofflight.BluetoothConnectionService"/>
+        <service android:name=".app.testing.MovementSensorService"/>
+        <service android:name=".app.testing.ScanResultsService"/>
     </application>
 
 </manifest>

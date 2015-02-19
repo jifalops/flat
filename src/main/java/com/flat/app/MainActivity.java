@@ -7,6 +7,7 @@ import android.view.Menu;
 import android.view.MenuItem;
 
 import com.flat.R;
+import com.flat.app.testing.OtherTestsActivity;
 
 /**
  * @author Jacob Phillips (12/2014, jphilli85 at gmail)
@@ -15,7 +16,7 @@ public class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        getFragmentManager().beginTransaction().replace(android.R.id.content, new AppServiceFragment()).commit();
+        getFragmentManager().beginTransaction().replace(android.R.id.content, new MainFragment()).commit();
 
     }
 

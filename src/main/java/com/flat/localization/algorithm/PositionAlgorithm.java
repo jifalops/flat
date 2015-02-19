@@ -9,7 +9,7 @@ import java.util.Set;
 /**
  * Created by Jacob Phillips (10/2014)
  */
-public abstract class PositionAlgorithm implements LocationAlgorithm {
+public abstract class PositionAlgorithm implements Algorithm {
 
     private boolean enabled;
     private int count;

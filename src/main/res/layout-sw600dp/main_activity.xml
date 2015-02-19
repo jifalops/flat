@@ -3,7 +3,7 @@
     android:orientation="horizontal"
     style="@style/Match">
     <fragment
-        android:name="com.flat.app.OtherTestsFragment"
+        android:name="com.flat.app.testing.OtherTestsFragment"
         android:id="@+id/groupListFragment"
         style="@style/LeftPane" />	
     <FrameLayout 

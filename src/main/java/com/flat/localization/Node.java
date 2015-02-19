@@ -4,7 +4,7 @@ import android.content.SharedPreferences;
 import android.text.TextUtils;
 
 import com.flat.sockets.MyConnectionSocket;
-import com.flat.util.Util;
+import com.flat.util.Format;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -62,9 +62,9 @@ public final class Node {
         @Override
         public String toString() {
             String x,y,z;
-            x = Util.Format.SCIENTIFIC_3SIG.format(pos[0]);
-            y = Util.Format.SCIENTIFIC_3SIG.format(pos[1]);
-            z = Util.Format.SCIENTIFIC_3SIG.format(pos[2]);
+            x = Format.SCIENTIFIC_3SIG.format(pos[0]);
+            y = Format.SCIENTIFIC_3SIG.format(pos[1]);
+            z = Format.SCIENTIFIC_3SIG.format(pos[2]);
             return String.format("(%s, %s, %s), (%.0f, %.0f, %.0f)",
                     x,y,z, angle[0], angle[1], angle[2]);
         }
