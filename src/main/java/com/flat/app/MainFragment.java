@@ -10,12 +10,15 @@ import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
 
+import com.flat.AppController;
 import com.flat.R;
+import com.flat.localization.LocMan;
 import com.flat.localization.node.Node;
 import com.flat.localization.NodeManager;
 import com.flat.localization.algorithms.Algorithm;
 import com.flat.localization.node.NodeRange;
 import com.flat.localization.node.NodeState;
+import com.flat.localization.node.RemoteNode;
 import com.flat.localization.signals.Signal;
 import com.flat.util.PersistentIntentService;
 import com.flat.util.PersistentIntentServiceFragment;
@@ -26,15 +29,17 @@ import java.util.List;
  * @author Jacob Phillips (12/2014, jphilli85 at gmail)
  */
 public class MainFragment extends PersistentIntentServiceFragment {
-    private AppService mService;
+    private AppController.AppService mService;
 
     private ImageView signalDot, algDot, rangeDot;
     private TextView signalSummary, algSummary, rangeSummary;
     private boolean shouldEnableService;
 
+    private LocMan locManager;
+
     @Override
     public void onServiceConnected(PersistentIntentService service) {
-        mService = (AppService) service;
+        mService = (AppController.AppService) service;
         if (shouldEnableService) {
             service.setEnabled(true);
             onServiceEnabled(true);
@@ -44,13 +49,13 @@ public class MainFragment extends PersistentIntentServiceFragment {
 
     @Override
     protected Class<? extends PersistentIntentService> getServiceClass() {
-        return AppService.class;
+        return AppController.AppService.class;
     }
 
     @Override
     protected void onServiceEnabled(boolean enabled) {
         setPersistent(enabled);
-        AppController.getInstance().setEnabled(enabled);
+        LocMan.getInstance(getActivity()).setEnabled(enabled);
     }
 
 
@@ -69,33 +74,33 @@ public class MainFragment extends PersistentIntentServiceFragment {
     }
 
     private void registerListeners() {
-        AppController.getInstance().signalManager.registerListener(signalListener);
-        AppController.getInstance().algorithmManager.registerListener(algListener);
-        AppController.getInstance().nodeManager.registerListener(nodeManagerListener);
+        locManager.getSignalManager().registerListener(signalListener);
+        locManager.getAlgorithmManager().registerListener(algListener);
+        locManager.getNodeManager().registerListener(nodeManagerListener);
     }
 
     private void unregisterListeners() {
-        AppController.getInstance().signalManager.unregisterListener(signalListener);
-        AppController.getInstance().algorithmManager.unregisterListener(algListener);
-        AppController.getInstance().nodeManager.unregisterListener(nodeManagerListener);
+        locManager.getSignalManager().unregisterListener(signalListener);
+        locManager.getAlgorithmManager().unregisterListener(algListener);
+        locManager.getNodeManager().unregisterListener(nodeManagerListener);
     }
 
     private void updateSummaries() {
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getActivity());
 
         int count = 0;
-        for (Signal s : AppController.getInstance().signalManager.getSignals()) {
+        for (Signal s : locManager.getSignalManager().getSignals()) {
             if (prefs.getBoolean(s.getName(), false)) ++count;
         }
         signalSummary.setText(count + " enabled");
 
         count = 0;
-        for (Algorithm la : AppController.getInstance().algorithmManager.getAlgorithms()) {
+        for (Algorithm la : locManager.getAlgorithmManager().getAlgorithms()) {
             if (prefs.getBoolean(la.getName(), false)) ++count;
         }
         algSummary.setText(count + " enabled");
 
-        rangeSummary.setText(AppController.getInstance().nodeManager.getNodeCount() + " nodes in range (this app instance)");
+        rangeSummary.setText(locManager.getNodeManager().getNodeCount() + " nodes in range (this app instance)");
     }
 
 
@@ -116,12 +121,12 @@ public class MainFragment extends PersistentIntentServiceFragment {
 
     private final NodeManager.NodeManagerListener nodeManagerListener = new NodeManager.NodeManagerListener() {
         @Override
-        public void onNodeAdded(Node n) {
-            rangeSummary.setText(AppController.getInstance().nodeManager.getNodeCount() + " nodes in range (this app instance)");
+        public void onNodeAdded(RemoteNode n) {
+            rangeSummary.setText(locManager.getNodeManager().getNodeCount() + " nodes in range (this app instance)");
         }
 
         @Override
-        public void onRangePending(Node n, NodeRange r) {
+        public void onRangePending(RemoteNode n, NodeRange r) {
 
         }
 
@@ -131,7 +136,7 @@ public class MainFragment extends PersistentIntentServiceFragment {
         }
 
         @Override
-        public void onRangeChanged(Node n, NodeRange r) {
+        public void onRangeChanged(RemoteNode n, NodeRange r) {
             blink(rangeDot);
         }
 
@@ -158,6 +163,7 @@ public class MainFragment extends PersistentIntentServiceFragment {
         super.onCreate(savedInstanceState);
         showPersistControl(false);
         shouldEnableService = true;
+        locManager = LocMan.getInstance(getActivity());
     }
 
     @Override

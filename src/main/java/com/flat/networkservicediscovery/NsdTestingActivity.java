@@ -25,7 +25,7 @@ import android.widget.EditText;
 import android.widget.TextView;
 
 import com.flat.R;
-import com.flat.app.AppController;
+import com.flat.localization.LocMan;
 import com.flat.sockets.MyConnectionSocket;
 import com.flat.sockets.MyServerSocket;
 import com.flat.sockets.MySocketManager;
@@ -51,10 +51,10 @@ public class NsdTestingActivity extends Activity {
         setContentView(R.layout.nsd_activity);
         mStatusView = (TextView) findViewById(R.id.status);
 
-        mNsdHelper = new NsdHelper(this, AppController.NSD_SERVICE_PREFIX + AppController.getInstance().id, new NsdHelper.NsdServiceFilter() {
+        mNsdHelper = new NsdHelper(this, LocMan.NSD_SERVICE_PREFIX + LocMan.getInstance(this).getLocalNodeId(), new NsdHelper.NsdServiceFilter() {
             @Override
             public boolean isAcceptableService(NsdServiceInfo info) {
-                return info.getServiceName().startsWith(AppController.NSD_SERVICE_PREFIX);
+                return info.getServiceName().startsWith(LocMan.NSD_SERVICE_PREFIX);
             }
         });
         mNsdHelper.initializeNsd();

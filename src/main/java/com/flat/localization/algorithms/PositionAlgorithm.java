@@ -2,6 +2,7 @@ package com.flat.localization.algorithms;
 
 import com.flat.localization.node.Node;
 import com.flat.localization.node.NodeState;
+import com.flat.localization.node.RemoteNode;
 
 import java.util.HashSet;
 import java.util.List;
@@ -48,7 +49,7 @@ public abstract class PositionAlgorithm implements Algorithm {
         NodeState s = new NodeState();
         s.algorithm = getName();
         float[][] positions = Node.toPositionArray(references.toArray(new Node[references.size()]));
-        float[] ranges = Node.toRangeArray(references.toArray(new Node[references.size()]));
+        float[] ranges = RemoteNode.toRangeArray(references.toArray(new RemoteNode[references.size()]));
         s.pos = findCoords(positions, ranges);
         s.angle = target.getState().angle;
         s.time = System.currentTimeMillis(); //System.nanoTime();

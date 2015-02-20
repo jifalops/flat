@@ -4,6 +4,7 @@ import android.util.Log;
 
 import com.flat.localization.node.Node;
 import com.flat.localization.node.NodeMatchCriteria;
+import com.flat.localization.node.RemoteNode;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -22,14 +23,14 @@ public final class AlgorithmMatchCriteria {
      * Note this moves on to the next node when a nodeListRequirement is met, so there will be
      * at least as many nodes as there are requirements.
      */
-    public List<Node> filter(List<Node> nodes) {
-        nodes = new ArrayList<Node>(nodes);
+    public List<Node> filter(List<RemoteNode> nodes) {
+        nodes = new ArrayList<RemoteNode>(nodes);
         List<Node> matches = new ArrayList<Node>();
 
         // Remove nodes that do not meet all criteria for individual nodes.
         int size = nodeRequirements.size();
         if (size > 0) {
-            for (Node n : nodes) {
+            for (RemoteNode n : nodes) {
                 for (NodeMatchCriteria nmc : nodeRequirements) {
                     if (!nmc.matches(n)) {
                         Log.v(TAG, n.getId() + " did not meet requirements.");
@@ -44,7 +45,7 @@ public final class AlgorithmMatchCriteria {
         size = nodeListRequirements.size();
         if (size > 0) {
             boolean[] met = new boolean[size];
-            for (Node n : nodes) {
+            for (RemoteNode n : nodes) {
                 for (int i = 0; i < size; ++i) {
                     if (nodeListRequirements.get(i).matches(n)) {
                         Log.v(TAG, String.format("list requirement %d matches %s.", i, n.getId()));

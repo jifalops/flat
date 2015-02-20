@@ -21,10 +21,12 @@ import android.widget.ListView;
 import android.widget.TextView;
 
 import com.flat.R;
-import com.flat.localization.node.Node;
+import com.flat.localization.LocMan;
 import com.flat.localization.NodeManager;
+import com.flat.localization.node.Node;
 import com.flat.localization.node.NodeRange;
 import com.flat.localization.node.NodeState;
+import com.flat.localization.node.RemoteNode;
 
 import java.util.List;
 
@@ -77,10 +79,12 @@ public class RangeTableActivity extends Activity {
 
     public static class RangeTableFragment extends ListFragment {
         ColorStateList defaultColor;
+        NodeManager nodeManager;
 
         @Override
         public void onCreate(Bundle savedInstanceState) {
             super.onCreate(savedInstanceState);
+            nodeManager = LocMan.getInstance(getActivity()).getNodeManager();
             setListAdapter(new RangeTableAdapter());
         }
 
@@ -93,14 +97,14 @@ public class RangeTableActivity extends Activity {
 
         private final NodeManager.NodeManagerListener nodeManagerListener = new NodeManager.NodeManagerListener() {
             @Override
-            public void onNodeAdded(Node n) {
+            public void onNodeAdded(RemoteNode n) {
                 // TODO still doesnt redraw the list
                 ((BaseAdapter) getListAdapter()).notifyDataSetChanged();
                 getListView().invalidate();
             }
 
             @Override
-            public void onRangePending(Node n, NodeRange r) {
+            public void onRangePending(RemoteNode n, NodeRange r) {
 
             }
 
@@ -110,8 +114,8 @@ public class RangeTableActivity extends Activity {
             }
 
             @Override
-            public void onRangeChanged(Node n, NodeRange r) {
-                List<Node> nodes = AppController.getInstance().nodeManager.getNodes(false);
+            public void onRangeChanged(RemoteNode n, NodeRange r) {
+                List<RemoteNode> nodes = nodeManager.getNodes();
                 for (int i=0; i<nodes.size(); ++i) {
                     if (n == nodes.get(i)) {
                         View container = getViewByPosition(i, getListView());
@@ -131,7 +135,7 @@ public class RangeTableActivity extends Activity {
             }
         };
 
-        private void showRange(TextView tv, Node n) {
+        private void showRange(TextView tv, RemoteNode n) {
             if (tv == null || n == null) return;
             float f;
             if (n.getRange().rangeOverride > 0) {
@@ -148,9 +152,9 @@ public class RangeTableActivity extends Activity {
             return ((int)(f*100))/100f;
         }
 
-        private class RangeTableAdapter extends ArrayAdapter<Node> {
+        private class RangeTableAdapter extends ArrayAdapter<RemoteNode> {
             public RangeTableAdapter() {
-                super(getActivity(), R.layout.range_table_item, AppController.getInstance().nodeManager.getNodes(false));
+                super(getActivity(), R.layout.range_table_item, nodeManager.getNodes());
             }
 
             @Override
@@ -173,7 +177,7 @@ public class RangeTableActivity extends Activity {
 
                 if (defaultColor == null) defaultColor = holder.dist.getTextColors();
 
-                final Node node = AppController.getInstance().nodeManager.getNode(position);
+                final RemoteNode node = nodeManager.getNode(position);
 
 
                 final SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getActivity());
@@ -257,13 +261,13 @@ public class RangeTableActivity extends Activity {
         @Override
         public void onPause() {
             super.onPause();
-            AppController.getInstance().nodeManager.unregisterListener(nodeManagerListener);
+            nodeManager.unregisterListener(nodeManagerListener);
         }
 
         @Override
         public void onResume() {
             super.onResume();
-            AppController.getInstance().nodeManager.registerListener(nodeManagerListener);
+            nodeManager.registerListener(nodeManagerListener);
         }
 
     }

@@ -17,11 +17,12 @@ import android.widget.Switch;
 import android.widget.TextView;
 
 import com.flat.R;
-import com.flat.localization.node.Node;
-import com.flat.localization.algorithms.Algorithm;
 import com.flat.localization.AlgorithmManager;
-import com.flat.localization.signals.Signal;
+import com.flat.localization.LocMan;
 import com.flat.localization.SignalManager;
+import com.flat.localization.algorithms.Algorithm;
+import com.flat.localization.node.Node;
+import com.flat.localization.signals.Signal;
 import com.flat.localization.signals.interpreters.SignalInterpreter;
 
 import java.util.ArrayList;
@@ -84,11 +85,12 @@ public class BlinkingListActivity extends Activity {
 
 
     public static class SignalFragment extends ListFragment {
-        SignalManager manager = AppController.getInstance().signalManager;
+        SignalManager manager;
 
         @Override
         public void onCreate(Bundle savedInstanceState) {
             super.onCreate(savedInstanceState);
+            manager = LocMan.getInstance(getActivity()).getSignalManager();
             setListAdapter(new SignalAdapter());
         }
 
@@ -153,7 +155,7 @@ public class BlinkingListActivity extends Activity {
 
                         sharedPrefs.edit().putBoolean(signal.getName(), isChecked).apply();
                         if (isChecked) {
-                            if (AppController.getInstance().isEnabled()) {
+                            if (LocMan.getInstance(getActivity()).isEnabled()) {
                                 signal.enable(getActivity());
                             }
                         } else {
@@ -186,11 +188,12 @@ public class BlinkingListActivity extends Activity {
 
 
     public static class AlgorithmFragment extends ListFragment {
-        AlgorithmManager manager = AppController.getInstance().algorithmManager;
+        AlgorithmManager manager;
 
         @Override
         public void onCreate(Bundle savedInstanceState) {
             super.onCreate(savedInstanceState);
+            manager = LocMan.getInstance(getActivity()).getAlgorithmManager();
             setListAdapter(new AlgorithmAdapter());
         }
 
@@ -251,7 +254,7 @@ public class BlinkingListActivity extends Activity {
                         sharedPrefs.edit().putBoolean(alg.getName(), isChecked).apply();
 
                         if (isChecked) {
-                            if (AppController.getInstance().isEnabled()) {
+                            if (LocMan.getInstance(getActivity()).isEnabled()) {
                                 alg.setEnabled(true);
                             }
                         } else {

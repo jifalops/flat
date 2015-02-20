@@ -22,7 +22,7 @@ import com.flat.remotelogging.RangingRequest;
 import com.flat.remotelogging.VolleyController;
 import com.flat.sockets.MyConnectionSocket;
 import com.flat.sockets.MyServerSocket;
-import com.flat.wifi.MyWifiManager;
+import com.flat.wifi.WifiHelper;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -35,10 +35,10 @@ import java.util.Timer;
 import java.util.TimerTask;
 
 /**
- * @author Jacob Phillips (02/2015, jphilli85 at gmail)
+ * Localization Manager
  */
-public class LocalizationManager2 {
-    private static final String TAG = LocalizationManager2.class.getSimpleName();
+public class LocMan {
+    private static final String TAG = LocMan.class.getSimpleName();
 
     /** Minimum number of remote nodes required to do localization */
     public static final int MIN_NODES = 2;
@@ -52,16 +52,24 @@ public class LocalizationManager2 {
 
 
     private NodeManager nodeManager;
+    public NodeManager getNodeManager() { return nodeManager; }
+
     private SignalManager signalManager;
+    public SignalManager getSignalManager() { return signalManager; }
+
     private AlgorithmManager algorithmManager;
-    private MyWifiManager myWifiManager;
+    public AlgorithmManager getAlgorithmManager() { return algorithmManager; }
+
+    private WifiHelper wifiHelper;
+    public WifiHelper getWifiHelper() { return wifiHelper; }
 
     private NsdController nsdController;
     public NsdController getNsdController() { return nsdController; }
 
-    private VolleyController loggingRequestQueue;
+    private VolleyController volleyController;
 
     private String localNodeId;
+    public String getLocalNodeId() { return localNodeId; }
 
     private Timer beaconTimer;
     private Timer nsdTimer;
@@ -69,16 +77,16 @@ public class LocalizationManager2 {
 
 
     // Singleton
-    private static LocalizationManager2 instance;
-    public static LocalizationManager2 getInstance(Context ctx) {
-        if (instance == null) instance = new LocalizationManager2(ctx);
+    private static LocMan instance;
+    public static LocMan getInstance(Context ctx) {
+        if (instance == null) instance = new LocMan(ctx);
         return instance;
     }
-    private LocalizationManager2(Context ctx) {
+    private LocMan(Context ctx) {
         if (ctx == null) return;
         context = ctx;
-        myWifiManager = MyWifiManager.getInstance(ctx);
-        localNodeId = myWifiManager.getMacAddress();
+        wifiHelper = WifiHelper.getInstance(ctx);
+        localNodeId = wifiHelper.getMacAddress();
 
         initializeManagersAndControllers();
         initializeStaticData();
@@ -104,7 +112,7 @@ public class LocalizationManager2 {
         });
         nsdController.registerListener(nsdContollerListener);
 
-        loggingRequestQueue = new VolleyController(context);
+        volleyController = new VolleyController(context);
     }
 
 
@@ -188,10 +196,10 @@ public class LocalizationManager2 {
 
     private void setBeaconMode(boolean enabled) {
 //        Toast.makeText(this, "Setting beacon mode: " + enabled, Toast.LENGTH_SHORT).show();
-        if (!myWifiManager.getSoftApManager().setSsid(WIFI_BEACON_SSID_PREFIX + localNodeId)) {
+        if (!wifiHelper.getSoftApManager().setSsid(WIFI_BEACON_SSID_PREFIX + localNodeId)) {
             Log.e(TAG, "Setting SSID for beacon mode failed.");
         }
-        if (!myWifiManager.setSoftApEnabled(enabled)) {
+        if (!wifiHelper.setSoftApEnabled(enabled)) {
             Log.e(TAG, "Error setting soft AP.");
         }
     }
@@ -238,7 +246,7 @@ public class LocalizationManager2 {
             });
 
             // add the request object to the queue to be executed
-            loggingRequestQueue.addToRequestQueue(req);
+            volleyController.addToRequestQueue(req);
         }
 
         @Override
@@ -380,7 +388,7 @@ public class LocalizationManager2 {
          * the LA's filter, to see if it is able to estimate a new state/position for this node.
          */
         List<NodeState> states = new ArrayList<NodeState>();
-        List<Node> nodes = new ArrayList<Node>(nodeManager.getNodes());
+        List<RemoteNode> nodes = new ArrayList<RemoteNode>(nodeManager.getNodes());
         AlgorithmMatchCriteria criteria;
 
         for (Algorithm la : algorithmManager.getAlgorithms()) {

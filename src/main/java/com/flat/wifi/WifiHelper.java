@@ -15,20 +15,20 @@ import java.nio.ByteOrder;
 /**
  * @author Jacob Phillips (11/2014, jphilli85 at gmail)
  */
-public final class MyWifiManager {
-    private static final String TAG = MyWifiManager.class.getSimpleName();
+public final class WifiHelper {
+    private static final String TAG = WifiHelper.class.getSimpleName();
 
     private WifiManager wifiManager;
     private ConnectivityManager connManager;
     private SoftAccessPointManager apManager = null;
 
     // Singleton
-    private static MyWifiManager instance;
-    public static MyWifiManager getInstance(Context ctx) {
-        if (instance == null) instance = new MyWifiManager(ctx);
+    private static WifiHelper instance;
+    public static WifiHelper getInstance(Context ctx) {
+        if (instance == null) instance = new WifiHelper(ctx);
         return instance;
     }
-    private MyWifiManager(Context ctx) {
+    private WifiHelper(Context ctx) {
         wifiManager = (WifiManager) ctx.getSystemService(Context.WIFI_SERVICE);
         connManager = (ConnectivityManager) ctx.getSystemService(Context.CONNECTIVITY_SERVICE);
         try {

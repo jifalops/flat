@@ -33,7 +33,7 @@ public final class NodeMatchCriteria {
     /**
      * True if any of the above match. For min/max values, a match is when the value is in [min, max].
      */
-    public boolean matches(Node n) {
+    public boolean matches(RemoteNode n) {
         int pr = n.getRangePendingSize();
         int ps = n.getStatePendingSize();
         return matchAll ||
