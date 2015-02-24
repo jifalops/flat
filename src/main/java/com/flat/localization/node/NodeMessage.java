@@ -16,14 +16,14 @@ public final class NodeMessage {
     public static final int TYPE_ID = 1;
     public static final int TYPE_RANGE_TABLE = 2;
     public static final int TYPE_COORDINATE_SYSTEM = 3;
+    public static final int TYPE_CONNECTED_NODES = 4;
+
 
     public static final String KEY_TYPE = "type";
     public static final String KEY_NODE_ID = "id";
     public static final String KEY_RANGE_TABLE = "range_table";
-//    public static final String KEY_RANGE = "range";
-//    public static final String KEY_TIMESTAMP = "time";
     public static final String KEY_COORDINATE_SYSTEM = "coord_system";
-//    public static final String KEY_COORDINATES = "coords";
+    public static final String KEY_CONNECTED_NODES = "connected_nodes";
 
     private JSONObject msg = new JSONObject();
 
@@ -31,6 +31,7 @@ public final class NodeMessage {
     public String fromId;
     public CoordinateSystem.RangeTable rangeTable;
     public CoordinateSystem coordinateSystem;
+    public String[] connectedNodes;
 
     private NodeMessage() {}
 
@@ -91,6 +92,20 @@ public final class NodeMessage {
         msg.put(KEY_COORDINATE_SYSTEM, coords);
     }
 
+    public NodeMessage(String fromId, String[] connectedNodes) throws JSONException {
+        type = TYPE_CONNECTED_NODES;
+        this.fromId = fromId;
+        this.connectedNodes = connectedNodes;
+        msg.put(KEY_TYPE, TYPE_CONNECTED_NODES);
+        msg.put(KEY_NODE_ID, fromId);
+
+        JSONArray connections = new JSONArray();
+        for (String node : connectedNodes) {
+            connections.put(node);
+        }
+        msg.put(KEY_CONNECTED_NODES, connections);
+    }
+
     public static NodeMessage from(String jsonString) throws JSONException {
         NodeMessage nm = new NodeMessage();
         nm.msg = new JSONObject(jsonString);
@@ -137,6 +152,13 @@ public final class NodeMessage {
                             (float) json.getDouble(2),
                             (float) json.getDouble(3)
                     });
+                }
+                break;
+            case TYPE_CONNECTED_NODES:
+                JSONArray connections = nm.msg.getJSONArray(KEY_CONNECTED_NODES);
+                nm.connectedNodes = new String[connections.length()];
+                for (int i = 0; i < connections.length(); ++i) {
+                    nm.connectedNodes[i] = connections.getString(i);
                 }
                 break;
         }

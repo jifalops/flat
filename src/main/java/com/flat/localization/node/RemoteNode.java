@@ -23,6 +23,10 @@ public final class RemoteNode extends Node {
         return connection;
     }
 
+    private String[] connectedNodes;
+    public void setConnectedNodes(String[] nodes) { connectedNodes = nodes; }
+    public String[] getConnectedNodes() { return connectedNodes; }
+
     private float actualRangeOverride;
     public synchronized void setActualRangeOverride(float range) {
         actualRangeOverride = range;

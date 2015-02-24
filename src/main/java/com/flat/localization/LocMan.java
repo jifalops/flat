@@ -67,9 +67,12 @@ public class LocMan {
     public NsdController getNsdController() { return nsdController; }
 
     private VolleyController volleyController;
+    public VolleyController getVolleyController() { return volleyController; }
 
     private String localNodeId;
-    public String getLocalNodeId() { return localNodeId; }
+    public String getLocalNodeId() {
+        return localNodeId;
+    }
 
     private Timer beaconTimer;
     private Timer nsdTimer;
@@ -79,13 +82,19 @@ public class LocMan {
     // Singleton
     private static LocMan instance;
     public static LocMan getInstance(Context ctx) {
-        if (instance == null) instance = new LocMan(ctx);
+        if (instance == null) { instance = new LocMan(ctx); }
         return instance;
     }
     private LocMan(Context ctx) {
         if (ctx == null) return;
         context = ctx;
+
         wifiHelper = WifiHelper.getInstance(ctx);
+
+        if (!wifiHelper.isWifiEnabled()) {
+            wifiHelper.setWifiEnabled(true);
+        }
+
         localNodeId = wifiHelper.getMacAddress();
 
         initializeManagersAndControllers();
@@ -128,7 +137,6 @@ public class LocMan {
 
         if (enabled) {
             nsdController.enableNsd();
-            // TODO why did i comment these out?
             //signalManager.enable(this);
             //algorithmManager.enable();
         } else {
@@ -185,13 +193,14 @@ public class LocMan {
     // TODO
     // Once the local node has shared it's mac with 2 other devices and has the macs of those same 2 devices,
     // It (they) may switch to beacon mode and perform ranging. When the ranges have been collected,
-    // they will swtich back to NSD mode and share their range tables and perform localization.
+    // they will switch back to NSD mode and share their range tables and perform localization.
     // If beacon mode (wifi AP) could be enabled without disconnecting from the current network, that'd be great.
 
 
     private boolean hasEnoughInfoForBeaconMode() {
         return  nsdController.getSocketManager().getConnections().size() >= 2
                 && nodeManager.countConnectedNodes() >= 2;
+        // TODO check node connected nodes.
     }
 
     private void setBeaconMode(boolean enabled) {
@@ -376,6 +385,10 @@ public class LocMan {
                 NodeState state = new NodeState();
                 state.referenceFrame = nm.coordinateSystem;
                 n.update(state);
+                break;
+            case NodeMessage.TYPE_CONNECTED_NODES:
+                Log.v(TAG, "received connected node list from " + nm.fromId + "@" + mcs.getAddress().getHostAddress());
+                n.setConnectedNodes(nm.connectedNodes);
                 break;
         }
     }
