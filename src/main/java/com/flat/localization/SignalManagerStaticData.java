@@ -4,12 +4,14 @@ import android.bluetooth.BluetoothDevice;
 import android.hardware.Sensor;
 import android.net.wifi.ScanResult;
 import android.os.Bundle;
+import android.util.Log;
 
 import com.flat.localization.node.NodeRange;
 import com.flat.localization.node.NodeState;
 import com.flat.localization.node.RemoteNode;
 import com.flat.localization.signals.AndroidSensor;
 import com.flat.localization.signals.BluetoothBeacon;
+import com.flat.localization.signals.BluetoothLeBeacon;
 import com.flat.localization.signals.Signal;
 import com.flat.localization.signals.WifiBeacon;
 import com.flat.localization.signals.interpreters.FreeSpacePathLoss;
@@ -26,6 +28,8 @@ import java.util.List;
  * @author Jacob Phillips (01/2015, jphilli85 at gmail)
  */
 public class SignalManagerStaticData {
+    private static final String TAG = SignalManagerStaticData.class.getSimpleName();
+
     private static final Bundle extras = new Bundle();
     public static void initialize(SignalManager signalManager, final NodeManager nodeManager) {
         /*
@@ -151,6 +155,55 @@ public class SignalManagerStaticData {
             }
         });
 
+
+        /*
+         * Bluetooth LE beacon
+         */
+        final BluetoothLeBeacon leBeacon = BluetoothLeBeacon.getInstance();
+
+        // boilerplate
+        signalProcessors = new ArrayList<SignalInterpreter>(1);
+        signalProcessors.add(fspl);
+        signalManager.addSignal(leBeacon, signalProcessors);
+
+        // signal change listener
+        leBeacon.registerListener(new Signal.SignalListener() {
+            @Override
+            public void onChange(Signal signal, int eventType) {
+                NodeRange range = new NodeRange();
+                range.signal = leBeacon.getName();
+                range.interpreter = fspl.getName();
+                range.time = System.currentTimeMillis();
+                switch (eventType) {
+                    case BluetoothLeBeacon.EVENT_SCAN_RESULT:
+
+
+                        android.bluetooth.le.ScanResult result = leBeacon.getScanResult();
+
+                        // TODO use formula that includes tx power.
+//                        ScanRecord record = result.getScanRecord();
+//                        if (record != null) {
+//                            int txPower = record.getTxPowerLevel();
+//                            range.range = fspl.fromPathLoss(txPower - result.getRssi());
+//                        } else {
+                            range.range = fspl.fromDbMhz(result.getRssi(), 2400.0f);
+//                        }
+
+
+                        // TODO using BT mac instead of wifi
+                        String mac = result.getDevice().getAddress();
+                        Log.v(TAG, "got scan result for " + mac);
+                        if (nodeManager.getNode(mac) == null) {
+                            nodeManager.addNode(new RemoteNode(mac));
+                        }
+                        nodeManager.getNode(mac).addPending(range);
+                        break;
+                    case BluetoothLeBeacon.EVENT_BATCH_SCAN_RESULTS:
+                        Log.v(TAG, "got batch scan results");
+                        break;
+                }
+            }
+        });
 
 
         /*

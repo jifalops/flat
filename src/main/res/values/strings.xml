@@ -41,4 +41,6 @@
 
     <string name="send">Send</string>
     <string name="action_other_tests">Other Tests</string>
+    <string name="ble_not_supported">Bluetooth Low Energy not available on this device.</string>
+    <string name="enable_bt">Please enable Bluetooth.</string>
 </resources>
