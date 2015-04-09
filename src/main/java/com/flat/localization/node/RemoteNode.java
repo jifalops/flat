@@ -56,7 +56,11 @@ public final class RemoteNode extends Node {
 
     /** Get previous (or current) range */
     public synchronized NodeRange getRange(int index) {
-        return rangeHistory.get(index);
+        if (rangeHistory.size() > 0 && rangeHistory.size() < index) {
+            return rangeHistory.get(index);
+        } else {
+            return new NodeRange(); // TODO, implementations should just check for null.
+        }
     }
 
     /** Get current range */

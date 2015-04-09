@@ -20,7 +20,7 @@ public final class WifiHelper {
 
     private WifiManager wifiManager;
     private ConnectivityManager connManager;
-    private SoftAccessPointManager apManager = null;
+    private SoftApManager apManager = null;
 
     // Singleton
     private static WifiHelper instance;
@@ -32,7 +32,7 @@ public final class WifiHelper {
         wifiManager = (WifiManager) ctx.getSystemService(Context.WIFI_SERVICE);
         connManager = (ConnectivityManager) ctx.getSystemService(Context.CONNECTIVITY_SERVICE);
         try {
-            apManager = SoftAccessPointManager.getInstance(ctx);
+            apManager = SoftApManager.getInstance(ctx);
         } catch (NoSuchMethodException e) {
             Log.e(TAG, "Soft AP not available.", e);
         }
@@ -41,7 +41,7 @@ public final class WifiHelper {
     public WifiManager getWifiManager() {
         return wifiManager;
     }
-    public SoftAccessPointManager getSoftApManager() {
+    public SoftApManager getSoftApManager() {
         return apManager;
     }
     public ConnectivityManager getConnectionManager() {

@@ -105,6 +105,10 @@ public class OtherTestsActivity extends Activity implements OtherTestsFragment.C
             return;
         }
 
+        if (item == OtherTestsData.BLUETOOTH_LE) {
+            startActivity(new Intent(this, BluetoothLeBeaconTestActivity.class));
+            return;
+        }
 
         if (isDualPane()) {
             // We can display everything in-place with fragments, so update

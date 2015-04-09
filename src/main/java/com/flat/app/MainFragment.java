@@ -12,7 +12,7 @@ import android.widget.TextView;
 
 import com.flat.AppController;
 import com.flat.R;
-import com.flat.localization.LocMan;
+import com.flat.localization.LocalizationManager2;
 import com.flat.localization.node.Node;
 import com.flat.localization.NodeManager;
 import com.flat.localization.algorithms.Algorithm;
@@ -35,7 +35,7 @@ public class MainFragment extends PersistentIntentServiceFragment {
     private TextView signalSummary, algSummary, rangeSummary;
     private boolean shouldEnableService;
 
-    private LocMan locManager;
+    private LocalizationManager2 locManager;
 
     @Override
     public void onServiceConnected(PersistentIntentService service) {
@@ -55,7 +55,7 @@ public class MainFragment extends PersistentIntentServiceFragment {
     @Override
     protected void onServiceEnabled(boolean enabled) {
         setPersistent(enabled);
-        LocMan.getInstance(getActivity()).setEnabled(enabled);
+        LocalizationManager2.getInstance(getActivity()).setEnabled(enabled);
     }
 
 
@@ -163,7 +163,7 @@ public class MainFragment extends PersistentIntentServiceFragment {
         super.onCreate(savedInstanceState);
         showPersistControl(false);
         shouldEnableService = true;
-        locManager = LocMan.getInstance(getActivity());
+        locManager = LocalizationManager2.getInstance(getActivity());
     }
 
     @Override

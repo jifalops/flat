@@ -37,8 +37,8 @@ import java.util.TimerTask;
 /**
  * Localization Manager
  */
-public class LocMan {
-    private static final String TAG = LocMan.class.getSimpleName();
+public class LocalizationManager2 {
+    private static final String TAG = LocalizationManager2.class.getSimpleName();
 
     /** Minimum number of remote nodes required to do localization */
     public static final int MIN_NODES = 2;
@@ -80,12 +80,12 @@ public class LocMan {
 
 
     // Singleton
-    private static LocMan instance;
-    public static LocMan getInstance(Context ctx) {
-        if (instance == null) { instance = new LocMan(ctx); }
+    private static LocalizationManager2 instance;
+    public static LocalizationManager2 getInstance(Context ctx) {
+        if (instance == null) { instance = new LocalizationManager2(ctx); }
         return instance;
     }
-    private LocMan(Context ctx) {
+    private LocalizationManager2(Context ctx) {
         if (ctx == null) return;
         context = ctx;
 
@@ -210,6 +210,9 @@ public class LocMan {
         }
         if (!wifiHelper.setSoftApEnabled(enabled)) {
             Log.e(TAG, "Error setting soft AP.");
+        }
+        if (!wifiHelper.getSoftApManager().setSsid(WIFI_BEACON_SSID_PREFIX + localNodeId)) {
+            Log.e(TAG, "Setting SSID for beacon mode failed.");
         }
     }
 

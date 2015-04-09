@@ -18,7 +18,7 @@ import android.widget.TextView;
 
 import com.flat.R;
 import com.flat.localization.AlgorithmManager;
-import com.flat.localization.LocMan;
+import com.flat.localization.LocalizationManager2;
 import com.flat.localization.SignalManager;
 import com.flat.localization.algorithms.Algorithm;
 import com.flat.localization.node.Node;
@@ -90,7 +90,7 @@ public class BlinkingListActivity extends Activity {
         @Override
         public void onCreate(Bundle savedInstanceState) {
             super.onCreate(savedInstanceState);
-            manager = LocMan.getInstance(getActivity()).getSignalManager();
+            manager = LocalizationManager2.getInstance(getActivity()).getSignalManager();
             setListAdapter(new SignalAdapter());
         }
 
@@ -155,7 +155,7 @@ public class BlinkingListActivity extends Activity {
 
                         sharedPrefs.edit().putBoolean(signal.getName(), isChecked).apply();
                         if (isChecked) {
-                            if (LocMan.getInstance(getActivity()).isEnabled()) {
+                            if (LocalizationManager2.getInstance(getActivity()).isEnabled()) {
                                 signal.enable(getActivity());
                             }
                         } else {
@@ -193,7 +193,7 @@ public class BlinkingListActivity extends Activity {
         @Override
         public void onCreate(Bundle savedInstanceState) {
             super.onCreate(savedInstanceState);
-            manager = LocMan.getInstance(getActivity()).getAlgorithmManager();
+            manager = LocalizationManager2.getInstance(getActivity()).getAlgorithmManager();
             setListAdapter(new AlgorithmAdapter());
         }
 
@@ -254,7 +254,7 @@ public class BlinkingListActivity extends Activity {
                         sharedPrefs.edit().putBoolean(alg.getName(), isChecked).apply();
 
                         if (isChecked) {
-                            if (LocMan.getInstance(getActivity()).isEnabled()) {
+                            if (LocalizationManager2.getInstance(getActivity()).isEnabled()) {
                                 alg.setEnabled(true);
                             }
                         } else {

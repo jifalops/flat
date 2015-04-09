@@ -3,7 +3,7 @@ package com.flat;
 import android.app.Application;
 import android.content.Intent;
 
-import com.flat.localization.LocMan;
+import com.flat.localization.LocalizationManager2;
 import com.flat.util.PersistentIntentService;
 
 public class AppController extends Application {
@@ -11,17 +11,17 @@ public class AppController extends Application {
     private static final int REQUEST_ENABLE_BT = 1;
 
     private static AppController instance;
-    public static synchronized AppController getInstance() {
+    public static AppController getInstance() {
         return instance;
     }
 
-    private LocMan locManager;
+    private LocalizationManager2 locManager;
 
 	@Override
 	public void onCreate() {
 		super.onCreate();
 		instance = this;
-        locManager = LocMan.getInstance(this);
+        locManager = LocalizationManager2.getInstance(this);
 
 
     }
@@ -37,6 +37,4 @@ public class AppController extends Application {
 
         }
     }
-
-
 }

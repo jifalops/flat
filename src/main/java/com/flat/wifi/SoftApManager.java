@@ -10,8 +10,8 @@ import java.lang.reflect.Method;
 /**
 * This is based off of a response on Stack Overflow.
 */
-public final class SoftAccessPointManager {
-    private static final String TAG = SoftAccessPointManager.class.getSimpleName();
+public final class SoftApManager {
+    private static final String TAG = SoftApManager.class.getSimpleName();
     private static final int WIFI_AP_STATE_FAILED = 14; // from WifiManager code
 
 
@@ -21,14 +21,15 @@ public final class SoftAccessPointManager {
     private Method wifiApConfigurationMethod;
     private Method wifiApState;
     private boolean softApEnabled;
+    private boolean wifiWasEnabled;
 
     // Singleton
-    private static SoftAccessPointManager instance;
-    public static SoftAccessPointManager getInstance(Context ctx) throws NoSuchMethodException {
-        if (instance == null) instance = new SoftAccessPointManager(ctx);
+    private static SoftApManager instance;
+    public static SoftApManager getInstance(Context ctx) throws NoSuchMethodException {
+        if (instance == null) instance = new SoftApManager(ctx);
         return instance;
     }
-    private SoftAccessPointManager(Context context) throws NoSuchMethodException {
+    private SoftApManager(Context context) throws NoSuchMethodException {
         mWifiManager = (WifiManager) context.getSystemService(Context.WIFI_SERVICE);
 
         wifiControlMethod = mWifiManager.getClass().getMethod("setWifiApEnabled", WifiConfiguration.class, boolean.class);
@@ -94,12 +95,17 @@ public final class SoftAccessPointManager {
     public boolean setEnabled(boolean enabled, WifiConfiguration config) {
         if (config == null) config = getConfig();
 
-        if (enabled) mWifiManager.setWifiEnabled(false);
+        if (enabled) {
+            wifiWasEnabled = mWifiManager.isWifiEnabled();
+            mWifiManager.setWifiEnabled(false);
+        }
+
         try { softApEnabled = (Boolean) wifiControlMethod.invoke(mWifiManager, config, enabled); }
         catch (Exception e) {
             Log.e(TAG, "Error setting soft AP state.", e);
         }
-        if (!enabled) mWifiManager.setWifiEnabled(true);
+
+        if (!softApEnabled && wifiWasEnabled) mWifiManager.setWifiEnabled(true);
         return softApEnabled;
     }
 

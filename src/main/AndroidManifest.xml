@@ -29,7 +29,7 @@
         android:theme="@style/AppTheme" >
         <activity
             android:name=".app.testing.OtherTestsActivity"
-            android:parentActivityName=".app.testing.OtherTestsActivity"
+            android:parentActivityName=".app.MainActivity"
             android:label="Testing Area">
 
         </activity>
@@ -42,6 +42,10 @@
         <activity android:name=".app.testing.RotationVectorDemo"
             android:parentActivityName=".app.testing.OtherTestsActivity">
 
+        </activity>
+        <activity android:name=".app.testing.BluetoothLeBeaconTestActivity"
+            android:parentActivityName=".app.testing.OtherTestsActivity"
+            android:label="BT-LE Test Area">
         </activity>
         <activity android:name=".networkservicediscovery.NsdTestingActivity"
             android:parentActivityName=".app.testing.OtherTestsActivity"
@@ -64,10 +68,13 @@
         </activity>
         <activity android:name=".app.MainActivity"
             android:label="@string/app_name">
+
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+
+
         </activity>
         <service android:name=".AppController$AppService"/>
         <service android:name=".bluetoothtimeofflight.BluetoothConnectionService"/>

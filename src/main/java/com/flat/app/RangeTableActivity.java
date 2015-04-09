@@ -21,7 +21,7 @@ import android.widget.ListView;
 import android.widget.TextView;
 
 import com.flat.R;
-import com.flat.localization.LocMan;
+import com.flat.localization.LocalizationManager2;
 import com.flat.localization.NodeManager;
 import com.flat.localization.node.Node;
 import com.flat.localization.node.NodeRange;
@@ -84,7 +84,7 @@ public class RangeTableActivity extends Activity {
         @Override
         public void onCreate(Bundle savedInstanceState) {
             super.onCreate(savedInstanceState);
-            nodeManager = LocMan.getInstance(getActivity()).getNodeManager();
+            nodeManager = LocalizationManager2.getInstance(getActivity()).getNodeManager();
             setListAdapter(new RangeTableAdapter());
         }
 
