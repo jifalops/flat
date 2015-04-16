@@ -16,7 +16,7 @@ import com.flat.localization.node.NodeRange;
 import com.flat.localization.node.NodeState;
 import com.flat.localization.node.RemoteNode;
 import com.flat.networkservicediscovery.NsdController;
-import com.flat.networkservicediscovery.NsdHelper;
+import com.flat.networkservicediscovery.NsdServiceFilter;
 import com.flat.remotelogging.CustomRequest;
 import com.flat.remotelogging.RangingRequest;
 import com.flat.remotelogging.VolleyController;
@@ -113,7 +113,7 @@ public class LocalizationManager2 {
         signalManager = new SignalManager(context);
 //        signalManager.registerListener(signalListener);
         algorithmManager = new AlgorithmManager(context);
-        nsdController = new NsdController(context, NSD_SERVICE_PREFIX + localNodeId, new NsdHelper.NsdServiceFilter() {
+        nsdController = new NsdController(context, NSD_SERVICE_PREFIX + localNodeId, new NsdServiceFilter() {
             @Override
             public boolean isAcceptableService(NsdServiceInfo info) {
                 return info.getServiceName().startsWith(NSD_SERVICE_PREFIX);

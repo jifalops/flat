@@ -2,9 +2,11 @@ package com.flat;
 
 import android.app.Application;
 import android.content.Intent;
+import android.text.TextUtils;
 
 import com.flat.localization.LocalizationManager2;
 import com.flat.util.PersistentIntentService;
+import com.flat.wifi.WifiHelper;
 
 public class AppController extends Application {
     private static final String TAG = AppController.class.getSimpleName();
@@ -16,14 +18,23 @@ public class AppController extends Application {
     }
 
     private LocalizationManager2 locManager;
+    private String wifiMac;
 
 	@Override
 	public void onCreate() {
 		super.onCreate();
 		instance = this;
+
+
         locManager = LocalizationManager2.getInstance(this);
+    }
 
-
+    public String getWifiMac() {
+        if (TextUtils.isEmpty(wifiMac)) {
+            WifiHelper.getInstance(this).setWifiEnabled(true);
+            wifiMac = WifiHelper.getInstance(this).getMacAddress();
+        }
+        return wifiMac;
     }
 
 

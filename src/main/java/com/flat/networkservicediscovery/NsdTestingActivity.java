@@ -51,7 +51,7 @@ public class NsdTestingActivity extends Activity {
         setContentView(R.layout.nsd_activity);
         mStatusView = (TextView) findViewById(R.id.status);
 
-        mNsdHelper = new NsdHelper(this, LocalizationManager2.NSD_SERVICE_PREFIX + LocalizationManager2.getInstance(this).getLocalNodeId(), new NsdHelper.NsdServiceFilter() {
+        mNsdHelper = new NsdHelper(this, LocalizationManager2.NSD_SERVICE_PREFIX + LocalizationManager2.getInstance(this).getLocalNodeId(), new NsdServiceFilter() {
             @Override
             public boolean isAcceptableService(NsdServiceInfo info) {
                 return info.getServiceName().startsWith(LocalizationManager2.NSD_SERVICE_PREFIX);

@@ -41,13 +41,10 @@ public class NsdHelper {
     private String mServiceName;
     private boolean registered;
 
-    public static interface NsdServiceFilter {
-        boolean isAcceptableService(NsdServiceInfo info);
-    }
     private final NsdServiceFilter mFilter;
 
     public NsdHelper(Context context, String serviceName, NsdServiceFilter filter) {
-        mContext = context;
+        mContext = context.getApplicationContext();
         mFilter = filter;
         mNsdManager = (NsdManager) context.getSystemService(Context.NSD_SERVICE);
         mServiceName = serviceName;

@@ -27,7 +27,7 @@ public class NsdController {
     private final NsdHelper nsdHelper;
     private final MySocketManager socketManager;
 
-    public NsdController(Context ctx, String serviceName, NsdHelper.NsdServiceFilter filter) {
+    public NsdController(Context ctx, String serviceName, NsdServiceFilter filter) {
         nsdHelper = new NsdHelper(ctx, serviceName, filter);
         socketManager = new MySocketManager();
     }
