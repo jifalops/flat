@@ -18,6 +18,12 @@ import java.net.Socket;
  * Created by Jacob Phillips.
  */
 public class NsdEventHandler extends NsdController.NsdContollerListener {
+    static final String TAG = NsdEventHandler.class.getSimpleName();
+
+
+    NodeManager nodeManager = NodeManager.getInstance();
+
+
     @Override
     public void onServiceRegistered(NsdServiceInfo info) {
 
@@ -60,12 +66,20 @@ public class NsdEventHandler extends NsdController.NsdContollerListener {
     @Override
     public void onClientFinished(MyConnectionSocket mcs) {
         Log.v(TAG, "lost connection to " + mcs.getAddress().getHostAddress());
-        RemoteNode n = nodeManager.findNodeByConnection(mcs);
-        if (n != null) n.setDataConnection(null);
+        Node n = nodeManager.getNodeByConnection(mcs);
+        if (n != null) n.setConnection(null);
     }
 
     @Override
     public void onClientSocketCreated(MyConnectionSocket mcs, Socket socket) {
         handleNewConnection(socket);
+    }
+
+    void handleNewConnection(Socket socket) {
+
+    }
+
+    void handleReceivedMessage(MyConnectionSocket conn, NodeMessage msg) {
+
     }
 }

@@ -1,22 +1,21 @@
-package com.flat.localization.node;
+package com.flat.aa;
 
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.util.Collection;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
 
 /**
  * Created by Jacob Phillips.
  */
 public class RangeTable {
     private Map<String, Entry> table = new HashMap<String, Entry>();
-    public Set<Entry> getEntries() { return (HashSet<Entry>) table.values(); }
+    public Collection<Entry> getEntries() { return table.values(); }
     public Entry getEntry(String bssid) { return table.get(bssid); }
-    public Entry putEntry(Entry tableEntry) { return table.put(tableEntry.bssid, tableEntry); }
+    Entry putEntry(Entry tableEntry) { return table.put(tableEntry.bssid, tableEntry); }
 
     public RangeTable() {}
     public RangeTable(String jsonArray) {
@@ -87,44 +86,44 @@ public class RangeTable {
             return super.toString();
         }
 
-        public Compact compact() {
-            Compact c = new Compact();
+        public CompactEntry compact() {
+            CompactEntry c = new CompactEntry();
             c.bssid = bssid;
             c.range = range;
             c.time = time;
             return c;
         }
+    }
 
-        public static final class Compact {
-            public String bssid;
-            public float range;
-            public long time;
+    public static final class CompactEntry {
+        public String bssid;
+        public float range;
+        public long time;
 
-            public Compact() {
+        public CompactEntry() {
+        }
+
+        public CompactEntry(String jsonArray) {
+            try {
+                JSONArray json = new JSONArray(jsonArray);
+                bssid = json.getString(0);
+                range = (float) json.getDouble(1);
+                time = json.getLong(2);
+            } catch (JSONException ignored) {
             }
+        }
 
-            public Compact(String jsonArray) {
-                try {
-                    JSONArray json = new JSONArray(jsonArray);
-                    bssid = json.getString(0);
-                    range = (float) json.getDouble(1);
-                    time = json.getLong(2);
-                } catch (JSONException ignored) {
-                }
+        @Override
+        public String toString() {
+            try {
+                JSONArray json = new JSONArray();
+                json.put(bssid);
+                json.put(range);
+                json.put(time);
+                return json.toString();
+            } catch (JSONException ignored) {
             }
-
-            @Override
-            public String toString() {
-                try {
-                    JSONArray json = new JSONArray();
-                    json.put(bssid);
-                    json.put(range);
-                    json.put(time);
-                    return json.toString();
-                } catch (JSONException ignored) {
-                }
-                return super.toString();
-            }
+            return super.toString();
         }
     }
 }
