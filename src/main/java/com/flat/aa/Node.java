@@ -20,6 +20,7 @@ import java.util.List;
 public final class Node {
     static final String TAG = Node.class.getSimpleName();
     final String bssid;
+    String ssid;
     RangeTable rangeTable;
     boolean isPassive;
     final boolean isNodeThisDevice;
@@ -50,6 +51,8 @@ public final class Node {
             savePrefs();
         }
     }
+    public String getSsid() { return ssid; }
+    public void setSsid(String ssid) { this.ssid = ssid; }
 
     public void setRangeOverride(float range) {
         rangeOverride = range;
@@ -58,15 +61,18 @@ public final class Node {
         return rangeOverride;
     }
 
-    public void setRange(RangeTable.Entry entry) {
-        rangeTable.putEntry(entry);
-        for (NodeListener l : listeners) l.onRangeChange(this, entry);
-    }
+//    public RangeTable.Entry setRange(RangeTable.Entry entry) {
+//        RangeTable.Entry old = rangeTable.putEntry(entry);
+//        if (entry.rssi != old.rssi) {
+//            for (NodeListener l : listeners) l.onRangeChange(this, entry);
+//        }
+//        return old;
+//    }
 
     public RangeTable getRangeTable() { return rangeTable; }
     public void setRangeTable(RangeTable rt) {
         rangeTable = rt;
-        for (NodeListener l : listeners) l.onNewRangeTable(this, rt);
+//        for (NodeListener l : listeners) l.onNewRangeTable(this, rt);
     }
 
     public void setConnection(MyConnectionSocket conn) {
@@ -77,7 +83,7 @@ public final class Node {
             Log.e(TAG, "Overriding connection to " + name);
         }
         connection = conn;
-        for (NodeListener l : listeners) l.onConnectionChange(this, conn);
+//        for (NodeListener l : listeners) l.onConnectionChange(this, conn);
     }
     public MyConnectionSocket getConnection() { return connection; }
 
@@ -108,7 +114,7 @@ public final class Node {
 
     public void setCoords(CoordinateSystem coords) {
         this.coords = coords;
-        for (NodeListener l : listeners) l.onCoordsChange(this, coords);
+//        for (NodeListener l : listeners) l.onCoordsChange(this, coords);
     }
 
     public CoordinateSystem getCoords() { return coords; }
@@ -139,7 +145,6 @@ public final class Node {
             JSONObject json = new JSONObject();
             json.put("id", bssid);
             json.put("name", name);
-            json.put("isPassive", isPassive);
             json.put("rangeTable", rangeTable);
             json.put("coordinateSystem", coords);
             return json.toString();
@@ -151,35 +156,28 @@ public final class Node {
         try {
             JSONObject json = new JSONObject(jsonObject);
             String id = json.getString("id");
-            Node n = NodeManager.getInstance().getNode(id);
-            if (n == null) {
-                n = new Node(id);
-                NodeManager.getInstance().addNode(n);
-            }
-            n.setName(json.getString("name"));
-            n.isPassive = json.getBoolean("isPassive");
-            n.setRangeTable(new RangeTable(json.getString("rangeTable")));
-            n.setCoords(new CoordinateSystem(json.getString("coordinateSystem")));
-
+            Node n = new Node(id);
+            n.name = json.getString("name");
+            n.rangeTable = new RangeTable(json.getString("rangeTable"));
+            n.coords = new CoordinateSystem(json.getString("coordinateSystem"));
             return n;
         } catch (JSONException ignored) {}
         return null;
     }
 
-    /**
-     * Allow other objects to react to node events.
-     */
-    public interface NodeListener {
-        void onCoordsChange(Node node, CoordinateSystem coords);
-        void onConnectionChange(Node node, MyConnectionSocket conn);
-        void onNewRangeTable(Node node, RangeTable rangeTable);
-        void onRangeChange(Node node, RangeTable.Entry entry);
-    }
-    private final List<NodeListener> listeners = new ArrayList<NodeListener>(1);
-    public boolean registerListener(NodeListener l) {
-        return !listeners.contains(l) && listeners.add(l);
-    }
-    public boolean unregisterListener(NodeListener l) {
-        return listeners.remove(l);
-    }
+//    /**
+//     * Allow other objects to react to node events.
+//     */
+//    public interface NodeListener {
+//        void onCoordsChange(Node node, CoordinateSystem coords);
+//        void onConnectionChange(Node node, MyConnectionSocket conn);
+//        void onRangeTableChange(Node node, RangeTable rangeTable);
+//    }
+//    private final List<NodeListener> listeners = new ArrayList<NodeListener>(1);
+//    public boolean registerListener(NodeListener l) {
+//        return !listeners.contains(l) && listeners.add(l);
+//    }
+//    public boolean unregisterListener(NodeListener l) {
+//        return listeners.remove(l);
+//    }
 }

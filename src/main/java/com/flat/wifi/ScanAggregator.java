@@ -10,15 +10,14 @@ import java.util.Map;
 /**
  * Created by Jacob Phillips.
  */
-public class ScanAggregator implements WifiScanner.ScanListener {
+public class ScanAggregator {
     final Map<String, AggregateScanResult> aggResults = new HashMap<String, AggregateScanResult>();
     public AggregateScanResult getResult(String bssid) { return aggResults.get(bssid); }
     public Collection<AggregateScanResult> getResults() {
         return aggResults.values();
     }
 
-    @Override
-    public void onScanResults(List<ScanResult> scanResults) {
+    public void processScanResults(List<ScanResult> scanResults) {
         for (ScanResult sr : scanResults) {
             AggregateScanResult agg = aggResults.get(sr.BSSID);
             if (agg == null) {

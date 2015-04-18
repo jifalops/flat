@@ -36,9 +36,9 @@ public class AggregateScanResult {
 
 
     /** Uses the max rssi from up to the 10 most recent results,
-     * but they must be less than 2 minutes old. */
+     * but they must be less than 1 minute old. */
     public int effectiveRssi() {
-        long cutoff = (System.nanoTime() / 1000) - 1000000*60*2;
+        long cutoff = (System.nanoTime() / 1000) - 1000000*60;
         int index;
         for (index=0; index<time.size(); ++index) {
             if (time.get(index) > cutoff) {
