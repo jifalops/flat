@@ -47,7 +47,9 @@ public class BeaconAndLocalizeMode {
         }, 5000);
         wifiHelper.setWifiEnabled(false);
         wifiHelper.setSoftApEnabled(true);
-        doLocalization();
+
+        // Magic
+        Localizer.localize();
     }
 
     public void stop() {
@@ -61,12 +63,4 @@ public class BeaconAndLocalizeMode {
     }
 
     public boolean isEnabled() { return enabled; }
-
-
-
-
-    private void doLocalization() {
-        NodeManager nodeManager = NodeManager.getInstance();
-
-    }
 }

@@ -7,6 +7,7 @@ import org.json.JSONObject;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.TreeSet;
 
 /**
  * Created by Jacob Phillips.
@@ -39,6 +40,9 @@ public class RangeTable {
 //        return super.toString();
     }
 
+    public TreeSet<String> keySet() {
+        return (TreeSet<String>) table.keySet();
+    }
 
     public static final class Entry {
         public String bssid;

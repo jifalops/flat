@@ -36,7 +36,7 @@ public class NodeManager {
         if (nodes.containsKey(n.getId())) return false;
         nodes.put(n.getId(), n);
 
-        n.registerListener(nodeListener);
+//        n.registerListener(nodeListener);
         for (NodeManagerListener l : listeners) {
             l.onNodeAdded(n);
         }
@@ -76,41 +76,41 @@ public class NodeManager {
 
 
 
-    final Node.NodeListener nodeListener = new Node.NodeListener() {
-        @Override
-        public void onCoordsChange(Node node, CoordinateSystem coords) {
-            for (NodeManagerListener l : listeners) {
-                l.onCoordsChange(node, coords);
-            }
-        }
-
-        @Override
-        public void onConnectionChange(Node node, MyConnectionSocket conn) {
-            for (NodeManagerListener l : listeners) {
-                l.onConnectionChange(node, conn);
-            }
-        }
-
-        @Override
-        public void onNewRangeTable(Node node, RangeTable rangeTable) {
-            for (NodeManagerListener l : listeners) {
-                l.onNewRangeTable(node, rangeTable);
-            }
-        }
-
-        @Override
-        public void onRangeChange(Node node, RangeTable.Entry entry) {
-            for (NodeManagerListener l : listeners) {
-                l.onRangeChange(node, entry);
-            }
-        }
-    };
+//    final Node.NodeListener nodeListener = new Node.NodeListener() {
+//        @Override
+//        public void onCoordsChange(Node node, CoordinateSystem coords) {
+//            for (NodeManagerListener l : listeners) {
+//                l.onCoordsChange(node, coords);
+//            }
+//        }
+//
+//        @Override
+//        public void onConnectionChange(Node node, MyConnectionSocket conn) {
+//            for (NodeManagerListener l : listeners) {
+//                l.onConnectionChange(node, conn);
+//            }
+//        }
+//
+//        @Override
+//        public void onNewRangeTable(Node node, RangeTable rangeTable) {
+//            for (NodeManagerListener l : listeners) {
+//                l.onNewRangeTable(node, rangeTable);
+//            }
+//        }
+//
+//        @Override
+//        public void onRangeChange(Node node, RangeTable.Entry entry) {
+//            for (NodeManagerListener l : listeners) {
+//                l.onRangeChange(node, entry);
+//            }
+//        }
+//    };
 
 
     /**
      * Allow other objects to react to node events.
      */
-    public interface NodeManagerListener extends Node.NodeListener {
+    public interface NodeManagerListener {
         void onNodeAdded(Node n);
     }
     private final List<NodeManagerListener> listeners = new ArrayList<NodeManagerListener>(1);

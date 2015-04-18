@@ -11,7 +11,7 @@ public final class State {
     public final String id;
     public final float[] pos = new float[3];
     public final float[] angle = new float[3];
-    public long time;
+    public long time = System.currentTimeMillis();
     public String algorithm;
     State(String id) { this.id = id; }
 
