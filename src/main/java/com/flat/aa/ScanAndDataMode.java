@@ -3,13 +3,12 @@ package com.flat.aa;
 import android.content.Context;
 import android.net.nsd.NsdServiceInfo;
 import android.net.wifi.ScanResult;
-import android.net.wifi.WifiManager;
 
 import com.flat.AppController;
 import com.flat.networkservicediscovery.NsdController;
 import com.flat.networkservicediscovery.NsdServiceFilter;
+import com.flat.wifi.AggregateScanResult;
 import com.flat.wifi.ScanAggregator;
-import com.flat.wifi.ScanReceiver;
 import com.flat.wifi.WifiHelper;
 import com.flat.wifi.WifiScanner;
 
@@ -26,6 +25,7 @@ public class ScanAndDataMode {
     ScanAggregator aggregator;
     NsdController nsdController;
     NsdEventHandler nsdEventHandler;
+    NodeManager nodeManager;
     boolean enabled;
     int scanCount = 0;
 
@@ -38,7 +38,7 @@ public class ScanAndDataMode {
     }
     private ScanAndDataMode(Context ctx) {
         wifiHelper = WifiHelper.getInstance(ctx);
-        scanner = new WifiScanner(ctx);
+        scanner = WifiScanner.getInstance(ctx);
         aggregator = new ScanAggregator();
 
         nsdController = new NsdController(ctx,
@@ -49,6 +49,8 @@ public class ScanAndDataMode {
             }
         });
         nsdEventHandler = new NsdEventHandler();
+
+        nodeManager = NodeManager.getInstance();
     }
 
     public void start() {
@@ -58,16 +60,10 @@ public class ScanAndDataMode {
         wifiHelper.setSoftApEnabled(false);
         wifiHelper.setWifiEnabled(true);
 
-        scanner.start(new ScanReceiver() {
-            @Override
-            public void onScanResults(List<ScanResult> scanResults) {
-                aggregator.onScanResults(scanResults);
-                ++scanCount;
-                if (scanCount % 10 == 0) {
-                    // TODO check for new best rssi and localizationalize.
-                }
-            }
-        });
+
+        scanner.registerListener(aggregator);
+        scanner.registerListener(scanListener);
+        scanner.start();
 
         nsdController.registerListener(nsdEventHandler);
         nsdController.enableNsd();
@@ -77,10 +73,29 @@ public class ScanAndDataMode {
         if (!enabled) return;
         enabled = false;
 
+        scanner.unregisterListener(aggregator);
+        scanner.unregisterListener(scanListener);
         scanner.stop();
         nsdController.unregisterListener(nsdEventHandler);
         nsdController.disableNsd();
     }
 
     public boolean isEnabled() { return enabled; }
+
+    final WifiScanner.ScanListener scanListener = new WifiScanner.ScanListener() {
+        @Override
+        public void onScanResults(List<ScanResult> scanResults) {
+            ++scanCount;
+            if (scanCount % 10 == 0) {
+                for (AggregateScanResult result : aggregator.getResults()) {
+                    Node n = nodeManager.getNode(result.bssid);
+                    if (n == null) {
+                        n = new Node(result.bssid);
+                        nodeManager.addNode(n);
+                    }
+                    result.
+                }
+            }
+        }
+    };
 }

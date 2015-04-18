@@ -10,7 +10,7 @@ import java.util.Map;
 /**
  * Created by Jacob Phillips.
  */
-public class ScanAggregator implements ScanReceiver {
+public class ScanAggregator implements WifiScanner.ScanListener {
     final Map<String, AggregateScanResult> aggResults = new HashMap<String, AggregateScanResult>();
     public AggregateScanResult getResult(String bssid) { return aggResults.get(bssid); }
     public Collection<AggregateScanResult> getResults() {

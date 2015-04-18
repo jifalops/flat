@@ -10,11 +10,11 @@ import java.util.List;
  * Created by Jacob Phillips.
  */
 public class AggregateScanResult {
-    String bssid;
-    String ssid;
-    int freq;
-    List<Integer> rssi = new ArrayList<Integer>();
-    List<Long> time = new ArrayList<Long>();
+    public String bssid;
+    public String ssid;
+    public int freq;
+    public List<Integer> rssi = new ArrayList<Integer>();
+    public List<Long> time = new ArrayList<Long>();
 
     boolean add(ScanResult result) {
         if (bssid == null) {
@@ -56,15 +56,15 @@ public class AggregateScanResult {
         return relevant.get(relevant.size() - 1);
     }
 
-//    public long elapsedTime() {
-//        List<Long> tmp = new ArrayList<Long>(time);
-//        Collections.sort(tmp);
-//        return tmp.get(tmp.size()-1) - tmp.get(0);
-//    }
-//
-//    public float resultsPerMinute() {
-//        return 60f * ((float)rssi.size() / ((int)elapsedTime() / 1000f));
-//    }
+    public long elapsedTime() {
+        List<Long> tmp = new ArrayList<Long>(time);
+        Collections.sort(tmp);
+        return tmp.get(tmp.size()-1) - tmp.get(0);
+    }
+
+    public float resultsPerMinute() {
+        return 60f * ((float)rssi.size() / ((int)elapsedTime() / 1000f));
+    }
 
 //    public int medianRssi() {
 //        int[] tmp = ArrayUtils.toPrimitive(rssi.toArray(new Integer[rssi.size()]));

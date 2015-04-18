@@ -169,7 +169,7 @@ public final class Node {
     /**
      * Allow other objects to react to node events.
      */
-    interface NodeListener {
+    public interface NodeListener {
         void onCoordsChange(Node node, CoordinateSystem coords);
         void onConnectionChange(Node node, MyConnectionSocket conn);
         void onNewRangeTable(Node node, RangeTable rangeTable);
