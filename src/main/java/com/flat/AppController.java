@@ -4,6 +4,7 @@ import android.app.Application;
 import android.content.Intent;
 import android.text.TextUtils;
 
+import com.flat.aa.ScanAndDataMode;
 import com.flat.localization.LocalizationManager2;
 import com.flat.util.PersistentIntentService;
 import com.flat.wifi.WifiHelper;
@@ -26,7 +27,8 @@ public class AppController extends Application {
 		instance = this;
 
 
-        locManager = LocalizationManager2.getInstance(this);
+//        locManager = LocalizationManager2.getInstance(this);
+        ScanAndDataMode.getInstance(this).start();
     }
 
     public String getWifiMac() {
