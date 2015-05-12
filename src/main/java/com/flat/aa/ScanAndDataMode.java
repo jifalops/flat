@@ -1,12 +1,15 @@
 package com.flat.aa;
 
+import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
+import android.net.ConnectivityManager;
 import android.net.nsd.NsdServiceInfo;
 import android.net.wifi.ScanResult;
 import android.util.Log;
 
 import com.flat.AppController;
-import com.flat.localization.node.NodeMessage;
 import com.flat.localization.signals.interpreters.FreeSpacePathLoss;
 import com.flat.networkservicediscovery.NsdController;
 import com.flat.networkservicediscovery.NsdServiceFilter;
@@ -16,8 +19,6 @@ import com.flat.wifi.AggregateScanResult;
 import com.flat.wifi.ScanAggregator;
 import com.flat.wifi.WifiHelper;
 import com.flat.wifi.WifiScanner;
-
-import org.json.JSONException;
 
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -30,7 +31,7 @@ public class ScanAndDataMode {
     static final String TAG = ScanAndDataMode.class.getSimpleName();
     static final String NSD_SERVICE_PREFIX = "flatloco_";
 
-    BeaconAndLocalizeMode beaconAndLocalizeMode;
+    Context context;
     WifiHelper wifiHelper;
     WifiScanner scanner;
     ScanAggregator aggregator;
@@ -47,13 +48,13 @@ public class ScanAndDataMode {
         return instance;
     }
     private ScanAndDataMode(Context ctx) {
-        beaconAndLocalizeMode = BeaconAndLocalizeMode.getInstance(ctx);
+        context = ctx;
         wifiHelper = WifiHelper.getInstance(ctx);
         scanner = WifiScanner.getInstance(ctx);
         aggregator = new ScanAggregator();
 
         nsdController = new NsdController(ctx,
-                AppController.getInstance().getWifiMac(), new NsdServiceFilter() {
+                NSD_SERVICE_PREFIX + AppController.getInstance().getWifiMac(), new NsdServiceFilter() {
             @Override
             public boolean isAcceptableService(NsdServiceInfo info) {
                 return info.getServiceName().startsWith(NSD_SERVICE_PREFIX);
@@ -70,12 +71,7 @@ public class ScanAndDataMode {
         wifiHelper.setSoftApEnabled(false);
         wifiHelper.setWifiEnabled(true);
 
-
-        scanner.registerListener(scanListener);
-        scanner.start();
-
-        nsdController.registerListener(nsdContollerListener);
-        nsdController.enableNsd();
+        context.registerReceiver(connChangeReceiver, new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION));
     }
 
     public void stop() {
@@ -91,13 +87,21 @@ public class ScanAndDataMode {
 
     public boolean isEnabled() { return enabled; }
 
+    public static int makeScanLimit() {
+        return Config.SCAN_MIN_SCANS + (int) (Math.random() * (Config.SCAN_MAX_SCANS - Config.SCAN_MIN_SCANS + 1));
+    }
+
     final WifiScanner.ScanListener scanListener = new WifiScanner.ScanListener() {
+        int scanLimit = makeScanLimit();
         @Override
         public void onScanResults(List<ScanResult> scanResults) {
+            Log.v(TAG, "Received scan results");
             aggregator.processScanResults(scanResults);
 
             ++scanCount;
-            if (scanCount % 10 == 0) {
+            if (scanCount % scanLimit == 0) {
+                scanLimit = makeScanLimit();
+
                 RangeTable rangeTable = nodeManager.getLocalNode().getRangeTable();
                 for (AggregateScanResult result : aggregator.getResults()) {
                     Node n = nodeManager.getNode(result.bssid);
@@ -126,7 +130,7 @@ public class ScanAndDataMode {
                 nodeManager.getLocalNode().setRangeTable(rangeTable);
 
                 stop();
-                beaconAndLocalizeMode.start();
+                BeaconAndLocalizeMode.getInstance(context).start();
             }
         }
     };
@@ -134,52 +138,59 @@ public class ScanAndDataMode {
     final NsdController.NsdContollerListener nsdContollerListener = new NsdController.NsdContollerListener() {
         @Override
         public void onServiceRegistered(NsdServiceInfo info) {
-
+            Log.v(TAG, "onServiceRegistered(): " + info.toString());
         }
 
         @Override
         public void onAcceptableServiceResolved(NsdServiceInfo info) {
-
+            Log.v(TAG, "onAcceptableServiceResolved(): " + info.toString());
         }
 
         @Override
         public void onServerAcceptedClientSocket(MyServerSocket mss, Socket socket) {
+            Log.v(TAG, "onServerAcceptedClientSocket()");
             handleNewConnection(socket);
         }
 
         @Override
         public void onServerFinished(MyServerSocket mss) {
+            Log.v(TAG, "onServerFinished()");
 
         }
 
         @Override
         public void onServerSocketListening(MyServerSocket mss, ServerSocket socket) {
+            Log.v(TAG, "listening for incoming connections on port " + socket.getLocalPort());
 
         }
 
         @Override
         public void onMessageSent(MyConnectionSocket mcs, String msg) {
+            Log.v(TAG, "onMessageSent(): " + msg);
 
         }
 
         @Override
         public void onMessageReceived(MyConnectionSocket mcs, String msg) {
+            Log.v(TAG, "onMessageReceived(): " + msg);
             handleReceivedMessage(mcs, msg);
         }
 
         @Override
         public void onClientFinished(MyConnectionSocket mcs) {
-//            Log.v(TAG, "lost connection to " + mcs.getAddress().getHostAddress());
+            Log.i(TAG, "lost connection to " + mcs.getAddress().getHostAddress());
             Node n = nodeManager.getNodeByConnection(mcs);
             if (n != null) n.setConnection(null);
         }
 
         @Override
         public void onClientSocketCreated(MyConnectionSocket mcs, Socket socket) {
+            Log.v(TAG, "onClientSocketCreated()");
             handleNewConnection(socket);
         }
 
         void handleNewConnection(Socket socket) {
+            Log.e(TAG, "##### Received connection to " + socket.getInetAddress().getHostAddress());
             nsdController.getSocketManager().send(socket.getInetAddress(), nodeManager.getLocalNode().toString());
         }
 
@@ -193,6 +204,20 @@ public class ScanAndDataMode {
                 existingNode.setConnection(conn);
                 existingNode.setRangeTable(newNode.getRangeTable());
                 existingNode.setCoords(newNode.getCoords());
+            }
+        }
+    };
+
+    final BroadcastReceiver connChangeReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            if (enabled && wifiHelper.isConnected()) {
+                scanner.registerListener(scanListener);
+                scanner.start();
+
+                nsdController.registerListener(nsdContollerListener);
+                nsdController.enableNsd();
+                context.unregisterReceiver(connChangeReceiver);
             }
         }
     };

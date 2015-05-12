@@ -7,7 +7,6 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeMap;
 
 /**
  * Created by Jacob Phillips.
@@ -18,6 +17,7 @@ public class CoordinateSystem {
     public State getState(String node) { return nodes.get(node); }
     public Collection<State> getStates() { return nodes.values(); }
     public Set<String> getNodeIds() { return nodes.keySet(); }
+    /** Returns the previous state for that node. */
     public State setState(State state) {
         if (state.pos[0] == 0 && state.pos[1] == 0 && state.pos[2] == 0) {
             root = state.id;

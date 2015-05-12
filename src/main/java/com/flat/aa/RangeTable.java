@@ -7,13 +7,13 @@ import org.json.JSONObject;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.TreeSet;
+import java.util.Set;
 
 /**
  * Created by Jacob Phillips.
  */
 public class RangeTable {
-    private Map<String, Entry> table = new HashMap<String, Entry>();
+    final Map<String, Entry> table = new HashMap<String, Entry>();
     public Collection<Entry> getEntries() { return table.values(); }
     public Entry getEntry(String bssid) { return table.get(bssid); }
     Entry putEntry(Entry tableEntry) { return table.put(tableEntry.bssid, tableEntry); }
@@ -40,8 +40,8 @@ public class RangeTable {
 //        return super.toString();
     }
 
-    public TreeSet<String> keySet() {
-        return (TreeSet<String>) table.keySet();
+    public Set<String> keySet() {
+        return table.keySet();
     }
 
     public static final class Entry {

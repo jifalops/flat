@@ -147,7 +147,7 @@ public class NodeManager {
     /**
      * Allow other objects to react to node events.
      */
-    public static interface NodeManagerListener extends RemoteNode.RemoteNodeListener {
+    public interface NodeManagerListener extends RemoteNode.RemoteNodeListener {
         void onNodeAdded(RemoteNode n);
     }
     private final List<NodeManagerListener> listeners = new ArrayList<NodeManagerListener>(1);

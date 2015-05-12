@@ -64,15 +64,15 @@ public class NodeManager {
         return null;
     }
 
-    public String[] getConnectedNodes() {
-        List<String> connected = new ArrayList<String>();
+    public List<Node> getNodesWithRangeTables() {
+        List<Node> withTables = new ArrayList<Node>();
         for (Node n : nodes.values()) {
-            if (n.getConnection() != null) connected.add(n.getId());
+            if (n.getRangeTable() != null && n.getRangeTable().getEntries().size() > 0) {
+                withTables.add(n);
+            }
         }
-        return connected.toArray(new String[connected.size()]);
+        return withTables;
     }
-
-
 
 
 

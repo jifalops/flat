@@ -69,13 +69,18 @@
         <activity android:name=".app.MainActivity"
             android:label="@string/app_name">
 
+
+
+
+        </activity>
+
+        <activity android:name=".aa.GraphActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-
-
         </activity>
+
         <service android:name=".AppController$AppService"/>
         <service android:name=".bluetoothtimeofflight.BluetoothConnectionService"/>
         <service android:name=".app.testing.MovementSensorService"/>

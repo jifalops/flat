@@ -5,7 +5,6 @@ import android.content.Intent;
 import android.text.TextUtils;
 
 import com.flat.aa.ScanAndDataMode;
-import com.flat.localization.LocalizationManager2;
 import com.flat.util.PersistentIntentService;
 import com.flat.wifi.WifiHelper;
 
@@ -18,7 +17,6 @@ public class AppController extends Application {
         return instance;
     }
 
-    private LocalizationManager2 locManager;
     private String wifiMac;
 
 	@Override

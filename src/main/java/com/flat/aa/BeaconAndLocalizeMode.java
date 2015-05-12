@@ -12,7 +12,7 @@ import java.util.TimerTask;
  */
 public class BeaconAndLocalizeMode {
 
-    ScanAndDataMode scanAndDataMode;
+    Context context;
     WifiHelper wifiHelper;
     boolean enabled;
     Timer timer;
@@ -25,9 +25,13 @@ public class BeaconAndLocalizeMode {
         return instance;
     }
     private BeaconAndLocalizeMode(Context ctx) {
-        scanAndDataMode = ScanAndDataMode.getInstance(ctx);
+        context = ctx;
         wifiHelper = WifiHelper.getInstance(ctx);
 
+    }
+
+    public static int makeBeaconPeriod() {
+        return Config.BEACON_PERIOD_MIN_MS + (int) (Math.random() * (Config.BEACON_PERIOD_MAX_MS - Config.BEACON_PERIOD_MIN_MS + 1));
     }
 
     public void start() {
@@ -42,9 +46,9 @@ public class BeaconAndLocalizeMode {
             @Override
             public void run() {
                stop();
-               scanAndDataMode.start();
+               ScanAndDataMode.getInstance(context).start();
             }
-        }, 5000);
+        }, makeBeaconPeriod());
         wifiHelper.setWifiEnabled(false);
         wifiHelper.setSoftApEnabled(true);
 

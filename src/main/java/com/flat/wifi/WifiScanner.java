@@ -7,6 +7,8 @@ import android.content.IntentFilter;
 import android.net.wifi.ScanResult;
 import android.net.wifi.WifiManager;
 
+import com.flat.aa.Config;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Timer;
@@ -44,8 +46,7 @@ public class WifiScanner {
         }
     };
 
-    /** scanPeriod is in millis. */
-    public void start(int scanPeriod) {
+    public void start() {
         if (enabled) return;
         enabled = true;
 
@@ -59,9 +60,8 @@ public class WifiScanner {
             public void run() {
                 manager.startScan();
             }
-        }, 0, scanPeriod);
+        }, 0, Config.SCAN_PERIOD_MS);
     }
-    public void start() { start(1000); }
 
 
     public void stop() {

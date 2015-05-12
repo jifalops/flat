@@ -5,7 +5,6 @@ import android.util.Log;
 import com.flat.localization.util.Calc;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.TreeSet;
@@ -19,13 +18,15 @@ public class Localizer {
 
     private Localizer() {}
 
-    public static final class RangeTableList extends TreeMap<String, RangeTable> {}
+    public static final class RangeTableMap extends TreeMap<String, RangeTable> {}
     public static final class CoordsList extends TreeMap<String, CoordinateSystem> {}
 
     public static final class NodeSet extends TreeSet<String> {}
     public static final class NodeSetMap extends TreeMap<String, NodeSet> {}
 
-    public static final class CommonNodeMap extends TreeMap<String, NodeSetMap> {}
+    public static final class NodeSetMapMap extends TreeMap<String, NodeSetMap> {}
+
+    public static final class NodePath extends ArrayList<String> {}
 
     public static final class NodePathMap extends TreeMap<String, String[]> {}
     public static final class NodeHopList extends ArrayList<NodePathMap> {}
@@ -36,12 +37,11 @@ public class Localizer {
         public NodeSetMap commonNodeMap;
     }
 
+
     public static void localize() {
-        RangeTableList rangeTables = new RangeTableList();
-        CoordsList coordsList = new CoordsList();
-        for (Node n : NodeManager.getInstance().getNodes()) {
+        RangeTableMap rangeTables = new RangeTableMap();
+        for (Node n : NodeManager.getInstance().getNodesWithRangeTables()) {
             rangeTables.put(n.getId(), n.getRangeTable());
-            coordsList.put(n.getId(), n.getCoords());
         }
 
         // Find coordinate system with the most nodes
@@ -57,11 +57,10 @@ public class Localizer {
 
         CoordinateSystem newCoords = new CoordinateSystem();
 
-        // If there arent enough nodes in the coordinate system, a new coordinate system must be created.
-        if (rangeTables.size() >= 3) {
+        if (rangeTables.size() >= 2) {
 
             // The complete list of common nodes
-            CommonNodeMap allCommonNodes = new CommonNodeMap();
+            NodeSetMapMap allCommonNodes = new NodeSetMapMap();
 
             long startTime = System.nanoTime();
 
@@ -202,7 +201,7 @@ public class Localizer {
             root.addAll(localizableNodes.get(winnerNode));
             root.commonNodeMap = allCommonNodes.get(winnerNode);
 
-            if (root.size() < 2) {
+            if (root.size() < 2 || (root.get(0).size() == 0 && root.get(1).size() == 0)) {
                 return;
             }
 
@@ -312,7 +311,7 @@ public class Localizer {
 
 
 
-    private static float[] putCoords(CoordinateSystem coords, RangeTableList rangeTables,
+    private static float[] putCoords(CoordinateSystem coords, RangeTableMap rangeTables,
                                      String targetNode, String referenceNode1, String referenceNode2) {
         if (coords.getNodeIds().contains(targetNode)) {
             Log.e(TAG, "Target node already in coordinate system: " + targetNode);
@@ -383,7 +382,7 @@ public class Localizer {
         return pos;
     }CoordinateSystem newCoords = new CoordinateSystem();
 
-    public static float findRangeBetween(RangeTableList rangeTables, String node1, String node2) {
+    public static float findRangeBetween(RangeTableMap rangeTables, String node1, String node2) {
         float range = 0;
 
         for (Map.Entry<String, RangeTable> table : rangeTables.entrySet()) {

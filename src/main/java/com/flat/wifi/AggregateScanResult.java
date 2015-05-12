@@ -2,6 +2,8 @@ package com.flat.wifi;
 
 import android.net.wifi.ScanResult;
 
+import com.flat.aa.Config;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -35,10 +37,12 @@ public class AggregateScanResult {
     }
 
 
-    /** Uses the max rssi from up to the 10 most recent results,
-     * but they must be less than 1 minute old. */
+    /** Uses the max rssi from up to the {@link Config#SCAN_MIN_SCANS} most recent results,
+     * but they must be less than {@link Config#SCAN_CUTOFF_AGE_US} old. */
     public int effectiveRssi() {
-        long cutoff = (System.nanoTime() / 1000) - 1000000*60;
+        if (rssi.size() == 0) return 0;
+
+        long cutoff = (System.nanoTime() / 1000) - Config.SCAN_CUTOFF_AGE_US;
         int index;
         for (index=0; index<time.size(); ++index) {
             if (time.get(index) > cutoff) {
@@ -46,14 +50,18 @@ public class AggregateScanResult {
             }
         }
 
-        if (index < rssi.size() - 10) {
-            index = rssi.size() - 10;
+        if (index < rssi.size() - Config.SCAN_MIN_SCANS) {
+            index = rssi.size() - Config.SCAN_MIN_SCANS;
         }
 
         List<Integer> relevant = rssi.subList(index, rssi.size());
 
-        Collections.sort(relevant);
-        return relevant.get(relevant.size() - 1);
+        if (relevant.size() == 0) {
+            return rssi.get(rssi.size() - 1);
+        } else {
+            Collections.sort(relevant);
+            return relevant.get(relevant.size() - 1);
+        }
     }
 
     public long elapsedTime() {

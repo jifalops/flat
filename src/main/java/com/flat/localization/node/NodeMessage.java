@@ -13,6 +13,7 @@ import java.util.TreeMap;
  */
 public final class NodeMessage {
     public static final int TYPE_RANGE_TABLE = 1;
+    public static final int TYPE_ID = 2;
     public static final int TYPE_COORDINATE_SYSTEM = 3;
     public static final int TYPE_CONNECTED_NODES = 4;
 

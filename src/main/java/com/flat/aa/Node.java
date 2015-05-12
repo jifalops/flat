@@ -11,9 +11,6 @@ import com.flat.sockets.MyConnectionSocket;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.util.ArrayList;
-import java.util.List;
-
 /**
  * Created by Jacob Phillips.
  */
@@ -128,6 +125,8 @@ public final class Node {
 //        s.time = System.currentTimeMillis();
 //        for (NodeListener l : listeners) l.onCoordsChange(this, coords);
 //    }
+
+    /** Shorthand for this.getCoords().getState(this.getId()); */
     public State getState() {
         return coords.getState(bssid);
     }
